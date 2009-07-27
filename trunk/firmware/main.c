@@ -57,7 +57,7 @@
 #include "i2cmaster.h"
 #include "uart.h"
 
-#include "../commandline/linkm-lib.h"
+#include "linkm-lib.h"
 
 // these aren't used anywhere, just here to note them
 #define PIN_LED_STATUS         PB4
