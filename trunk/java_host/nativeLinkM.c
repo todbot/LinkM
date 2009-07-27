@@ -4,8 +4,8 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "../commandline/hiddata.h"
-#include "../commandline/linkm-lib.h"
+#include "hiddata.h"
+#include "linkm-lib.h"
 
 
 /* ------------------------------------------------------------------------- */

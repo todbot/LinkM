@@ -14,7 +14,7 @@ JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
 JAVAINCLUDE = -I $(JAVAINCLUDEDIR)
 
-INCLUDES = -I . $(JAVAINCLUDE) $(JAVANATINC) 
+INCLUDES = -I . -I../c_host $(JAVAINCLUDE) $(JAVANATINC) 
 CFLAGS = -g -O2 -D_BSD_SOURCE -bundle  -std=gnu99 $(USBFLAGS) $(INCLUDES)
 #CFLAGS = -g -O2 -D_BSD_SOURCE -bundle  -arch i386 -arch ppc -std=gnu99 $(USBFLAGS) $(INCLUDES)
 LDFLAGS =  -Wl,-search_paths_first -framework JavaVM -framework IOKit -framework CoreFoundation $(USBLIBS) 
