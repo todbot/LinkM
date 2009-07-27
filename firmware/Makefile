@@ -21,7 +21,7 @@ F_CPU   = 12000000	# in Hz
 #AVRDUDE = avrdude -c usbasp -p $(MCU) # edit this line for your programmer
 AVRDUDE = avrdude -c avrispmkii -P usb -p $(MCU) # edit this line for your programmer
 
-CFLAGS  = -Iusbdrv -I. -DDEBUG_LEVEL=0
+CFLAGS  = -Iusbdrv -I. -I../c_host -DDEBUG_LEVEL=0
 OBJECTS = twimaster.c uart.c
 OBJECTS += usbdrv/usbdrv.o usbdrv/usbdrvasm.o usbdrv/oddebug.o 
 OBJECTS += main.o 
