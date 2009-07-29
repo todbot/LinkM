@@ -1,9 +1,11 @@
-/* linkm-tool --
+/*
+ * linkm-tool -- Command-line tool for using LinkM.
+ *               Also excercises the linkm-lib library.
  *
  *
- * Based off of "hidtool" by obdev.at
+ * Based off of "hidtool", part of the "vusb" AVR-USB library by obdev
  *
- * 2009, ThingM, Tod E. Kurt, http://thingm.com/
+ * 2009, Tod E. Kurt, ThingM, http://thingm.com/
  *
  */
 
@@ -42,10 +44,13 @@ enum {
     CMD_LINKM_I2CINIT,
     CMD_BLINKM_CMD,
     CMD_BLINKM_OFF,
+    CMD_BLINKM_PLAY,
+    CMD_BLINKM_STOP,
     CMD_BLINKM_COLOR,
     CMD_BLINKM_UPLOAD,
     CMD_BLINKM_DOWNLOAD,
     CMD_BLINKM_SETADDR,
+    CMD_BLINKM_GETVERSION,
     CMD_BLINKM_RANDOM,
 };
 
@@ -57,21 +62,24 @@ void usage(char *myName)
 "Usage: %s <cmd> [options]\n"
 "\n"
 "where <cmd> is one of:\n"
-"  --cmd <blinkmcmd> Send a blinkm command  (uses addr) \n"
+"  --cmd <blinkmcmd> Send a blinkm command  \n"
 "  --off             Turn off blinkm at specified address (or all) \n"
+"  --play <n>        Play light script N \n"
+"  --stop            Stop playing light script \n"
+"  --getversion      Gets BlinkM version \n"
 "  --setaddr <newa>  Set address of blinkm at address 'addr' to 'newa' \n"
 "  --random <n>      Send N random colors to blinkm\n"
 "  --i2cscan         Scan I2c bus for devices  \n"
 "  --i2enable <0|1>  Enable or disable the I2C bus (for connecting devices) \n"
-"  --upload          Upload a light script to blinkm (needs addr & file) \n"
-"  --download <n>    Download light script n from blinkm (needs addr & file) \n"
+"  --upload          Upload a light script to blinkm (reqs addr & file) \n"
+"  --download <n>    Download light script n from blinkm (reqs addr & file) \n"
 "  --linkmcmd        Send a raw linkm command  \n"
 "  --statled <0|1>   Turn on or off status LED  \n"
 "Options:\n"
 "  -h, --help                   Print this help message\n"
-"  -a addr, --addr=i2caddr      Set I2C address (default 0)\n"
+"  -a addr, --addr=i2caddr      I2C address for command (default 0)\n"
 "  -f file, --afile=file        Read or save to this file\n"
-"  -m ms,   --miilis=millis     Set milliseconds betwen actions (default 100)\n"
+"  -m ms,   --miilis=millis     Set millisecs betwen actions (default 100)\n"
 "  -v, --verbose                verbose debugging msgs\n"
 "\n"
 "Note:  blah blah blah\n"
@@ -105,7 +113,7 @@ int main(int argc, char **argv)
 
     memset(cmdbuf,0,sizeof(cmdbuf));  // zero out for debugging ease
 
-    srand( time(0) );  // a good enough seeding for our purposes
+    srand( time(0) );    // a good enough seeding for our purposes
 
     if(argc < 2){
         usage(argv[0]);
@@ -127,13 +135,16 @@ int main(int argc, char **argv)
         {"i2cscan",    no_argument,       &cmd,   CMD_LINKM_I2CSCAN },
         {"i2cenable",  required_argument, &cmd,   CMD_LINKM_I2CENABLE },
         {"i2cinit",    no_argument,       &cmd,   CMD_LINKM_I2CINIT },
-        {"cmd",        required_argument, &cmd,   CMD_BLINKM_CMD},
-        {"off",        no_argument,       &cmd,   CMD_BLINKM_OFF},
-        {"color",      required_argument, &cmd,   CMD_BLINKM_COLOR},
-        {"upload",     required_argument, &cmd,   CMD_BLINKM_UPLOAD},
-        {"download",   required_argument, &cmd,   CMD_BLINKM_DOWNLOAD},
-        {"random",     required_argument, &cmd,   CMD_BLINKM_RANDOM},
-        {"setaddr",    required_argument, &cmd,   CMD_BLINKM_SETADDR},
+        {"cmd",        required_argument, &cmd,   CMD_BLINKM_CMD },
+        {"off",        no_argument,       &cmd,   CMD_BLINKM_OFF },
+        {"stop",       no_argument,       &cmd,   CMD_BLINKM_STOP },
+        {"play",       required_argument, &cmd,   CMD_BLINKM_PLAY },
+        {"color",      required_argument, &cmd,   CMD_BLINKM_COLOR },
+        {"upload",     required_argument, &cmd,   CMD_BLINKM_UPLOAD },
+        {"download",   required_argument, &cmd,   CMD_BLINKM_DOWNLOAD },
+        {"random",     required_argument, &cmd,   CMD_BLINKM_RANDOM },
+        {"setaddr",    required_argument, &cmd,   CMD_BLINKM_SETADDR },
+        {"getversion", no_argument,       &cmd,   CMD_BLINKM_GETVERSION },
         {NULL,         0,                 0,      0}
     };
 
@@ -144,26 +155,15 @@ int main(int argc, char **argv)
         case 0:             // deal with long opts that have no short opts
             switch(cmd) { 
             case CMD_LINKM_WRITE:
-                hexread(cmdbuf, optarg, sizeof(cmdbuf));
-                break;
             case CMD_LINKM_CMD:
-                hexread(cmdbuf, optarg, sizeof(cmdbuf));
-                break;
-            case CMD_LINKM_STATLED:
-                arg = strtol(optarg,NULL,0);
-                break;
-            case CMD_LINKM_I2CENABLE:
-                arg = strtol(optarg,NULL,0);
-                break;
-            case CMD_LINKM_I2CINIT:
-                break;
             case CMD_BLINKM_CMD:
                 hexread(cmdbuf, optarg, sizeof(cmdbuf));
                 break;
+            case CMD_LINKM_STATLED:
+            case CMD_LINKM_I2CENABLE:
             case CMD_BLINKM_RANDOM:
-                arg = strtol(optarg,NULL,0);
-                break;
             case CMD_BLINKM_SETADDR:
+            case CMD_BLINKM_PLAY:
                 arg = strtol(optarg,NULL,0);
                 break;
             }
@@ -280,6 +280,18 @@ int main(int argc, char **argv)
             fprintf(stderr,"error on blinkm cmd: %s\n",linkm_error_msg(err));
         }
     }
+    else if( cmd == CMD_BLINKM_GETVERSION ) {
+        printf("addr:%d: getting version\n", addr );
+        cmdbuf[0] = addr;
+        cmdbuf[1] = 'Z';
+        err = linkm_command(dev, LINKM_CMD_I2CSCAN, 2, 2, cmdbuf, recvbuf);
+        if( err ) {
+            fprintf(stderr,"error on getversion: %s\n",linkm_error_msg(err));
+        }
+        else { 
+            printf("version: %d,%d\n", recvbuf[0],recvbuf[1]);
+        }
+    }
     else if( cmd == CMD_BLINKM_SETADDR ) { 
         printf("setting addr from %d to %d\n", addr, arg );
         cmdbuf[0] = addr; // send to old address (or zero for broadcast)
@@ -326,14 +338,29 @@ int main(int argc, char **argv)
             usleep(millis * 1000 ); // sleep milliseconds
         }
     }
+    else if( cmd == CMD_BLINKM_PLAY  ) {
+        printf("addr %d: playing script #%d\n", addr,arg);
+        cmdbuf[0] = addr; 
+        cmdbuf[1] = 'p';  // play script
+        cmdbuf[2] = arg;
+        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 3,0, cmdbuf, NULL)) ) 
+            fprintf(stderr,"error on play: %s\n",linkm_error_msg(err));
+    }
+    else if( cmd == CMD_BLINKM_STOP  ) {
+        printf("addr %d: stopping scriptn", addr);
+        cmdbuf[0] = addr; 
+        cmdbuf[1] = 'o';  // stop script
+        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,0, cmdbuf, NULL)) ) 
+            fprintf(stderr,"error on stop: %s\n",linkm_error_msg(err));
+    }
     else if( cmd == CMD_BLINKM_OFF  ) {
         printf("addr %d: turning off\n", addr);
         cmdbuf[0] = addr; 
         cmdbuf[1] = 'o';  // stop script
         if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,0, cmdbuf, NULL)) ) 
             fprintf(stderr,"error on blinkmoff cmd: %s\n",linkm_error_msg(err));
-        cmdbuf[1] = 'n';  // turn off now
-        cmdbuf[2] = cmdbuf[3] = cmdbuf[4] = 0x00; 
+        cmdbuf[1] = 'n';  // set rgb color now now
+        cmdbuf[2] = cmdbuf[3] = cmdbuf[4] = 0x00;   // to zeros
         if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL)) ) 
             fprintf(stderr,"error on blinkmoff cmd: %s\n",linkm_error_msg(err));
     }

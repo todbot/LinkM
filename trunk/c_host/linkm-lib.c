@@ -2,6 +2,8 @@
  * linkm-lib -- LinkM functions 
  *
  *
+ * 2009, Tod E. Kurt, ThingM, http://thingm.com/
+ *
  */
 
 
@@ -16,7 +18,7 @@
 int linkm_debug = 0;
 
 /**
- * open up a linkm for transactions
+ * Open up a LinkM for transactions.
  * returns 0 on success, and opened device in "dev"
  * or returns non-zero error that can be decoded with linkm_error_msg()
  * FIXME: what happens when multiple are plugged in?
@@ -30,7 +32,7 @@ int linkm_open(usbDevice_t **dev)
 }
 
 /**
- * close a linkm 
+ * Close a LinkM 
  */
 void linkm_close(usbDevice_t *dev)
 {
@@ -41,7 +43,9 @@ void linkm_close(usbDevice_t *dev)
  * Given a linkm command, number of bytes to send and receive, 
  * and buffers to read from and write to, do a linkm transaction
  * Make sure buf_recv is big enough to receive data, or it will be truncated
- * return 0 on success, other on failure
+ * return 0 on success, other on failure.
+ *
+ * This is the most-used function for LinkM tools.
  */
 int linkm_command(usbDevice_t *dev, int cmd, 
                   int num_send, int num_recv,
@@ -93,7 +97,7 @@ int linkm_command(usbDevice_t *dev, int cmd,
 }
 
 /**
- * decodes error messages
+ * decodes error messages into string
  */
 char* linkm_error_msg(int errCode)
 {
@@ -115,8 +119,11 @@ char* linkm_error_msg(int errCode)
 }
 
 /* ------------------------------------------------------------------------- */
-/*  utility funcs */
+/*  Utility funcs */
 
+/**
+ * Print out a buffer as a hex string, with an optional intro string
+ */
 void hexdump(char* intro, uint8_t *buffer, int len)
 {
     int     i;
@@ -130,6 +137,9 @@ void hexdump(char* intro, uint8_t *buffer, int len)
     fprintf(fp, "\n");
 }
 
+/**
+ * Read a hex-formatted values from a string into a buffer
+ */
 int  hexread(uint8_t *buffer, char *string, int buflen)
 {
     char    *s;
