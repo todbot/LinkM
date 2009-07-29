@@ -5,8 +5,10 @@
 
 package thingm.linkm;
 
-// Java data struct representation of a BlinkM script line
-// also includes string rendering
+/**
+ * Java data struct representation of a BlinkM script line
+ * also includes string rendering
+ */
 public class BlinkMScriptLine {
   int dur = 0xff;  // indicates uninit'd line
   char cmd = (char)0xff;  // indicates uninit'd line
@@ -28,7 +30,9 @@ public class BlinkMScriptLine {
 
   }
 
-  // "construct" from a byte array.  could also do other error checking here
+  /**
+   *  "construct" from a byte array.  could also do other error checking here
+   */
   public boolean fromByteArray(byte[] ba) {
     if( ba==null || ba.length != 5 ) return false;
     dur  = ba[0] & 0xff;

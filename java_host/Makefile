@@ -1,6 +1,8 @@
 
 TARGET = LinkM
-LIBTARGET = libnative$(TARGET)
+LIBTARGET = libnative$(TARGET).jnilib
+#LIBTARGET = libnative$(TARGET).so  # for linux
+
 PROCESSING_LIBDIR = linkm/library
 LIBUSBA_DIR = libusb-static
 
@@ -33,7 +35,7 @@ help:
 	@echo "make libprep ... to get libusb usable for compiling"
 	@echo "make compile ....to build the C code" 
 	@echo "make jar ....... to build the distribution jar"
-	@echo "make processing. to build the processing library"
+	@echo "make processing. to build the processing library (only for OSX!)"
 	@echo "make clean ..... to clean all built files"
 
 javac:
@@ -49,7 +51,7 @@ libprep:
 	cp `libusb-config --exec-prefix`/lib/libusb.a $(LIBUSBA_DIR)
 
 compile: $(OBJ)
-	$(CC)  -o $(LIBTARGET).jnilib $(CFLAGS) $(LDFLAGS) $(OBJ)  -lc
+	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(LDFLAGS) $(OBJ)  -lc
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o
@@ -64,13 +66,15 @@ processinglib:	jar
 	mkdir -p $(PROCESSING_LIBDIR)
 	cp packaging/processing-export.txt $(PROCESSING_LIBDIR)/export.txt
 	cp linkm.jar $(PROCESSING_LIBDIR)
-	cp libnativeLinkM.jnilib $(PROCESSING_LIBDIR)
+	cp $(LIBTARGET) $(PROCESSING_LIBDIR)
+	#cp libnativeLinkM.dll $(PROCESSING_LIBDIR)
+	#cp libnativeLinkM.so $(PROCESSING_LIBDIR)
 	zip -r linkm.zip linkm
 # now unzip linkm.zip into ~/Documents/Processing/libraries  or maybe
 
 
 clean:
-	rm -f thingm/linkm/*.class *.o *.jnilib thingm_linkm_$(TARGET).h
+	rm -f thingm/linkm/*.class *.o $(LIBTARGET) thingm_linkm_$(TARGET).h
 	rm -f linkm.jar linkm.zip
 	rm -rf linkm
 	rm -rf $(LIBUSBA_DIR)

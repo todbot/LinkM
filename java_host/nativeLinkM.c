@@ -10,6 +10,10 @@
 
 /* ------------------------------------------------------------------------- */
 static usbDevice_t* dev;   // sigh.
+// the goal is to have a usbDevice_t* per LinkM instance, 
+// but for some reason I cannot get a LinkM instance int or long to
+// store the pointer in and then retrieve it. 
+// So for now, there's one global 'dev', so only one LinkM per system.
 
 /**
  * Class:     LinkM
@@ -71,14 +75,6 @@ JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_command
         num_recv = (*env)->GetArrayLength(env, jb_recv );
         byte_recv = (uint8_t*)(*env)->GetByteArrayElements(env, jb_recv,0);
     }
-
-    /*
-    printf("cmd: num_send:%d num_recv:%d\n",num_send,num_recv);
-    printf("cmd: 0x%02x byte_send: ",cmdbyte);
-    for( int i=0; i<num_send; i++ )
-        printf("0x%02x ",byte_send[i]);
-    printf("\n");
-    */
 
     err = linkm_command(dev, cmdbyte, num_send,num_recv, byte_send,byte_recv);
     if( err ) {

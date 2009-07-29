@@ -9,7 +9,7 @@
  *  - Scan I2C bus           (all 127 addrs?)
  *  - Do raw I2C transaction (as linkm-tool)
  *
- * 2009, ThingM, Tod E. Kurt, http://thingm.com/
+ * 2009, Tod E. Kurt, ThingM, http://thingm.com/
  *
  */
 
@@ -55,15 +55,24 @@ public class LinkM
 "Usage: LinkM <cmd> [options]\n" +
 "\n"+
 "where <cmd> is one of:\n" +
-"  --cmd <blinkmcmd> send a blinkm command  (uses addr) \n"+
-"  --off             turn off blinkm at specified address (or all) \n"+
-"  --i2cscan         scan I2c bus for devices  \n"+
-"  --upload          upload a light script to blinkm (needs addr & file) \n"+
-"  --download        download light script from blinkm (needs addr & file) \n"+
-"  --linkmcmd        send a raw linkm command  \n"+
+"  --cmd <blinkmcmd> Send a blinkm command  \n" +
+"  --off             Turn off blinkm at specified address (or all) \n" +
+"  --play <n>        Play light script N \n" +
+"  --stop            Stop playing light script \n" +
+"  --getversion      Gets BlinkM version \n" +
+"  --setaddr <newa>  Set address of blinkm at address 'addr' to 'newa' \n" +
+"  --random <n>      Send N random colors to blinkm\n" +
+"  --i2cscan         Scan I2c bus for devices  \n" +
+"  --i2enable <0|1>  Enable or disable the I2C bus (for connecting devices) \n"+
+"  --upload          Upload a light script to blinkm (reqs addr & file) \n"+
+"  --download <n>    Download light script n from blinkm (reqs addr & file) \n"+
+"  --linkmcmd        Send a raw linkm command  \n"+
+"  --statled <0|1>   Turn on or off status LED  \n"+
 "Options:\n"+
 "  -h, --help                   Print this help message\n"+
-"  -a, --addr=i2caddr           i2c address\n"+
+"  -a addr, --addr=i2caddr      I2C address for command (default 0)\n"+
+"  -f file, --afile=file        Read or save to this file\n"+
+"  -m ms,   --miilis=millis     Set millisecs betwen actions (default 100)\n"+
 "  -v, --verbose                verbose debugging msgs\n"+
 "\n"+
 "Note:  blah blah blah\n"
@@ -143,6 +152,9 @@ public class LinkM
       else if( a.equals("--help")) { 
         cmd = "help";
       }
+      else if( a.equals("--factorysettings") ) {
+        cmd = "factorysettings";
+      }
       else { 
         file = args[j];
       }
@@ -198,6 +210,7 @@ public class LinkM
         }
       }
       else if( cmd.equals("i2cscan") ) { 
+        if( addr == 0 ) addr = 1; // don't scan general call / broadcast addr
         println("I2C scan from addresses "+addr+" - "+(addr+16));
         byte[] addrs = linkm.i2cScan(addr,addr+16);
         if( addrs == null ) {
@@ -234,7 +247,8 @@ public class LinkM
           int rsize = respSizeForCommand( argbuf[0] );
           byte[] respbuf = new byte[ rsize ];
           linkm.commandi2c( cmdbuf, respbuf );
-          printHexString( "response: ", respbuf );
+          if( rsize > 0 ) 
+            printHexString( "response: ", respbuf );
         }
       }
       else if( cmd.equals("play") ) {
@@ -244,6 +258,18 @@ public class LinkM
       else if( cmd.equals("stop") ) { 
         println("Stopping any playing light script at addr "+addr);
         linkm.stopScript( addr );
+      }
+      else if( cmd.equals("setlength") ) {
+        println("Setting length to "+arg+" for addr "+addr);
+        linkm.setScriptLengthRepeats( addr, (int)arg, 0 ); //  0 reps = inf
+      }
+      else if( cmd.equals("factorysettings") ) {        
+        if( addr == 0 ) { 
+          println("Address 0 is not allowed. Set address with --addr=<addr>");
+          return;
+        }
+        println("Setting BlinkM to factory settings for addr "+addr);
+        linkm.setFactorySettings(addr);
       }
       else if( cmd.equals("random") ) { 
         Random rand = new Random();
@@ -455,7 +481,7 @@ public class LinkM
     commandi2c( cmdbuf, null );
     pause(20);  // enforce wait for EEPROM write
   }
-  
+
   /**
    * Default values for startup params
    */
@@ -463,12 +489,22 @@ public class LinkM
     setStartupParams( addr, 1, 0, 0, 8, 0 );
   }
 
+  /**
+   * Set light script default length and repeats.
+   * reps == 0 means infinite repeats
+   */
+  public void setScriptLengthRepeats( int addr, int len, int reps) 
+    throws IOException {
+    byte[] cmdbuf = { (byte)addr, 'L', 0, (byte)len, (byte)reps };
+    commandi2c( cmdbuf, null );
+    pause(20);  // enforce wait for EEPROM write
+  }
 
   /**
    * Write an entire BlinkM light script as an ArrayList of BlinkMScriptLines
    * to blinkm at address 'addr'.
    */
-  public void writeScript( int addr, ArrayList scriptLines ) 
+  public void writeScript( int addr,  ArrayList scriptLines ) 
     throws IOException {
     int olen = scriptLines.size();
     // copy only the good ones  FIXME: this is kind of a hack
@@ -489,6 +525,9 @@ public class LinkM
     for( int i=0; i< len; i++ ) {
       writeScriptLine( addr, i, sl.get(i) );
     }
+
+    setScriptLengthRepeats( addr, len, 0);
+    
   }
 
   /**
@@ -501,7 +540,7 @@ public class LinkM
     byte[] cmdbuf = new byte[9];    // 
     cmdbuf[0] = (byte)addr;         // i2c address of blinkm
     cmdbuf[1] = (byte)'W';          // "Write Script Line" command
-    cmdbuf[2] = (byte)0;            // script id (0==eeprom)
+    cmdbuf[2] = (byte) 0;           // script id (0==eeprom)
     cmdbuf[3] = (byte)pos;          // script line number
     cmdbuf[4] = (byte)line.dur;     // duration in ticks
     cmdbuf[5] = (byte)line.cmd;     // command
@@ -553,6 +592,21 @@ public class LinkM
     return lines;
   }
 
+  /**
+   * Set a BlinkM back to factory settings
+   * Writes a new light script and sets the startup paramters
+   */
+  public void setFactorySettings( int addr ) throws IOException {
+    ArrayList<BlinkMScriptLine> scriptLines = new ArrayList<BlinkMScriptLine>();
+    scriptLines.add( new BlinkMScriptLine(  1, 'f', 10,0,0 ) );
+    scriptLines.add( new BlinkMScriptLine(100, 'c', 0xff,0xff,0xff) );
+    scriptLines.add( new BlinkMScriptLine( 50, 'c', 0xff,0x00,0x00) );
+    scriptLines.add( new BlinkMScriptLine( 50, 'c', 0x00,0xff,0x00) );
+    scriptLines.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0xff) );
+
+    writeScript( addr, scriptLines);
+    setStartupParamsDefault(addr);
+  }
 
   public void debug( String s ) {
     if(debug>0) println(s);
@@ -634,6 +688,7 @@ public class LinkM
     if( lines==null ) return null;
     for (int i = 0; i < lines.size(); i++) {
       String l = (String) lines.get(i);
+
       String[] lineparts = l.split("//");  // in case there's a comment
       String ls = l.replaceAll("\\s+","");  // squash all spaces to zero
 
