@@ -1,6 +1,8 @@
 /**
  * linkm-lib --
  *
+ * 2009, Tod E. Kurt, ThingM, http://thingm.com/
+ *
  */
 
 #ifndef __LINKM_LIB_H_INCLUDED__
