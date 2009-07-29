@@ -16,3 +16,4 @@ include Makefile
 USBFLAGS=
 USBLIBS=    -lhid -lsetupapi
 EXE_SUFFIX= .exe
+LIBTARGET  = $(TARGET).dll
