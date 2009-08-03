@@ -1,0 +1,6 @@
+//
+// BlinkM ROM script #2 -- "white blink"
+// 
+{ 20, {'c', 0xff,0xff,0xff}},  // white
+{ 20, {'c', 0x00,0x00,0x00}},  // black
+
