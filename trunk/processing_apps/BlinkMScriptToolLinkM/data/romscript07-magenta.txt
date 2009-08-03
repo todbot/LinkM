@@ -1,0 +1,5 @@
+//
+// BlinkM ROM script #6 -- "magenta blink"
+// 
+{ 20, {'c', 0xff,0x00,0xff}},  // magenta
+{ 20, {'c', 0x00,0x00,0x00}},  // black

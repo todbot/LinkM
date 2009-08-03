@@ -1,0 +1,16 @@
+// Dark detector
+// This script remains dark until it gets dark enough out, then it lights up 
+// To use:
+// hook a 10k resistor between input #0 and ground
+// hook a small photocell between input #0 and 5V
+//
+{
+	{1, {'f',5,0,0}},	//          set color_step (fade speed) to 5
+	{1, {'c',0x00,0x00,0x00}},	//          black
+	{1, {'i',1,32,-1}},	//          on input 1, jump -1 if > 32
+	{20, {'c',0xff,0xff,0xff}},	//          only do this if input is lowish
+	{25, {'c',0x33,0x11,0xff}},	//          blueish purple
+	{22, {'c',0xff,0xff,0xff}},	//          white
+	{25, {'c',0x33,0x33,0xff}},	//          blue
+	{27, {'c',0xff,0xff,0xff}},	//          white
+}

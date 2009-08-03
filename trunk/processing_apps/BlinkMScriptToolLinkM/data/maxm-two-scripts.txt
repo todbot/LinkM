@@ -1,0 +1,17 @@
+//
+// MaxM script -- "two mini scripts in one"
+//  Two mini light scripts in one larger script, using the 'j'ump command
+//  to play one, send {'p',0,0,0}}, the 2nd with {'p',0,0,4} 
+//
+
+// mini-script one 
+{ 1, {'f', 100, 0x00,0x00}}, // set fade speed to 100 
+{25, {'c', 0xff,0xff,0xff}}, // full white 
+{25, {'c', 0x00,0x00,0x00}}, // all off 
+{ 1, {'j', -2,  0,   0   }}  // jump back two 
+// mini-script two 
+{  1, {'f',  7, 0x00,0x00}},  // set fade speed to 7 
+{100, {'c', 0xff,0x00,0x00}}, // fade to red 
+{100, {'c', 0x00,0xff,0x00}}, // fade to green 
+{100, {'c', 0x00,0x00,0xff}}, // fade to blue 
+{ 1,  {'j',  -3, 0,   0   }}  // jump back three 
