@@ -70,7 +70,9 @@ processinglib:	jar
 	#cp libnativeLinkM.dll $(PROCESSING_LIBDIR)
 	#cp libnativeLinkM.so $(PROCESSING_LIBDIR)
 	zip -r linkm.zip linkm
-# now unzip linkm.zip into ~/Documents/Processing/libraries  or maybe
+	@echo
+	@echo "now unzip linkm.zip into ~/Documents/Processing/libraries"
+	@echo "or maybe just: cp -r linkm ~/Documents/Processing/libraries"
 
 
 clean:
