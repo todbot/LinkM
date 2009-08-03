@@ -56,7 +56,8 @@ public class BlinkMScriptLine {
   // this seems pretty inefficient with all the string cats
   public String toString() {
     String s;
-    if( dur == -1 && cmd == 0 && comment !=null ) {
+    if( ((dur == 0xff && cmd == 0xff ) || 
+         (dur == -1 && cmd == 0)) && comment !=null ) {
       s = comment;
     }
     else {

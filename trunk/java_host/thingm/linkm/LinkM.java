@@ -45,6 +45,8 @@ public class LinkM
 
 
   //---------------------------------------------------------------------------
+  // Test Functionality
+  //---------------------------------------------------------------------------
 
   /**
    * Demonstrates library usage by creating little command-line tool
@@ -92,6 +94,7 @@ public class LinkM
     long arg = -1;
     String file = null;
     byte[] argbuf = null;
+    ArrayList<BlinkMScriptLine> scriptLines;
     
     // argument processing
     int j=0;
@@ -180,8 +183,8 @@ public class LinkM
       // command handling
 
       if( cmd.equals("upload") ) {
-        ArrayList lines = linkm.loadFile( file );
-        ArrayList scriptLines  = linkm.parseScript( lines );
+        ArrayList lines = linkm.loadFile( file );  // FIXME: kinda hacky here
+        scriptLines = linkm.parseScript((String[]) lines.toArray() );
         if( scriptLines == null ) {
           System.err.println("bad format in file");
           return;
@@ -203,7 +206,7 @@ public class LinkM
         }
         println("Downloading script from ...");
         BlinkMScriptLine line = null;
-        ArrayList scriptLines = linkm.readScript( addr, 0 );
+        scriptLines = linkm.readScript( addr, 0 );
         for(int i=0; i< scriptLines.size(); i++ ) {
           line = (BlinkMScriptLine) scriptLines.get(i);
           println(line.toString());  
@@ -282,8 +285,8 @@ public class LinkM
         }
       }
       
-    } catch(IOException e) { 
-      System.err.println("error: "+e);
+    } catch(IOException e) {
+      System.err.println("error: "+e.getMessage());
     }
     
     linkm.close();
@@ -291,9 +294,9 @@ public class LinkM
   }
   
   
-  // --------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
   // Native method declarations
-  //
+  //---------------------------------------------------------------------------
 
   /**
    * Open LinkM dongle 
@@ -334,9 +337,9 @@ public class LinkM
   native byte[] test(byte[] buff);
 
 
-  // --------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
   // Instance methods
-  //
+  //---------------------------------------------------------------------------
 
   /**
    * Open the first LinkM found
@@ -419,12 +422,6 @@ public class LinkM
     throws IOException { 
     stopScript(addr);               
     setRGB(addr, 0,0,0 );
-    /*
-    byte[] cmdbuf1 = { (byte)addr, 'o' };          // stop script playing
-    byte[] cmdbuf2 = { (byte)addr, 'n', 0,0,0};    // go to black now
-    commandi2c( cmdbuf1, null );
-    commandi2c( cmdbuf2, null );
-    */
   }
 
   /**
@@ -501,10 +498,33 @@ public class LinkM
   }
 
   /**
+   *
+   */
+  public byte[] readInputs( int addr ) throws IOException { 
+    debug("BlinkMComm.readInputs");
+    byte[] cmdbuf = { (byte)addr, 'i', 0};
+    byte[] respbuf = new byte[4]; // 4 bytes of response (should be 5?)
+    commandi2c( cmdbuf, respbuf);
+    return respbuf;
+
+  }
+
+  /**
+   *
+   */
+  public void writeScript( int addr, String script ) 
+    throws IOException {
+    ArrayList<BlinkMScriptLine> scriptLines = parseScript( script );
+    writeScript( addr, scriptLines );
+  }
+
+  /**
    * Write an entire BlinkM light script as an ArrayList of BlinkMScriptLines
    * to blinkm at address 'addr'.
+   * @param addr blinkm addr
+   * @param scriptLines list of BlinkMScriptLines
    */
-  public void writeScript( int addr,  ArrayList scriptLines ) 
+  public void writeScript( int addr,  ArrayList<BlinkMScriptLine> scriptLines) 
     throws IOException {
     int olen = scriptLines.size();
     // copy only the good ones  FIXME: this is kind of a hack
@@ -525,7 +545,7 @@ public class LinkM
     for( int i=0; i< len; i++ ) {
       writeScriptLine( addr, i, sl.get(i) );
     }
-
+    
     setScriptLengthRepeats( addr, len, 0);
     
   }
@@ -576,7 +596,7 @@ public class LinkM
   /**
    * Read an entire light script from a BlinkM at address 'addr' 
    */
-  public ArrayList readScript( int addr, int script_id ) 
+  public ArrayList<BlinkMScriptLine> readScript( int addr, int script_id ) 
     throws IOException { 
     ArrayList<BlinkMScriptLine> lines = new ArrayList<BlinkMScriptLine>();
     BlinkMScriptLine line;
@@ -590,6 +610,16 @@ public class LinkM
       }
     }
     return lines;
+  }
+
+  /**
+   * Read an entire light script, return as a string
+   */
+  public String readScriptToString( int addr, int script_id )
+    throws IOException {
+    ArrayList scriptLines = readScript( addr, script_id );
+    String str = scriptLinesToString(scriptLines);
+    return str;
   }
 
   /**
@@ -608,13 +638,15 @@ public class LinkM
     setStartupParamsDefault(addr);
   }
 
+
   public void debug( String s ) {
     if(debug>0) println(s);
   }
 
-  // --------------------------------------------------------------------------
+
+  //---------------------------------------------------------------------------
   // Class methods
-  //
+  //---------------------------------------------------------------------------
 
   /**
    * Essentially a sparse-array lookup-table for those commands that may 
@@ -636,6 +668,13 @@ public class LinkM
    * Load a text file and turn it into an ArrayList of Strings.
    */
   static final public ArrayList loadFile( String filename ) {
+    return loadFile( new File(filename) );
+  }
+
+  /**
+   * Load a text file and turn it into an ArrayList of Strings.
+   */
+  static final public ArrayList loadFile( File filename ) {
     ArrayList<String> lines = new ArrayList<String>();
     String line;
     BufferedReader in = null;
@@ -676,18 +715,28 @@ public class LinkM
   }
 
   /**
+   *
+   */
+  static final public ArrayList<BlinkMScriptLine> parseScript( String script ) {
+    return parseScript( script.split("\n") );
+  }
+
+  /**
    * Take a String and turn it into an ArrayList of BlinkMScriptLine objects
    */
   //@SuppressWarnings("unchecked")
-  static final public ArrayList parseScript( ArrayList lines ) {
+  //static final public ArrayList parseScript( ArrayList lines ) {
+  static final public ArrayList<BlinkMScriptLine> parseScript( String[] lines ){
     BlinkMScriptLine bsl; 
     ArrayList<BlinkMScriptLine> sl = new ArrayList<BlinkMScriptLine>();  
     //ArrayList sl = new ArrayList();  
     String linepat = "\\{(.+?),\\{'(.+?)',(.+?),(.+?),(.+?)\\}\\}";
     Pattern p = Pattern.compile(linepat);
     if( lines==null ) return null;
-    for (int i = 0; i < lines.size(); i++) {
-      String l = (String) lines.get(i);
+    //for (int i = 0; i < lines.size(); i++) {
+    //String l = (String) lines.get(i);
+    for( int i=0; i< lines.length; i++) { 
+      String l = lines[i];
 
       String[] lineparts = l.split("//");  // in case there's a comment
       String ls = l.replaceAll("\\s+","");  // squash all spaces to zero
@@ -718,6 +767,7 @@ public class LinkM
    * not strictly needed since we can just read/write the editArea
    */
   static final public String scriptLinesToString(ArrayList scriptlines) {
+    if( scriptlines == null || scriptlines.size()==0 ) return null;
     String str = "{\n";
     BlinkMScriptLine line;
     for( int i=0; i< scriptlines.size(); i++ ) {
@@ -728,18 +778,17 @@ public class LinkM
     return str;
   }
 
-  // -----------------------------------------------------------------------
+  //-------------------------------------------------------------------------
+  // Utilty Class methods
+  //-------------------------------------------------------------------------
 
   /**
-   * Utility:
-   */
-
-  /**
-   * A simple delay
+   * Utility: A simple delay
    */
   static final public void pause( int millis ) {
       try { Thread.sleep(millis); } catch(Exception e) { }
   }
+
   static final public void println(String s) { 
     System.out.println(s);
   }
