@@ -118,13 +118,23 @@ class MyActionListener implements ActionListener{
   }
 }
 
-// pop up the connect dialog box if we need to
+// open up the LinkM and set it up if it hasn't been
 boolean connectIfNeeded() {
   if( !isConnected ) {
     try { 
       linkm.open();
+      linkm.i2cEnable(true);
+      byte[] addrs = linkm.i2cScan(1,17);  // FIXME: not a full scan
+      int cnt = addrs.length;
+      println("found "+cnt+" blinkms");
+      if( cnt>0 ) {
+        bladdr = addrs[0];
+      }
+      else {
+        println("no blinkm found!");  // FIXME: pop up dialog?
+      }
     } catch(IOException ioe) {
-      println("no linkm?\n"+ioe);
+      println("connect:no linkm?\n"+ioe);
       return false;
     }
   }
@@ -144,12 +154,13 @@ void stopScript() {
 
 //
 void playScript() {
+  if( !connectIfNeeded() ) return;
   int pos = 0;
   String s = posText.getText().trim();
   try { pos = Integer.parseInt(s);} catch(Exception nfe){}
   if( pos < 0 ) pos = 0;
   println("playing at position "+pos);
-  if( !connectIfNeeded() ) return;
+  //if( !connectIfNeeded() ) return;
   try { 
     linkm.playScript(bladdr, 0,0,pos);
   } catch(IOException ioe) { 
@@ -162,39 +173,47 @@ void sendToBlinkM() {
   //String[] rawlines = editArea.getText().split("\n");
   //String str = linkm.scriptLinesToString(rawlines);
   String str = editArea.getText();
-  ArrayList scriptLines = linkm.parseScript(str);
-  str = linkm.scriptLinesToString(scriptLines);
-  if(debug) println( str );
-    
-  if( !connectIfNeeded() ) return;
+  BlinkMScript script = linkm.parseScript(str);
+  println("script:\n"+script.toString(true));
+  BlinkMScript scriptToSend = script.trimComments();
+  println("scriptToSend:\n"+scriptToSend.toString(true));
+  int len = scriptToSend.length();
 
+  if(debug) 
+      println("size:"+script.length()+", no comment size:"+len); //+"\n"+str );
+
+  if( !connectIfNeeded() ) return;
+  
   // update the text area with the parsed script
   str = "// Uploaded to BlinkM on "+(new Date())+"\n" + str;
   editArea.setText( str );
     
-  println("sending!...");
+  print("sending!...");
   try { 
-    linkm.writeScript( bladdr, scriptLines );
+    linkm.writeScript( bladdr, scriptToSend );
     linkm.setStartupParamsDefault(bladdr);
     linkm.playScript(bladdr);
+
+    // write an empty scriptLine to indicate end of script on readback
+    if( len < maxScriptLength ) {  
+        linkm.writeScriptLine( bladdr, len, nullScriptLine );
+    }
+    linkm.setScriptLengthRepeats( bladdr, len, 0 );
+
   } catch( IOException ioe ) {
     println("no linkm?\n"+ioe);
   }
-  /*
-    if( len < maxScriptLength ) {  
-    linkm.writeScriptLine( len, nullScriptLine );
-    }
-    linkm.setScriptLengthRepeats( 0, len, 0 );
-  */
+  println("done");
+
 }
 
 // download a script from a blinkm
 void receiveFromBlinkM() {
   if( !connectIfNeeded() ) return;
-  println("receiving!...");
+  print("receiving!...");
   String str = null;
   try { 
-    str = linkm.readScriptToString( bladdr, 0);
+    str = linkm.readScriptToString( bladdr, 0, false);
   } catch(IOException ioe) {
     println("no linkm?\n"+ioe);
   }
@@ -203,6 +222,7 @@ void receiveFromBlinkM() {
     editArea.setText(str); // copy it all to the edit textarea
     editArea.setCaretPosition(0);
   }
+  println("done!");
 }
 
 // Load a text file containing a light script and turn it into BlinkMScriptLines
