@@ -41,6 +41,7 @@ enum {
     LINKM_ERR_BADARGS,
     LINKM_ERR_I2C,
     LINKM_ERR_I2CREAD,
+    LINKM_ERR_NOTOPEN = 199,
 };
 
 

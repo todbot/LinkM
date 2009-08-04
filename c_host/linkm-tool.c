@@ -49,6 +49,7 @@ enum {
     CMD_BLINKM_COLOR,
     CMD_BLINKM_UPLOAD,
     CMD_BLINKM_DOWNLOAD,
+    CMD_BLINKM_READINPUTS,
     CMD_BLINKM_SETADDR,
     CMD_BLINKM_GETVERSION,
     CMD_BLINKM_RANDOM,
@@ -73,6 +74,7 @@ void usage(char *myName)
 "  --i2enable <0|1>  Enable or disable the I2C bus (for connecting devices) \n"
 "  --upload          Upload a light script to blinkm (reqs addr & file) \n"
 "  --download <n>    Download light script n from blinkm (reqs addr & file) \n"
+"  --readinputs      Read inputs (on MaxM)\n"
 "  --linkmcmd        Send a raw linkm command  \n"
 "  --statled <0|1>   Turn on or off status LED  \n"
 "Options:\n"
@@ -142,6 +144,7 @@ int main(int argc, char **argv)
         {"color",      required_argument, &cmd,   CMD_BLINKM_COLOR },
         {"upload",     required_argument, &cmd,   CMD_BLINKM_UPLOAD },
         {"download",   required_argument, &cmd,   CMD_BLINKM_DOWNLOAD },
+        {"readinputs", no_argument,       &cmd,   CMD_BLINKM_READINPUTS },
         {"random",     required_argument, &cmd,   CMD_BLINKM_RANDOM },
         {"setaddr",    required_argument, &cmd,   CMD_BLINKM_SETADDR },
         {"getversion", no_argument,       &cmd,   CMD_BLINKM_GETVERSION },
@@ -284,12 +287,12 @@ int main(int argc, char **argv)
         printf("addr:%d: getting version\n", addr );
         cmdbuf[0] = addr;
         cmdbuf[1] = 'Z';
-        err = linkm_command(dev, LINKM_CMD_I2CSCAN, 2, 2, cmdbuf, recvbuf);
+        err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2, 2, cmdbuf, recvbuf);
         if( err ) {
             fprintf(stderr,"error on getversion: %s\n",linkm_error_msg(err));
         }
         else { 
-            printf("version: %d,%d\n", recvbuf[0],recvbuf[1]);
+            printf("version: %c,%c\n", recvbuf[0],recvbuf[1]);
         }
     }
     else if( cmd == CMD_BLINKM_SETADDR ) { 
@@ -392,7 +395,17 @@ int main(int argc, char **argv)
     else if( cmd == CMD_BLINKM_UPLOAD ) {
         
     }
-
+    else if( cmd == CMD_BLINKM_READINPUTS ) {
+        cmdbuf[0] = addr;
+        cmdbuf[1] = 'i';
+        err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,4, cmdbuf, recvbuf );
+        if( err ) {
+            fprintf(stderr,"error on readinputs: %s\n", linkm_error_msg(err));
+        }
+        else { 
+            hexdump("inputs: ", recvbuf, 5);
+        }
+    }
 
  shutdown:
     linkm_close(dev);
