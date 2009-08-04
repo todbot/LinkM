@@ -57,6 +57,9 @@ int linkm_command(usbDevice_t *dev, int cmd,
         printf("linkmcmd: cmd:0x%x, num_send:%d, num_recv:%d\n",
                cmd, num_send, num_recv );
     }
+    if( dev==NULL ) {
+        return LINKM_ERR_NOTOPEN;
+    }
     memset( buf, 0, sizeof(buf));  // debug: zero everything (while testing)
     buf[0] = 0;            // byte 0 : report id, required by usb functions
     buf[1] = START_BYTE;   // byte 1 : start byte
@@ -105,12 +108,13 @@ char* linkm_error_msg(int errCode)
 
     switch(errCode){
     case USBOPEN_ERR_ACCESS:      return "Access to device denied";
-    case USBOPEN_ERR_NOTFOUND:    return "The specified device was not found";
+    case USBOPEN_ERR_NOTFOUND:    return "LinkM, not found";
     case USBOPEN_ERR_IO:          return "Communication error with device";
-    case LINKM_ERR_BADSTART:      return "LinkM, start byte";
+    case LINKM_ERR_BADSTART:      return "LinkM, bad start byte";
     case LINKM_ERR_BADARGS:       return "LinkM, improper args for command";
     case LINKM_ERR_I2C:           return "LinkM, I2C error";
     case LINKM_ERR_I2CREAD:       return "LinkM, I2C read error";
+    case LINKM_ERR_NOTOPEN:       return "LinkM not opened";
     default:
         sprintf(buffer, "Unknown USB error %d", errCode);
         return buffer;
