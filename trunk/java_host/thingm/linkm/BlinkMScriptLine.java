@@ -2,7 +2,6 @@
  *
  */
 
-
 package thingm.linkm;
 
 /**
@@ -10,8 +9,8 @@ package thingm.linkm;
  * also includes string rendering
  */
 public class BlinkMScriptLine {
-  int dur = 0xff;  // indicates uninit'd line
-  char cmd = (char)0xff;  // indicates uninit'd line
+  int dur = 0xff;
+  char cmd = (char)0x00;   // indicates uninit'd line
   int  arg1,arg2,arg3;
   String comment;
   
@@ -56,12 +55,15 @@ public class BlinkMScriptLine {
   // this seems pretty inefficient with all the string cats
   public String toString() {
     String s;
-    if( ((dur == 0xff && cmd == 0xff ) || 
-         (dur == -1 && cmd == 0)) && comment !=null ) {
+    if( cmd==0x00 && comment !=null ) {
       s = comment;
     }
     else {
-      s = "{"+dur+", {'"+cmd+"',";
+      String cmdstr = "'"+cmd+"'";
+      if( cmd < ' ' || cmd > '~' )  // outside printable ascii space
+        cmdstr = makeGoodHexString(cmd);
+        
+      s = "{"+dur+", {"+cmdstr+",";
       if( cmd=='n'||cmd=='c'||cmd=='C'||cmd=='h'||cmd=='H' ) {
         s += makeGoodHexString(arg1) +","+
           makeGoodHexString(arg2) +","+
