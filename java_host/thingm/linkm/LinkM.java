@@ -152,6 +152,9 @@ public class LinkM
         //file = args[++j];
         cmd = "download";
       }
+      else if( a.equals("--readinputs")) { 
+        cmd = "readinputs";
+      }
       else if( a.equals("--help")) { 
         cmd = "help";
       }
@@ -280,6 +283,16 @@ public class LinkM
         println("Setting BlinkM to factory settings for addr "+addr);
         linkm.setFactorySettings(addr);
       }
+      else if( cmd.equals("readinputs") ) {
+        if( addr == 0 ) {
+          println("Must read from an address. Set address with --addr=<addr>");
+          return;
+        }
+        print("Inputs: ");
+        byte inputs[] = linkm.readInputs(addr);
+        printHexString("inputs: ", inputs);
+
+      } 
       else if( cmd.equals("random") ) { 
         Random rand = new Random();
         for( int i=0; i< arg; i++ ) { 
@@ -558,8 +571,8 @@ public class LinkM
    */
   public byte[] readInputs( int addr ) throws IOException { 
     debug("BlinkMComm.readInputs");
-    byte[] cmdbuf = { (byte)addr, 'i', 0};
-    byte[] respbuf = new byte[4]; // 4 bytes of response (should be 5?)
+    byte[] cmdbuf = { (byte)addr, 'i'};
+    byte[] respbuf = new byte[4]; // 4 bytes of response
     commandi2c( cmdbuf, respbuf);
     return respbuf;
   }
@@ -823,6 +836,10 @@ public class LinkM
 
   static final public void printHexString(String intro, byte[] buf) {
     System.out.print(intro);
+    if( buf==null ) {
+      System.out.println("null");
+      return;
+    }
     for( int i=0;i<buf.length; i++ ) 
       System.out.print( "0x"+ hex(buf[i],2) +" ");
     println("");
