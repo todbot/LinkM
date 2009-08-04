@@ -18,6 +18,7 @@ package thingm.linkm;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
+import java.awt.Color;
 
 public class LinkM 
 {
@@ -94,7 +95,6 @@ public class LinkM
     long arg = -1;
     String file = null;
     byte[] argbuf = null;
-    ArrayList<BlinkMScriptLine> scriptLines;
     
     // argument processing
     int j=0;
@@ -108,7 +108,7 @@ public class LinkM
       //  color = parseHexDecInt( getArg(args,++j,"") );
       //  cmd = "color";
       //}
-      else if( a.equals("--debug") || a.equals("-d") ) { 
+      else if( a.equals("--debug") || a.equals("-d") || a.equals("-v") ) { 
         debug++;
       }
       else if( a.equals("--millis") || a.equals("-m") ) {
@@ -184,20 +184,26 @@ public class LinkM
 
       if( cmd.equals("upload") ) {
         ArrayList lines = linkm.loadFile( file );  // FIXME: kinda hacky here
-        scriptLines = linkm.parseScript((String[]) lines.toArray() );
-        if( scriptLines == null ) {
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < lines.size(); i++) {
+          String l = (String) lines.get(i);
+          sb.append(l); sb.append("\n");
+        }
+
+        BlinkMScript script = linkm.parseScript( sb.toString() );
+        if( script == null ) {
           System.err.println("bad format in file");
           return;
         }
-
+        script = script.trimComments(); 
+        int len = script.length();
         if( debug>0 ) {
-          for( int i=0; i < scriptLines.size(); i++ ) 
-            println(i+":"+scriptLines.get(i) );
+          for( int i=0; i < len; i++ ) 
+            println(i+": "+script.get(i) );
         }
 
-        println("Uploading "+scriptLines.size()+
-                           " line script to BlinkM address "+addr);
-        linkm.writeScript( addr, scriptLines );
+        println("Uploading "+len+" line script to BlinkM address "+addr);
+        linkm.writeScript( addr, script );
       }
       else if( cmd.equals("download") ) {
         if( addr == 0 ) { 
@@ -206,9 +212,9 @@ public class LinkM
         }
         println("Downloading script from ...");
         BlinkMScriptLine line = null;
-        scriptLines = linkm.readScript( addr, 0 );
-        for(int i=0; i< scriptLines.size(); i++ ) {
-          line = (BlinkMScriptLine) scriptLines.get(i);
+        BlinkMScript script = linkm.readScript( addr, 0, false );
+        for(int i=0; i< script.length(); i++ ) {
+          line = script.get(i);
           println(line.toString());  
         }
       }
@@ -431,7 +437,7 @@ public class LinkM
     throws IOException { 
     byte[] cmdbuf = { (byte)addr, 'z' };
     byte[] recvbuf = new byte[ 2 ]; 
-    command( LINKM_CMD_I2CSCAN, cmdbuf, recvbuf);
+    commandi2c( cmdbuf, recvbuf );
     return recvbuf;
   }
 
@@ -461,9 +467,59 @@ public class LinkM
     commandi2c( cmdbuf, null );
   }
   
+  /**
+   *
+   */
   public void setRGB(int addr, int r, int g, int b) 
     throws IOException { 
     byte[] cmdbuf = { (byte)addr, 'n', (byte)r, (byte)g, (byte)b };
+    commandi2c( cmdbuf, null );
+  }
+
+  /**
+   *
+   */
+  public void fadeToRGB(int addr, int r, int g, int b) 
+    throws IOException { 
+    byte[] cmdbuf = { (byte)addr, 'c', (byte)r, (byte)g, (byte)b };
+    commandi2c( cmdbuf, null );
+  }
+
+  /**
+   *
+   */
+  public void fadeToRGB(int addr, Color color) 
+    throws IOException { 
+    fadeToRGB( addr, color.getRed(), color.getGreen(), color.getBlue());
+  }
+
+  /**
+   * Return the RGB color the BlinkM is currently at.
+   */
+  public Color getRGBColor( int addr )
+    throws IOException { 
+    byte[] cmdbuf = { (byte)addr, 'g'};
+    byte[] respbuf = new byte[3]; // 3 bytes of response, r,g,b 
+    commandi2c( cmdbuf, respbuf);
+    Color color = new Color( respbuf[0], respbuf[1], respbuf[2] );
+    return color;
+  }
+
+  /**
+   *
+   */
+  public void setFadeSpeed(int addr, int fadespeed)
+    throws IOException { 
+    byte[] cmdbuf = { (byte)addr, 'f', (byte)fadespeed };
+    commandi2c( cmdbuf, null );
+  }
+
+  /**
+   *
+   */
+  public void setTimeAdj(int addr, int timeadj)
+    throws IOException { 
+    byte[] cmdbuf = { (byte)addr, 't', (byte)timeadj };
     commandi2c( cmdbuf, null );
   }
 
@@ -490,7 +546,7 @@ public class LinkM
    * Set light script default length and repeats.
    * reps == 0 means infinite repeats
    */
-  public void setScriptLengthRepeats( int addr, int len, int reps) 
+  public void setScriptLengthRepeats( int addr, int len, int reps)
     throws IOException {
     byte[] cmdbuf = { (byte)addr, 'L', 0, (byte)len, (byte)reps };
     commandi2c( cmdbuf, null );
@@ -506,48 +562,32 @@ public class LinkM
     byte[] respbuf = new byte[4]; // 4 bytes of response (should be 5?)
     commandi2c( cmdbuf, respbuf);
     return respbuf;
-
   }
 
   /**
    *
    */
-  public void writeScript( int addr, String script ) 
+  public void writeScript( int addr, String scriptstr ) 
     throws IOException {
-    ArrayList<BlinkMScriptLine> scriptLines = parseScript( script );
-    writeScript( addr, scriptLines );
+    BlinkMScript script = parseScript( scriptstr );
+    writeScript( addr, script );
   }
 
   /**
-   * Write an entire BlinkM light script as an ArrayList of BlinkMScriptLines
+   * Write an entire BlinkM light script as a BlinkMScript
    * to blinkm at address 'addr'.
    * @param addr blinkm addr
-   * @param scriptLines list of BlinkMScriptLines
+   * @param script BlinkMScript object of script lines
    */
-  public void writeScript( int addr,  ArrayList<BlinkMScriptLine> scriptLines) 
+  public void writeScript( int addr,  BlinkMScript script) 
     throws IOException {
-    int olen = scriptLines.size();
-    // copy only the good ones  FIXME: this is kind of a hack
-    ArrayList<BlinkMScriptLine> sl = new ArrayList<BlinkMScriptLine>();
-    BlinkMScriptLine line;
-    for( int i=0; i< olen; i++ ) {
-      line = (BlinkMScriptLine)scriptLines.get(i);
-      if( (line.dur == 0xff && line.cmd == 0xff ) || 
-          (line.dur == 0 && line.cmd == 0) ) {
-        // then, bad line
-      } 
-      else { 
-        sl.add( line );  // copy only the good ones, not the comment-only ones
-      }
-    }
-    int len = sl.size();
+    int len = script.length();
     
     for( int i=0; i< len; i++ ) {
-      writeScriptLine( addr, i, sl.get(i) );
+      writeScriptLine( addr, i, script.get(i) );
     }
     
-    setScriptLengthRepeats( addr, len, 0);
-    
+    setScriptLengthRepeats( addr, len, 0);    
   }
 
   /**
@@ -569,7 +609,7 @@ public class LinkM
     cmdbuf[8] = (byte)line.arg3;    // cmd arg3
     
     commandi2c( cmdbuf, null);
-    pause(10); // enforce at least 4.5msec delay between EEPROM writes
+    pause(20); // enforce at least 4.5msec delay between EEPROM writes
   }
 
   /**
@@ -595,30 +635,34 @@ public class LinkM
 
   /**
    * Read an entire light script from a BlinkM at address 'addr' 
+   * @param readAll read all script lines, or just the good ones
    */
-  public ArrayList<BlinkMScriptLine> readScript( int addr, int script_id ) 
+  public BlinkMScript readScript( int addr, int script_id, boolean readAll ) 
     throws IOException { 
-    ArrayList<BlinkMScriptLine> lines = new ArrayList<BlinkMScriptLine>();
+    BlinkMScript script = new BlinkMScript();
     BlinkMScriptLine line;
     for( int i = 0; i< maxScriptLength; i++ ) {
       line = readScriptLine( addr, script_id, i );
-      if( line==null || (line.dur == 0xff && line.cmd == 0xff ) || 
-          (line.dur == 0 && line.cmd == 0) ) {
-        // ooo bad bad scriptline, naughty thing
+      if( line==null 
+          || (line.cmd == 0xff && line.dur == 0xff) //(null or -1,-1 == bad loc 
+          || (line.cmd == 0x00 && !readAll)
+          ) { 
+        return script;
+        // ooo bad bad scriptline 
       } else { 
-        lines.add(line);
+        script.add(line);
       }
     }
-    return lines;
+    return script;
   }
 
   /**
    * Read an entire light script, return as a string
    */
-  public String readScriptToString( int addr, int script_id )
+  public String readScriptToString( int addr, int script_id, boolean readAll )
     throws IOException {
-    ArrayList scriptLines = readScript( addr, script_id );
-    String str = scriptLinesToString(scriptLines);
+    BlinkMScript script = readScript( addr, script_id, readAll );
+    String str = script.toString();
     return str;
   }
 
@@ -627,14 +671,14 @@ public class LinkM
    * Writes a new light script and sets the startup paramters
    */
   public void setFactorySettings( int addr ) throws IOException {
-    ArrayList<BlinkMScriptLine> scriptLines = new ArrayList<BlinkMScriptLine>();
-    scriptLines.add( new BlinkMScriptLine(  1, 'f', 10,0,0 ) );
-    scriptLines.add( new BlinkMScriptLine(100, 'c', 0xff,0xff,0xff) );
-    scriptLines.add( new BlinkMScriptLine( 50, 'c', 0xff,0x00,0x00) );
-    scriptLines.add( new BlinkMScriptLine( 50, 'c', 0x00,0xff,0x00) );
-    scriptLines.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0xff) );
+    BlinkMScript script = new BlinkMScript();
+    script.add( new BlinkMScriptLine(  1, 'f', 10,0,0 ) );
+    script.add( new BlinkMScriptLine(100, 'c', 0xff,0xff,0xff) );
+    script.add( new BlinkMScriptLine( 50, 'c', 0xff,0x00,0x00) );
+    script.add( new BlinkMScriptLine( 50, 'c', 0x00,0xff,0x00) );
+    script.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0xff) );
 
-    writeScript( addr, scriptLines);
+    writeScript( addr, script);
     setStartupParamsDefault(addr);
   }
 
@@ -715,26 +759,22 @@ public class LinkM
   }
 
   /**
-   *
+   * Take a String containing an entire script and turn it into a BlinkMScript
    */
-  static final public ArrayList<BlinkMScriptLine> parseScript( String script ) {
-    return parseScript( script.split("\n") );
+  static final public BlinkMScript parseScript( String scriptstr ) {
+    return parseScript( scriptstr.split("\n") );
   }
 
   /**
-   * Take a String and turn it into an ArrayList of BlinkMScriptLine objects
+   * Take an array of Strings and turn them into a BlinkMScript object
    */
-  //@SuppressWarnings("unchecked")
-  //static final public ArrayList parseScript( ArrayList lines ) {
-  static final public ArrayList<BlinkMScriptLine> parseScript( String[] lines ){
+  static final public BlinkMScript parseScript( String[] lines ){
     BlinkMScriptLine bsl; 
-    ArrayList<BlinkMScriptLine> sl = new ArrayList<BlinkMScriptLine>();  
-    //ArrayList sl = new ArrayList();  
+    BlinkMScript script = new BlinkMScript();
+
     String linepat = "\\{(.+?),\\{'(.+?)',(.+?),(.+?),(.+?)\\}\\}";
     Pattern p = Pattern.compile(linepat);
     if( lines==null ) return null;
-    //for (int i = 0; i < lines.size(); i++) {
-    //String l = (String) lines.get(i);
     for( int i=0; i< lines.length; i++) { 
       String l = lines[i];
 
@@ -757,26 +797,11 @@ public class LinkM
         bsl = new BlinkMScriptLine();
         bsl.addComment( l );  // so add the bad line as a comment
       }
-      sl.add( bsl );
+      script.add( bsl );
     }
-    return sl;
+    return script;
   }
 
-  /**
-   * Utility: 'serialize' to String
-   * not strictly needed since we can just read/write the editArea
-   */
-  static final public String scriptLinesToString(ArrayList scriptlines) {
-    if( scriptlines == null || scriptlines.size()==0 ) return null;
-    String str = "{\n";
-    BlinkMScriptLine line;
-    for( int i=0; i< scriptlines.size(); i++ ) {
-      line = (BlinkMScriptLine)scriptlines.get(i);
-      str += "\t"+ line.toFormattedString() +"\n";
-    }
-    str += "}\n";
-    return str;
-  }
 
   //-------------------------------------------------------------------------
   // Utilty Class methods

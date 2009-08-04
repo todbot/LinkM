@@ -9,7 +9,7 @@
 
 
 /* ------------------------------------------------------------------------- */
-static usbDevice_t* dev;   // sigh.
+static usbDevice_t* dev = NULL;   // sigh.
 // the goal is to have a usbDevice_t* per LinkM instance, 
 // but for some reason I cannot get a LinkM instance int or long to
 // store the pointer in and then retrieve it. 
