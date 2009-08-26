@@ -5,27 +5,30 @@
  */
 public class Timeline extends JPanel implements MouseListener, MouseMotionListener {
   
-  private int scrubHeight = 10;
-  public int secSpacerWidth = 2;
-  private int w;  
-  private int h;               // = 170;    // height of timeline, was 90
-  private int sx = 18;                 // offset from left edge of screen
-  private int trackHeight; // = 20;  //FIXME: derive   // height of track in pixels
-  private boolean isMousePressed;
+  private boolean multimode = false;
+
+  private int scrubHeight = 10;             // height of scrubber area
+  public int spacerWidth = 2;               // width between cells
+  private int w;                            // width of timeline
+  private int h;                            // height of timeline
+  private int sx = 50;                      // offset from left edge of screen
+  private int trackHeight;                  // height of each track 
+
   private Point mouseClickedPt;
-  private Point mouseReleasedPt;
   
   private Color playHeadC = new Color(255, 0, 0);
   private float playHeadCurr = sx;
-  private int loopEnd;
+  private int loopEnd;  //FIXME: need a better name
 
-  private javax.swing.Timer timer;
-  private int timerMillis = 25;        // time between timer firings
+  //private javax.swing.Timer timer;
+  //private int timerMillis = 25;        // time between timer firings
+  //private int timerMillis;        // time between ticks  (1/frameRate)
   
   private boolean isPlayHeadClicked = false;
   private boolean isLoop = true;           // timer, loop or no loop
-  private long startTime = 0;             // start time 
-  
+  private long startTime = 0;             // debug, start time of play
+  private boolean playing = false;
+
   private Font font;
 
   private int numSlices;
@@ -33,18 +36,21 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
   public TimeTrack[] timeTracks;
   
   /**
+   * @param multi if true, timeline is multi-track, otherwise single track
    * @param numTracks number of tracks this timeline represents
    * @param numSlices number of slices in a track
    * @param aHeight height of timeline in pixels
    * @param aWidth width of timeline in pixels
    */
-  public Timeline(int numSlices, int numTracks, int aWidth, int aHeight ) {
+  public Timeline(boolean multi, int numSlices, int numTracks, int aWidth, int aHeight ) {
+    this.multimode = multi;
     this.numSlices = numSlices;
     this.numTracks = numTracks;
     this.w = aWidth;           // overall width of timeline object
     this.h = aHeight;
     this.timeTracks = new TimeTrack[numTracks];
     this.trackHeight = (h - scrubHeight) / numTracks;
+    println("trackHeight: "+trackHeight);
     this.loopEnd = w-20;
     this.setPreferredSize(new Dimension(this.w, this.h));
     this.setBackground(bgDarkGray);
@@ -52,15 +58,17 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
     addMouseMotionListener(this);
     //mf.addKeyListener(this);
 
-    this.font = new Font("Monospaced", Font.PLAIN, 9);
+    //this.font = new Font("Monospaced", Font.PLAIN, 9);
+    this.font = silkfont;  // global in main class
+
     for( int j=0; j<numTracks; j++ ) {
-      int sy = 10 + j*trackHeight;
-      TimeTrack tc = new TimeTrack(sx,sy, w,trackHeight-2, secSpacerWidth);
+      int sy = scrubHeight + j*trackHeight;
+      TimeTrack tc = new TimeTrack(sx,sy,w,trackHeight-spacerWidth,spacerWidth);
       timeTracks[j] = tc;
     }
 
     // give people a nudge on what to do
-    timeTracks[0].timeSlices[0].isActive = true;
+    selectSlice( 0, true);
   }
 
   /**
@@ -69,18 +77,12 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
   public void paintComponent(Graphics gOG) {
     Graphics2D g = (Graphics2D) gOG;
     super.paintComponent(g); 
-
     // draw light gray background for playhead area
-    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
-                       RenderingHints.VALUE_ANTIALIAS_ON);
+    //g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
+    //                   RenderingHints.VALUE_ANTIALIAS_ON);
     g.setColor(fgLightGray);
     g.fillRect(0, 0, getWidth(), scrubHeight);
 
-    // draw "addr" above each adr column
-    g.setFont(font);
-    g.setColor(Color.black);
-    g.drawString( "solo", 2,    8); // left hand side
-    g.drawString( "addr", w-16, 8); // right hand  
     // draw each time track
     for( int j=0; j<numTracks; j++ ) {
       TimeSlice[] timeSlices = timeTracks[j].timeSlices;      
@@ -88,18 +90,11 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
       for( int i=0; i<numSlices; i++) {
         timeSlices[i].draw(g);
       }
-      // draw solo & addr on left & right sides of timeline
-      int blinkmAddr = blinkmAddrs[j];  // get this track i2c address
-      //g.setFont(font);
-      BasicStroke stroke = new BasicStroke(1.5f);
-      g.setStroke(stroke);
-      g.setColor( new Color(0,0,0x80) );
-      g.drawArc( 3, 15+j*trackHeight, 10,10, 0,360);
-      if( timeTracks[j].active == true )  // solo button
-        g.fillOval( 5,17+j*trackHeight, 6,6 );
-      g.drawString( nf(blinkmAddr,2), w-15, 23+j*trackHeight); // right hand  
+      if( multimode ) {
+        paintTrackButtons(g, j);
+      }
     }
-
+   
     paintPlayHead(g);
     //paintLoopEnd(g);
 
@@ -113,11 +108,38 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
   }
 
   /**
+   * Draw enable & addr buttons on left side of timeline
+   * @param g Graphics to draw on
+   * @param tnum track number (0..maxtracks)
+   */
+  void paintTrackButtons(Graphics2D g, int tnum ) {
+    int blinkmAddr = blinkmAddrs[tnum]; // get this track i2c address
+    g.setFont(font);
+    BasicStroke stroke = new BasicStroke(0.5f);
+    g.setStroke(stroke);
+    g.setColor( briOrange);
+    g.drawRect(  3,15+tnum*trackHeight, 15,10 );  // enable button outline 
+    g.drawRect( 25,15+tnum*trackHeight, 20,10 );  // addr button outline 
+    
+    if( timeTracks[tnum].active == true ) { 
+      g.setColor( muteOrange );
+      g.fillRect(  4, 16+tnum*trackHeight, 14,9 );  // enable button insides
+      g.fillRect( 26, 16+tnum*trackHeight, 19,9 );  // addr button insides
+      
+      g.setColor( cBlk );
+      int offs = 26;
+      offs = ( blinkmAddr < 100 ) ? offs += 6 : offs;
+      offs = ( blinkmAddr < 10 )  ? offs += 5 : offs;
+      g.drawString( ""+blinkmAddr, offs, 23+tnum*trackHeight);  // addr text
+    }
+  }
+  /**
    *
    */
   void paintPlayHead(Graphics2D g) {
     g.setColor(playHeadC);
-    g.fillRect((int)playHeadCurr, 0, secSpacerWidth, getHeight());
+    g.fillRect((int)playHeadCurr, 0, spacerWidth, getHeight());
+    //if( !multimode ) {
     Polygon p = new Polygon();
     p.addPoint((int)playHeadCurr - 5, 0);
     p.addPoint((int)playHeadCurr + 5, 0);
@@ -127,11 +149,12 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
     p.addPoint((int)playHeadCurr - 5, 5);
     p.addPoint((int)playHeadCurr - 5, 0);    
     g.fillPolygon(p);
+    //}
   }
   
   void paintLoopEnd(Graphics2D g) {
     g.setColor(playHeadC);
-    g.fillRect( loopEnd,0, secSpacerWidth, h );
+    g.fillRect( loopEnd,0, spacerWidth, h );
   }
 
   /**
@@ -144,21 +167,45 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
     return isLoop;
   }
 
+  public boolean isPlaying() { 
+    return playing;
+  }
+
   /**
    *
    */
   public void play() {
     l.debug("starting to play for dur: " + durationCurrent);
-
-    timer = new javax.swing.Timer( timerMillis, new TimerListener());
-    //timer.setInitialDelay(0);
-    //timer.setCoalesce(true);
-    timer.start();
+    playing = true;
     startTime = System.currentTimeMillis();
   }
 
   /**
    *
+   */
+  public void stop() {
+    l.debug("stop"); 
+    playing = false;
+    l.debug("elapsedTime:"+(System.currentTimeMillis() - startTime));
+  }
+
+  /**
+   *
+   */
+  public void reset() {
+    stop();
+    playHeadCurr = sx;
+    repaint();
+  }
+  
+  public void selectSlice( int slicenum, boolean state ) { 
+    for( int i=0; i< numTracks; i++ ) 
+      timeTracks[i].timeSlices[slicenum].selected = state;
+
+  }
+
+  /**
+   * FIXME:
    */
   public void setActiveColor(Color c) { 
     // update selected TimeSlice in TimeLine
@@ -166,7 +213,7 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
       TimeSlice[] timeSlices = timeTracks[j].timeSlices;
       for( int i=0; i<numSlices; i++) {
         TimeSlice ts = timeSlices[i];
-        if (ts.isActive)
+        if (ts.selected)
           ts.setColor(c);
         //ts.isActive = false;
       }
@@ -182,7 +229,7 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
     for( int j=0; j<numTracks; j++) { 
       TimeSlice[] timeSlices = timeTracks[j].timeSlices;
       for( int i=0; i<numSlices; i++) 
-        timeSlices[i].isActive = false;
+        timeSlices[i].selected = false;
     }
     repaint(); 
   }
@@ -199,12 +246,13 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
 
   /** 
    * return num from 0 to numTracks on an active or playhead column
+   * does brute force search looking for selected
    */
   public int getPreviewColumn() {
     int col = -1;
     for( int j=0; j<numTracks; j++) {
       for( int i=0; i<numSlices; i++) {
-        if( timeTracks[j].timeSlices[i].isActive )
+        if( timeTracks[j].timeSlices[i].selected )
           col = i;
       }
     }
@@ -219,49 +267,32 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
   }
 
   /**
+   *  Called once every "tick" of the application clock, usualy frameRate
    *
    */
-  class TimerListener implements ActionListener {
-    /** Handle ActionEvent */
-    public void actionPerformed(ActionEvent e) {
+  public void tick(float millisSinceLastTick) { 
+    if( playing ) {
       int width = getWidth() - sx;
       // not quite sure why need to add one to durationCurrent here
       int durtmp = (durationCurrent>5) ?durationCurrent+1 : durationCurrent;
-      float step = width / (durtmp*1000.0/timerMillis);
+      float step = width / (durtmp*1000.0/millisSinceLastTick);
+      
       playHeadCurr += step;
       repaint();
-
+      
       if (playHeadCurr > loopEnd) {        // check for end of timeline
-        if (isLoop) {
-          reset();
-          play(); 
+        reset();       // rest to beginning (and stop)
+        if (isLoop) {  // if we loop
+          play();      // start again
         } 
-        else {
-          reset();
-          pb.setToPlay();
+        else {        // or we stay stopped
+          pb.setToPlay();  // FIXME:
         }
-      } //if
-    } 
+      } //if loopend
+    } // if playing
   }
 
-  /**
-   *
-   */
-  public void stop() {
-    l.debug("stop"); 
-    if (timer != null) 
-      timer.stop();
-    l.debug("elapsedTime:"+(System.currentTimeMillis() - startTime));
-  }
-
-  /**
-   *
-   */
-  public void reset() {
-    stop();
-    playHeadCurr = sx;
-    repaint();
-  }
+  // ---------------------------------------------------------------------
 
   public void mouseClicked(MouseEvent e) {
     //l.debug("clicked");
@@ -288,39 +319,36 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
     isPlayHeadClicked = p.contains(mp);  // check if mouseclick on playhead
 
     if (!isPlayHeadClicked) {         // test for collision w/timeslice or track
+      // check for enable or address button hits
       for( int j=0; j<numTracks; j++) {
-        // check for solo/address number hits
-        if( (mp.x > 0 && mp.x < 20) ) {         // solo strip, left hand side
-          if( (mp.y > j*trackHeight + scrubHeight) && 
-              (mp.y < (j+1)*trackHeight + scrubHeight) )      // lame
-            toggleSolo(j);
-        } 
-        else if( (mp.x > w-15 && mp.x < w) ) { // i2caddr strip, right hand side
-          if( (mp.y > j*trackHeight + scrubHeight) &&       // lame
-              (mp.y < (j+1)*trackHeight + scrubHeight) )
+        boolean intrack = 
+          (mp.y > j*trackHeight + scrubHeight) && 
+          (mp.y < (j+1)*trackHeight + scrubHeight) ;
+        if( intrack && (mp.x >= 3 && mp.x <= 3+15 ) )   // enable button
+          toggleTrackEnable(j);
+        else if( intrack && (mp.x >= 26 && mp.x <= 26+20 ) ) // addr button
             doTrackDialog(j);
-        }
         else {                                 // check for timeslice hit
           TimeSlice[] timeSlices = timeTracks[j].timeSlices;
           for( int i=0; i<numSlices; i++) {
             TimeSlice ts = timeSlices[i];
-            if (ts.isCollision(mp.x,mp.y)) 
-              ts.isActive = true;
+            if (ts.isCollision(mp.x)) 
+              ts.selected = true;
             else if ((e.getModifiers() & InputEvent.META_MASK) == 0) 
-              ts.isActive = false; 
+              ts.selected = false; 
           }
         }
       } // for
     } // !playheadclicked
 
-    isMousePressed = true;
+    //isMousePressed = true;
     mouseClickedPt = mp;
 
     repaint();
   }
 
   public void mouseReleased(MouseEvent e) {
-    mouseReleasedPt = e.getPoint();
+    Point mouseReleasedPt = e.getPoint();
     int clickCnt = e.getClickCount();
 
     isPlayHeadClicked = false;
@@ -329,7 +357,7 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
       TimeSlice[] timeSlices = timeTracks[j].timeSlices;
       for( int i=0; i<numSlices; i++) {
         TimeSlice ts = timeSlices[i];
-        if( ts.isActive && clickCnt >= 2 )   // double-click to set color
+        if( ts.selected && clickCnt >= 2 )   // double-click to set color
           //colorPreview.setColors(  getColorsAtColumn(i) );
           //colorChooser.setColor( ts.getColor());
         if( ts.isCollision((int)playHeadCurr)) {
@@ -360,21 +388,26 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
     else {
       // make multiple selection of timeslices on mousedrag
       int x = e.getPoint().x;
-      int y = e.getPoint().y;
-      for( int j=0; j<numTracks; j++ ) {
-        TimeSlice[] timeSlices = timeTracks[j].timeSlices;
-        for( int i=0;i<numSlices;i++) {
-          TimeSlice ts = timeSlices[i];
-          ts.isActive = ts.isActive || ts.isCollision(mouseClickedPt.x,x, mouseClickedPt.y,y);
-        }
+      TimeSlice[] timeSlices = timeTracks[0].timeSlices;
+      for( int i=0;i<numSlices;i++) {
+        TimeSlice ts = timeSlices[i];
+        if( ts.isCollision(x,mouseClickedPt.x) )
+          selectSlice(i,true);
       }
     }
       
     repaint();
   }
   
+
+  // ------------------------------------------------------------------------
+
   public void toggleSoloO(int track) {
     int soloTrack = -1;
+    timeTracks[track].active = !timeTracks[track].active;
+  }
+
+  public void toggleTrackEnable(int track) {
     timeTracks[track].active = !timeTracks[track].active;
   }
 
@@ -384,7 +417,7 @@ public class Timeline extends JPanel implements MouseListener, MouseMotionListen
   // if only this track active, re-active all tracks
   // (this seems needlessly complex,btw)
   //
-  public void toggleSolo(int track) {
+  public void toggleSolo1(int track) {
     boolean someactive = false;
     boolean thisactive = false;
     int activecount = 0;
