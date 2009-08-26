@@ -23,7 +23,7 @@ public class PlayButton {
                                              "Stop"); 
     iconStopHov = new Util().createImageIcon("blinkm_butn_stop_hov.gif", 
                                              "Stop"); 
-    b = new JButton();
+    b = new JButton();  // this is me
     b.setOpaque(true);
     b.setBorderPainted( false );
     b.setBackground(bgDarkGray);
@@ -36,9 +36,11 @@ public class PlayButton {
           if (!isPlaying) {
             // stop playing uploaded script, prep for preview playing
             prepareForPreview(durationCurrent);
+            channels.play();
             timeline.play(); 
           }
           else {
+            channels.reset();
             timeline.reset();
           }
 

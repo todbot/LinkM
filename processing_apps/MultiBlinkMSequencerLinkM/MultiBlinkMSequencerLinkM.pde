@@ -27,11 +27,15 @@ LinkM linkm = new LinkM();
 
 boolean isConnected = false;   // FIXME: this isn't used yet
 
+String silkfontPath = "slkscrb.ttf";  // in "data" directory
+Font silkfont;
 
-MainFrame mf;
+
+JDialog mf;  // the main holder of the app
 JColorChooser colorChooser;
 //ColorPreview colorPreview;
 Timeline timeline;
+Timeline channels;
 PlayButton pb;
 
 JPanel connectPanel;
@@ -41,11 +45,11 @@ int numSlices = 48;
 // number of different blinkms
 int numTracks = 8;
 // default blinkm addresses used, can change by clicking on the addresses in UI
-int[] blinkmAddrs = {10,11,12,13, 14,15,16,17}; // numTracks big
+int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
 
 // overall dimensions
 int mainWidth = 851;
-int mainHeight = 535;  // was 455
+int mainHeight = 640;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
 
@@ -53,9 +57,9 @@ int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 int[] durations = { 3, 30, 120 };
 int durationCurrent = durations[0];
 
-// mapping of duration to ticks      (must be same length as 'durations')
+// mapping of duration to ticks      (array must be same length as 'durations')
 public byte[] durTicks   = { (byte)   1, (byte) 18, (byte) 72 };
-// mapping of duration to fadespeeds (must be same length as 'durations')
+// mapping of duration to fadespeeds (array must be same length as 'durations')
 public byte[] fadeSpeeds = { (byte) 100, (byte) 25, (byte)  5 };
 
 
@@ -68,18 +72,30 @@ Color bgLightGray = new Color(200, 200, 200);
 Color bgMidGray   = new Color(140, 140, 140);
 Color bgDarkGray  = new Color(100, 100, 100);
 Color tlDarkGray  = new Color(55, 55, 55);          // dark color for timeline
-Color highLightC  = new Color(255, 0, 0);           // used for selections
-
+Color cHighLight  = new Color(255, 0, 0);           // used for selections
+Color briOrange   = new Color(0xFB,0xC0,0x80);      // bright yellow/orange
+Color muteOrange  = new Color(0xBC,0x83,0x45);
+ 
 /**
  * Processing's setup()
  */
 void setup() {
   size(10, 10);   // Processing's frame, we'll turn this off in a bit
+  frameRate(30);  // each frame we can potentially redraw timelines
 
-  try {  // use a Swing look-and-feel that's the same across all OSs
+
+  try { 
+    // load up the lovely silkscreen font
+    File f = new File( dataPath( silkfontPath ));
+    FileInputStream in = new FileInputStream(f);
+    Font dynamicFont = Font.createFont(Font.TRUETYPE_FONT, in);
+    silkfont = dynamicFont.deriveFont( 8f );
+
+    // use a Swing look-and-feel that's the same across all OSs
     MetalLookAndFeel.setCurrentTheme(new DefaultMetalTheme());
     UIManager.setLookAndFeel( new MetalLookAndFeel() );
-  } catch(Exception e) { 
+  } 
+  catch(Exception e) { 
     l.error("drat: "+e);
   }
 
@@ -87,7 +103,6 @@ void setup() {
   if( osname.toLowerCase().startsWith("windows") ) 
     mainHeight += mainHeightAdjForWindows;
   
-  mf = new MainFrame(mainWidth, mainHeight, this);
   p = this;
   
   setupGUI();
@@ -97,28 +112,36 @@ void setup() {
  * Processing's draw()
  */
 void draw() {
-  super.frame.setVisible(false);  // turn off Processing's frame
-  super.frame.toBack();
-  mf.toFront();
-
-  if(frameCount > 30) {  // stop Processing's loooper
-    noLoop(); 
+  if( frameCount < 30 ) {
+    super.frame.setVisible(false);  // turn off Processing's frame
+    super.frame.toBack();
+    mf.toFront();                   // bring ours forward  
   }
+
+  float millisPerTick = (1/frameRate) * 1000;
+  // tick tock
+  channels.tick( millisPerTick );
+  timeline.tick( millisPerTick ); 
+  // not exactly 1/frameRate, but good enough I think
 }
+
+
 
 //
 void setupGUI() {
+
+  setupMainframe();  // creates 'mf'
+
   Container mainpane = mf.getContentPane();
   BoxLayout layout = new BoxLayout( mainpane, BoxLayout.Y_AXIS);
   mainpane.setLayout(layout);
 
-  ChannelsTop chanstop = new ChannelsTop();
-  //Channels chans      = new Channels( mainWidth );
-  Timeline channels    = new Timeline( numSlices, numTracks, mainWidth, 170 );
+  ChannelsTop chtop = new ChannelsTop();
+  channels          = new Timeline( true, numSlices, numTracks, mainWidth, 150);
 
-  TimelineTop timetop  = new TimelineTop();
-  //timeline             = new Timeline( numSlices,numTracks, 170, mainWidth );
-  timeline             = new Timeline( numSlices, 1, mainWidth, 170 );
+  TimelineTop ttop  = new TimelineTop();
+  timeline          = new Timeline( false, numSlices, 1, mainWidth, 100 );
+  //timeline        = new Timeline( numSlices,numTracks, 170, mainWidth );
 
   //  FIXME: this will change when preview-per-track exists
   //colorPreview             = new ColorPreview();
@@ -141,10 +164,10 @@ void setupGUI() {
   JPanel lowerpanel = makeLowerPanel();
 
   // add everything to the main pane, in order
-  mainpane.add( chanstop );
+  mainpane.add( chtop );
   mainpane.add( channels );
 
-  mainpane.add( timetop );
+  mainpane.add( ttop );
   mainpane.add( timeline );
 
   mainpane.add( controlsPanel );
@@ -155,6 +178,7 @@ void setupGUI() {
   mf.setResizable(false);
 
 }
+
 
 // just to get this out of the way 
 JPanel makeColorChooserPanel() {
@@ -184,6 +208,34 @@ JPanel makeLowerPanel() {
   lp.setLayout(new BorderLayout());
   lp.add(lowLabel, BorderLayout.WEST);
   return lp;
+}
+
+/**
+ * Create the containing frame (or JDialog in this case) 
+ */
+void setupMainframe() {
+  mf = new JDialog(new Frame(), "BlinkM Sequencer", false);
+  mf.setBackground(bgDarkGray);
+  mf.setFocusable(true);
+  mf.setSize( mainWidth, mainHeight);
+  
+  // handle window close events
+  mf.addWindowListener(new WindowAdapter() {
+      public void windowClosing(WindowEvent e) {
+        mf.dispose();          // close mainframe
+        p.destroy();           // close processing window as well
+        p.frame.setVisible(false); // hmm, seems out of order
+        System.exit(0);
+      }
+    });
+  
+  // center MainFrame on the screen and show it
+  //mf.setSize(this.width, this.height);
+  Dimension scrnSize = Toolkit.getDefaultToolkit().getScreenSize();
+  mf.setLocation(scrnSize.width/2 - mf.getWidth()/2, 
+                 scrnSize.height/2 - mf.getHeight()/2);
+  mf.setVisible(true);
+  
 }
 
 
