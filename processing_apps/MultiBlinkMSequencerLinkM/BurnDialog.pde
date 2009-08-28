@@ -48,7 +48,7 @@ public class BurnDialog extends JDialog implements ActionListener {
     setLocationRelativeTo(null); // center it on the BlinkMSequencer
     setVisible(true);
     
-    timeline.reset(); // stop preview script
+    multitrack.reset(); // stop preview script
     pb.setToPlay();  // rest play button
 
     // so dumb we have to spawn a thread for this
@@ -69,20 +69,20 @@ public class BurnDialog extends JDialog implements ActionListener {
 
   class Burner implements Runnable {
     public void run() {
-
-      timeline.stop();
+        
+      multitrack.stop();
 
       for( int j=0; j<numTracks; j++ ) {
         ArrayList colorlist = new ArrayList();
         for( int i=0; i<numSlices; i++)    // FIXME
-          colorlist.add( timeline.timeTracks[j].timeSlices[i].getColor());
+          colorlist.add( multitrack.tracks[j].slices[i] );
         msgtop.setText( msg_uploading );
         
         int blinkmAddr = blinkmAddrs[j];  // get this track i2c address
 
         // burn the list, and saying which colors are 'unused'
         burn( blinkmAddr, colorlist, tlDarkGray, durationCurrent,
-              timeline.getLoop(), progressbar);
+              multitrack.looping, progressbar);
         
         msgtop.setText( msg_uploading + msg_done );
       }

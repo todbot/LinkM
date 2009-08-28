@@ -67,9 +67,8 @@ public class TimelineTop extends JPanel {
     ActionListener actionListener = new ActionListener() {
         public void actionPerformed(ActionEvent actionEvent) {
           AbstractButton abButton = (AbstractButton) actionEvent.getSource();
-          boolean selected = abButton.getModel().isSelected();
-          timeline.setLoop(selected);
-                
+          boolean looping = abButton.getModel().isSelected();
+          multitrack.looping = looping;
         }
       };
     loopCheck.addActionListener(actionListener);

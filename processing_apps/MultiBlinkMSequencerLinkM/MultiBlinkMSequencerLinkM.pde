@@ -34,8 +34,8 @@ Font silkfont;
 JDialog mf;  // the main holder of the app
 JColorChooser colorChooser;
 //ColorPreview colorPreview;
-Timeline timeline;
-Timeline channels;
+MultiTrack multitrack;
+TrackView trackview;
 PlayButton pb;
 
 JPanel connectPanel;
@@ -48,7 +48,7 @@ int numTracks = 8;
 int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
 
 // overall dimensions
-int mainWidth = 851;
+int mainWidth = 820;
 int mainHeight = 640;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
@@ -120,8 +120,8 @@ void draw() {
 
   float millisPerTick = (1/frameRate) * 1000;
   // tick tock
-  channels.tick( millisPerTick );
-  timeline.tick( millisPerTick ); 
+  multitrack.tick( millisPerTick );
+  trackview.tick( millisPerTick ); 
   // not exactly 1/frameRate, but good enough I think
 }
 
@@ -137,11 +137,14 @@ void setupGUI() {
   mainpane.setLayout(layout);
 
   ChannelsTop chtop = new ChannelsTop();
-  channels          = new Timeline( true, numSlices, numTracks, mainWidth, 150);
+  //multitrack      = new MultiTrack( numTracks, numSlices, 0,0, mainWidth,150);
+  multitrack        = new MultiTrack( numTracks, numSlices, mainWidth,150);
+  //multitrack        = new MultiTrack( 4, numSlices, mainWidth,150);
 
   TimelineTop ttop  = new TimelineTop();
-  timeline          = new Timeline( false, numSlices, 1, mainWidth, 100 );
+  //timeline        = new Timeline( false, numSlices, 1, mainWidth, 100 );
   //timeline        = new Timeline( numSlices,numTracks, 170, mainWidth );
+  trackview         = new TrackView( multitrack, mainWidth, 100 );
 
   //  FIXME: this will change when preview-per-track exists
   //colorPreview             = new ColorPreview();
@@ -165,10 +168,10 @@ void setupGUI() {
 
   // add everything to the main pane, in order
   mainpane.add( chtop );
-  mainpane.add( channels );
+  mainpane.add( multitrack );
 
   mainpane.add( ttop );
-  mainpane.add( timeline );
+  mainpane.add( trackview );
 
   mainpane.add( controlsPanel );
 
@@ -188,8 +191,7 @@ JPanel makeColorChooserPanel() {
   colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
       public void stateChanged(ChangeEvent e) {
         Color c = colorChooser.getColor();
-        timeline.setActiveColor(c);
-        //colorPreview.setColor(c);          // update ColorPreview panel
+        multitrack.setSelectedColor(c);
       }      
     });
   colorChooser.setPreviewPanel( new JPanel() ); //colorPreview );

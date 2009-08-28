@@ -36,19 +36,21 @@ public class PlayButton {
           if (!isPlaying) {
             // stop playing uploaded script, prep for preview playing
             prepareForPreview(durationCurrent);
-            channels.play();
-            timeline.play(); 
+            multitrack.play();
+            //channels.play();
+            //timeline.play(); 
           }
           else {
-            channels.reset();
-            timeline.reset();
+            multitrack.reset();
+            //channels.reset();
+            //timeline.reset();
           }
 
           isPlaying = !isPlaying;
           l.debug("Playing: " + isPlaying);
           setIcon();
 
-          timeline.allOff();
+          multitrack.allOff();
 
         }
       });
