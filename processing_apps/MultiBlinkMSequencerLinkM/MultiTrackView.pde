@@ -22,7 +22,7 @@ public class MultiTrackView
   boolean playing = false;                  //    
   boolean looping = true;                   // loop or single-shot
 
-  private int scrubHeight = 10;             // height of scrubber area
+  private int scrubHeight = 12;             // height of scrubber area
   private int spacerWidth = 2;              // width between cells
   private int spacerHalf = spacerWidth/2;
   private int w,h;                           // dimensions of me
@@ -59,8 +59,9 @@ public class MultiTrackView
     addMouseMotionListener(this);
 
     //trackWidth = w - sx - previewWidth ;
+    //previewX =  w - previewWidth - 10;
     trackWidth = numSlices * sliceWidth;
-    previewX =  w - previewWidth - 10;
+    previewX =  sx + trackWidth + 10;
 
     this.font = silkfont;  // global in main class
 
@@ -73,7 +74,7 @@ public class MultiTrackView
     currTrack = 0;
     // give people a nudge on what to do
     tracks[ currTrack ].active = true;
-    selectSlice( 0, true);
+    tracks[ currTrack ].selects[0] =  true;
 
   }
 
@@ -83,14 +84,13 @@ public class MultiTrackView
    */
   public void paintComponent(Graphics gOG) {
     Graphics2D g = (Graphics2D) gOG;
+    //g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
+    //                   RenderingHints.VALUE_ANTIALIAS_ON);
     super.paintComponent(g); 
 
     g.setColor( bgDarkGray );
     g.fillRect( 0,0, getWidth(), getHeight() );
 
-    // draw light gray background for playhead area
-    //g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
-    //                   RenderingHints.VALUE_ANTIALIAS_ON);
 
     g.setFont(font);
 
@@ -146,10 +146,9 @@ public class MultiTrackView
   void drawCurrTrackMarker(Graphics2D g) { 
     // hilite currTrack with marker
     int tx = sx;
-    int ty = scrubHeight + (currTrack*trackHeight) + spacerWidth;
-    g.setColor( new Color( 200,140,140));  // FIXME : why -38?
-    g.drawRect( tx,ty, trackWidth, trackHeight - spacerWidth );
-    //g.drawRect( tr.x,tr.y+2, trackWidth-38, trackHeight - 2*spacerWidth - 1);
+    int ty = scrubHeight + (currTrack*trackHeight) ;
+    g.setColor( new Color( 200,140,140));
+    g.drawRect( tx,ty, trackWidth, trackHeight+1 );
   }
 
   /**
@@ -183,12 +182,7 @@ public class MultiTrackView
    *
    */
   void drawPreview(Graphics2D g ) {
-    int currSlice=0;
-    for(int i=0; i<numSlices; i++) {
-      if( isSliceHit( (int)playHeadCurr, i ) ) {
-        currSlice = i;
-      }
-    }
+    int currSlice = getCurrSliceNum();
     for( int i=0; i<numTracks; i++) { 
       Color c = tracks[i].slices[currSlice];
       int ty =  spacerWidth + scrubHeight + (i*trackHeight);
@@ -203,7 +197,7 @@ public class MultiTrackView
   void drawPlayHead(Graphics2D g) {
     // paint scrub area
     g.setColor(fgLightGray);
-    g.fillRect(0, 0, getWidth(), scrubHeight);
+    g.fillRect(0, 0, getWidth(), scrubHeight-spacerWidth);
 
     g.setStroke( new BasicStroke(0.5f) );
     
@@ -329,7 +323,23 @@ public class MultiTrackView
       colors[j] = tracks[j].slices[slicenum];
     return colors;
   }
-
+ 
+  /**
+   *
+   */
+  public int getCurrSliceNum() {
+    int cs=0;
+    for(int i=0; i<numSlices; i++) {
+      if( isSliceHit( (int)playHeadCurr, i ) ) {
+        cs = i;
+      }
+    }
+    return cs;
+  }
+    
+  /**
+   *
+   */
   public Track getCurrTrack() {
     return tracks[currTrack];
   }
@@ -345,14 +355,14 @@ public class MultiTrackView
   }
   // point 1D
   public boolean isSliceHit(int mx, int slicex, int slicew ) {
-    return (mx <= (slicex + slicew + 1) && mx >= slicex); 
+    return (mx < (slicex + slicew ) && mx >= slicex); 
   }
   // ranged 1D
   public boolean isSliceHitRanged( int mx1,int mx2, int slicex, int slicew ) {
     if( mx2 > mx1 ) 
-      return (mx1 <= (slicex + slicew + 1) && mx2 >= slicex);
+      return (mx1 < (slicex + slicew ) && mx2 >= slicex);
     else 
-      return (mx2 <= (slicex + slicew + 1) && mx1 >= slicex);
+      return (mx2 < (slicex + slicew ) && mx1 >= slicex);
   }
 
 
@@ -411,6 +421,7 @@ public class MultiTrackView
       else if( intrack && (mp.x >= 26 && mp.x <= 26+20 ) ) // addr button
         doTrackDialog(j);
       else {  // FIXME: this doesn't need to execute for each track
+        
         for( int i=0;i<numSlices;i++) {
           if( isSliceHit( mp.x, i ) ) {
             selectSlice(i,true); 
@@ -420,6 +431,7 @@ public class MultiTrackView
           else if ((e.getModifiers() & InputEvent.META_MASK) == 0) 
             selectSlice(i,false); // fixme: this doesn't work
         }
+        
       }
 
     }
