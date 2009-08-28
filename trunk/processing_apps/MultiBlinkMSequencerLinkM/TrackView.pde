@@ -11,7 +11,7 @@ public class TrackView
   extends JPanel implements MouseListener, MouseMotionListener {
 
 
-  private MultiTrackView multitrack;
+  private MultiTrackView mtv;
   //private Track currTrack;
 
   private Color playHeadC = new Color(255, 0, 0);
@@ -19,16 +19,18 @@ public class TrackView
   private boolean playheadClicked = false;
 
   private int w,h;
+  private int scrubHeight;
 
   private Point mouseClickedPt;
 
   public TrackView(MultiTrackView multitrack, int w, int h) {
-    this.multitrack = multitrack;
+    this.mtv = multitrack;
 
     this.w = w;           // overall width 
     this.h = h;
     this.setPreferredSize(new Dimension(this.w, this.h));
     this.setBackground(bgDarkGray);
+    scrubHeight = mtv.scrubHeight;
 
     addMouseListener(this);
     addMouseMotionListener(this);
@@ -43,14 +45,30 @@ public class TrackView
     Graphics2D g = (Graphics2D) gOG;
     super.paintComponent(g); 
 
-    //Track track = multitrack.getCurrTrack();
+    mtv.drawTrack( g, mtv.currTrack,  
+                   mtv.sx, scrubHeight, w, h-scrubHeight  );
 
-    //track.drawTall(g, h);
+    mtv.drawPlayHead(g);  // draws on me, not on mtv
+
+    drawPreview(g);
+    
+  }
+
+  /**
+   *
+   */
+  void drawPreview(Graphics2D g ) {
+    
+    int currSlice = mtv.getCurrSliceNum();
+    Color c = mtv.getCurrTrack().slices[currSlice];
+
+    g.setColor( c );
+    g.fillRect( mtv.previewX , scrubHeight, 40 , h-scrubHeight );
 
   }
 
   public void tick(float millisSinceLastTick) { 
-    if( multitrack.playing ) {
+    if( mtv.playing ) {
     }
     repaint();
   }
@@ -82,105 +100,48 @@ public class TrackView
 
     return p.contains(mp);  // check if mouseclick on playhead
   }
-
+  
   public void mousePressed(MouseEvent e) {
     l.debug("TrackView.mousePressed: "+e.getPoint());
-    /*
     if( (e.getModifiers() & InputEvent.META_MASK) == 0 )  // alt/cmd pressed
-      multitrack.allOff();
+      mtv.allOff();
 
     Point mp = e.getPoint();
-
     mouseClickedPt = mp;
 
-    // handle playhead hits in mouseDragged
-    // record location of hit in mouseClickedPt and go on
-    playheadClicked = isPlayheadClicked(mp);
-    if( playheadClicked ) {
-      repaint();
-      return;
-    }
-    
-    // check for enable or address button hits
-    for( int j=0; j<numTracks; j++) {
-      boolean intrack = 
-        (mp.y > j*trackHeight + scrubHeight) && 
-        (mp.y < (j+1)*trackHeight + scrubHeight) ;
-      if( intrack && (mp.x >= 3 && mp.x <= 3+15 ) )   // enable button
-        toggleTrackEnable(j);
-      else if( intrack && (mp.x >= 26 && mp.x <= 26+20 ) ) // addr button
-        doTrackDialog(j);
-      else {
-        TimeSlice[] timeSlices = tracks[0].timeSlices;  // any track will do
-        for( int i=0;i<numSlices;i++) {
-          TimeSlice ts = timeSlices[i];
-          if( ts.isCollision(mp.x) )
-            selectSlice(i,true);  
-          //toggleSlice(i);
-          else if ((e.getModifiers() & InputEvent.META_MASK) == 0) 
-            selectSlice(i,false); // fixme: this doesn't work
-        }
+    for( int i=0;i<mtv.numSlices;i++) {
+      if( mtv.isSliceHit( mp.x, i ) ) {
+        mtv.getCurrTrack().selects[i] = true; 
+        println("tv.slice:"+i);
       }
-
+      else if ((e.getModifiers() & InputEvent.META_MASK) == 0) 
+        mtv.getCurrTrack().selects[i] = false; // FIXME: this doesn't work
     }
-
-    repaint();
-    */
   }
-
+  
+  
   public void mouseReleased(MouseEvent e) {
     Point mouseReleasedPt = e.getPoint();
     int clickCnt = e.getClickCount();
-    
-    //playheadClicked = false;
-    /*
-    // snap playhead to closest time slice
-    for( int j=0; j<numTracks; j++ ) {
-      TimeSlice[] timeSlices = timeTracks[j].timeSlices;
-      for( int i=0; i<numSlices; i++) {
-        TimeSlice ts = timeSlices[i];
-        if( ts.selected && clickCnt >= 2 )   // double-click to set color
-          //colorPreview.setColors(  getColorsAtColumn(i) );
-          //colorChooser.setColor( ts.getColor());
-        if( ts.isCollision((int)playHeadCurr)) {
-          // update ColorPreview panel based on current pos. of slider
-          //playHeadCurr = ts.x - 1;        //break;
-          playHeadCurr = ts.x;        // FIXME: why was this "- 1"?
-        } 
-      }
-    }
-    */
-    //repaint();
-  }
-
+  }    
+  
   public void mouseMoved(MouseEvent e) {
   }
-
+  
   public void mouseDragged(MouseEvent e) {
-    //l.debug("dragged:"+e);
-    /*
-    if (playheadClicked) {             // if playhead is selected move it
-      playHeadCurr = e.getPoint().x;
-          
-      // bounds check for playhead
-      if (playHeadCurr < sx)
-        playHeadCurr = sx;
-      else if (playHeadCurr > trackWidth)
-        playHeadCurr = trackWidth;
-    } 
-    else {
-      // make multiple selection of timeslices on mousedrag
-      int x = e.getPoint().x;
-      TimeSlice[] timeSlices = tracks[0].timeSlices;  // any track will do
-      for( int i=0;i<numSlices;i++) {
-        TimeSlice ts = timeSlices[i];
-        if( ts.isCollision(x,mouseClickedPt.x) )
-          selectSlice(i,true);
+    //if( !playheadDragged(e) ) { 
+    //else {
+    // make multiple selection of timeslices on mousedrag
+
+    int x = e.getPoint().x;
+    for( int i=0; i<numSlices; i++) {
+      if( mtv.isSliceHitRanged( x, mouseClickedPt.x, i) ) {
+        mtv.getCurrTrack().selects[i] = true;
       }
     }
 
     repaint();
-    */
+    mtv.repaint();
   }
 
 }

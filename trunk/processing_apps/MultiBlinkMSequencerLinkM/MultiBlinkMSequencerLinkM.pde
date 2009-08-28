@@ -48,7 +48,7 @@ int numTracks = 8;
 int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
 
 // overall dimensions
-int mainWidth = 820;
+int mainWidth = 825;
 int mainHeight = 640;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
