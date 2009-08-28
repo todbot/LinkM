@@ -10,7 +10,7 @@
  *
  */
 
-public class MultiTrackViews
+public class MultiTrackView
   extends JPanel implements MouseListener, MouseMotionListener {
 
   Track[] tracks;
@@ -47,7 +47,7 @@ public class MultiTrackViews
    * @param aWidth width of multitrack
    * @param aHeight height of multitrack
    */
-  public MultiTrack(int numTracks, int numSlices,  int w,int h) {
+  public MultiTrackView(int numTracks, int numSlices,  int w,int h) {
     this.numTracks = numTracks;
     this.numSlices = numSlices;
     this.w = w;           // overall width 
