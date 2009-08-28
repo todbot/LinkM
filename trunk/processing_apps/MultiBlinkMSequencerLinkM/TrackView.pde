@@ -2,7 +2,7 @@
  * TrackView
  * 
  *  Gives a zoomed-in view of a particular track.
- *  Needs
+ *  Needs a MultiTrackView
  *  
  */
 
@@ -11,7 +11,7 @@ public class TrackView
   extends JPanel implements MouseListener, MouseMotionListener {
 
 
-  private MultiTrack multitrack;
+  private MultiTrackView multitrack;
   //private Track currTrack;
 
   private Color playHeadC = new Color(255, 0, 0);
@@ -22,7 +22,7 @@ public class TrackView
 
   private Point mouseClickedPt;
 
-  public TrackView(MultiTrack multitrack, int w, int h) {
+  public TrackView(MultiTrackView multitrack, int w, int h) {
     this.multitrack = multitrack;
 
     this.w = w;           // overall width 

@@ -34,7 +34,7 @@ Font silkfont;
 JDialog mf;  // the main holder of the app
 JColorChooser colorChooser;
 //ColorPreview colorPreview;
-MultiTrack multitrack;
+MultiTrackView multitrack;
 TrackView trackview;
 PlayButton pb;
 
@@ -137,13 +137,9 @@ void setupGUI() {
   mainpane.setLayout(layout);
 
   ChannelsTop chtop = new ChannelsTop();
-  //multitrack      = new MultiTrack( numTracks, numSlices, 0,0, mainWidth,150);
-  multitrack        = new MultiTrack( numTracks, numSlices, mainWidth,150);
-  //multitrack        = new MultiTrack( 4, numSlices, mainWidth,150);
+  multitrack        = new MultiTrackView( numTracks, numSlices, mainWidth,135);
 
   TimelineTop ttop  = new TimelineTop();
-  //timeline        = new Timeline( false, numSlices, 1, mainWidth, 100 );
-  //timeline        = new Timeline( numSlices,numTracks, 170, mainWidth );
   trackview         = new TrackView( multitrack, mainWidth, 100 );
 
   //  FIXME: this will change when preview-per-track exists
