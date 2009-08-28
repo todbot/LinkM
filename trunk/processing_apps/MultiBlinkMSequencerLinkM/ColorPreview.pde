@@ -69,7 +69,7 @@ public class ColorPreview extends JPanel {
     }
     
     // wow. is this a hack?
-    setColors( timeline.getColorsAtColumn( timeline.getPreviewColumn() ) );
+    //setColors( timeline.getColorsAtColumn( timeline.getPreviewColumn() ) );
     
     // make BlinkM color match preview color
     int addr = 0;
