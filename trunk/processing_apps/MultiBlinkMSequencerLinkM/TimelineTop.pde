@@ -18,9 +18,9 @@ public class TimelineTop extends JPanel {
     setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
 
     durChoice = new JComboBox();
-    durChoice.addItem( durations[0]+ " seconds");  
-    durChoice.addItem( durations[1]+ " seconds");
-    durChoice.addItem( durations[2]+ " seconds");
+    durChoice.addItem( timings[0].duration+ " seconds");  
+    durChoice.addItem( timings[1].duration+ " seconds");
+    durChoice.addItem( timings[2].duration+ " seconds");
 
         
     add( Box.createRigidArea(new Dimension(25,0) ) );
@@ -45,7 +45,7 @@ public class TimelineTop extends JPanel {
     durChoice.addItemListener(new ItemListener() {
         public void itemStateChanged(ItemEvent ie) {
           int indx = durChoice.getSelectedIndex();
-          durationCurrent = durations[indx];
+          durationCurrent = timings[indx].duration;
           prepareForPreview(durationCurrent);
         }        
       }
@@ -102,6 +102,13 @@ public class TimelineTop extends JPanel {
           buttonLegend.setVisible(false);
         }
       } );
+    loadOneBtn.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent ae) {
+          l.debug("loadOne");
+          loadTrack();
+        }    
+      }
+      );
 
     saveOneBtn.addMouseListener( new MouseAdapter() { 
         public void mouseEntered(MouseEvent e) { 
@@ -112,6 +119,13 @@ public class TimelineTop extends JPanel {
           buttonLegend.setVisible(false);
         }
       } );
+    saveOneBtn.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent ae) {
+          l.debug("saveOne");
+          saveTrack();
+        }
+      }
+      );
 
   }
     /*
