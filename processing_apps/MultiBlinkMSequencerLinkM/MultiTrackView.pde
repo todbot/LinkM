@@ -14,10 +14,14 @@ public class MultiTrackView
   extends JPanel implements MouseListener, MouseMotionListener {
 
   Track[] tracks;
+  Color[] previewColors;
+  int previewFadespeed = 25;
+
   int numTracks;
   int numSlices;
 
   int currTrack;
+  int currSlice;  // only valid on playback
 
   boolean playing = false;                  //    
   boolean looping = true;                   // loop or single-shot
@@ -33,7 +37,7 @@ public class MultiTrackView
   private int trackWidth;
   private int previewX;
   private Color playHeadC = new Color(255, 0, 0);
-  private float playHeadCurr = sx;
+  private float playHeadCurr;
   private boolean playheadClicked = false;
 
   private Font font;
@@ -41,6 +45,7 @@ public class MultiTrackView
   private Point mouseClickedPt;
 
   private long startTime = 0;             // debug, start time of play
+
 
   /**
    * @param numTracks  number of tracks in this multitrack
@@ -67,8 +72,11 @@ public class MultiTrackView
 
     // initialize the tracks
     tracks = new Track[numTracks];
+    previewColors = new Color[numTracks];
     for( int j=0; j<numTracks; j++ ) {
       tracks[j] = new Track( numSlices );
+      tracks[j].blinkmaddr = 10+j;  // set default addrs
+      previewColors[j] = tlDarkGray;
     }
 
     currTrack = 0;
@@ -76,6 +84,7 @@ public class MultiTrackView
     tracks[ currTrack ].active = true;
     tracks[ currTrack ].selects[0] =  true;
 
+    reset();
   }
 
 
@@ -100,7 +109,7 @@ public class MultiTrackView
 
     drawPreview(g);
 
-    drawCurrTrackMarker(g);
+    drawTrackMarker(g);
 
     drawPlayHead(g);   // it goes on top, so it gets painted last
    
@@ -141,13 +150,14 @@ public class MultiTrackView
   }
 
   /**
-   *
+   * Hilight the currently selected track
    */
-  void drawCurrTrackMarker(Graphics2D g) { 
+  void drawTrackMarker(Graphics2D g) { 
     // hilite currTrack with marker
     int tx = sx;
     int ty = scrubHeight + (currTrack*trackHeight) ;
-    g.setColor( new Color( 200,140,140));
+    //g.setColor( new Color( 200,140,140));
+    g.setColor( muteOrange );
     g.drawRect( tx,ty, trackWidth, trackHeight+1 );
   }
 
@@ -159,7 +169,6 @@ public class MultiTrackView
   void drawTrackButtons(Graphics2D g ) {
     int ty = 4 + scrubHeight ;
     for( int tnum=0; tnum<numTracks; tnum++ ) {
-      int blinkmAddr = blinkmAddrs[tnum]; // get this track i2c address
       g.setColor( briOrange);
       g.drawRect(  3,ty+tnum*trackHeight, 15,10 );  // enable button outline 
       g.drawRect( 25,ty+tnum*trackHeight, 20,10 );  // addr button outline 
@@ -167,27 +176,17 @@ public class MultiTrackView
       if( tracks[tnum].active == true ) { 
         g.setColor( muteOrange );
         g.fillRect(  4, ty+1+tnum*trackHeight, 14,9 );  // enable button insides
-        g.fillRect( 26, ty+1+tnum*trackHeight, 19,9 );  // addr button insides
         
-        g.setColor( cBlk );
-        int offs = 26;
-        offs = ( blinkmAddr < 100 ) ? offs += 6 : offs;
-        offs = ( blinkmAddr < 10 )  ? offs += 5 : offs;
-        g.drawString( ""+blinkmAddr, offs, ty+8+tnum*trackHeight);  // addr text
+        int blinkmAddr = tracks[tnum].blinkmaddr; // this track's i2c address
+        if( blinkmAddr != -1 ) { // if it's been set to something meaningful
+          g.fillRect( 26, ty+1+tnum*trackHeight, 19,9 );  // addr button insides
+          g.setColor( cBlk );
+          int offs = 26;
+          offs = ( blinkmAddr < 100 ) ? offs += 6 : offs;
+          offs = ( blinkmAddr < 10 )  ? offs += 5 : offs;
+          g.drawString( ""+blinkmAddr, offs, ty+8+tnum*trackHeight);// addr text
+        }
       }
-    }
-  }
-
-  /**
-   *
-   */
-  void drawPreview(Graphics2D g ) {
-    int currSlice = getCurrSliceNum();
-    for( int i=0; i<numTracks; i++) { 
-      Color c = tracks[i].slices[currSlice];
-      int ty =  spacerWidth + scrubHeight + (i*trackHeight);
-      g.setColor( c );
-      g.fillRect( previewX , ty, previewWidth-1 , trackHeight-spacerWidth);
     }
   }
 
@@ -216,6 +215,41 @@ public class MultiTrackView
 
   }
 
+  /**
+   *
+   */
+  void drawPreview(Graphics2D g ) {
+    for( int i=0; i<numTracks; i++) { 
+      Color ct = tracks[i].slices[currSlice];
+      Color c = previewColors[i];
+      int rt = ct.getRed();
+      int gt = ct.getGreen();
+      int bt = ct.getBlue();
+      int ro  = c.getRed();
+      int go  = c.getGreen();
+      int bo  = c.getBlue();
+      ro = color_slide( ro,rt, previewFadespeed);
+      go = color_slide( go,gt, previewFadespeed);
+      bo = color_slide( bo,bt, previewFadespeed);
+      previewColors[i] = new Color( ro,go,bo );
+      
+      int ty =  spacerWidth + scrubHeight + (i*trackHeight);
+      g.setColor( previewColors[i] );
+      g.fillRect( previewX , ty, previewWidth-1 , trackHeight-spacerWidth);
+    }
+  }
+  
+
+  int color_slide(int curr, int dest, int step) {
+    int diff = curr - dest;
+    if(diff < 0)  diff = -diff;
+    
+    if( diff <= step ) return dest;
+    if( curr == dest ) return dest;
+    else if( curr < dest ) return curr + step;
+    else                   return curr - step;
+  }
+
   // --------------------------------------------------------------------------
 
 
@@ -230,11 +264,23 @@ public class MultiTrackView
       int durtmp = (durationCurrent>5) ? durationCurrent+1 : durationCurrent;
       float step = trackWidth / (durtmp*1000.0/millisSinceLastTick);
       
+      previewFadespeed = getFadeSpeed(durationCurrent);
+      int newSlice = getCurrSliceNum();
+      if( newSlice != currSlice ) {
+        currSlice = newSlice;
+        for( int i=0; i<numTracks; i++ ) {
+          Color c = tracks[i].slices[currSlice];
+          if( c!=null && c != tlDarkGray ) { // the default "off", a hack FIXME
+            sendBlinkMColor( tracks[i].blinkmaddr, c );
+          }
+        }
+      }
+      
       playHeadCurr += step;
       repaint();
 
       // FIXME: +2
-      if( playHeadCurr >= sx + trackWidth +2) {   // check for end of timeline
+      if( playHeadCurr >= sx + trackWidth +1) {   // check for end of timeline
         reset();       // rest to beginning (and stop)
         if( looping ) {  // if we loop
           play();      // start again
@@ -244,6 +290,9 @@ public class MultiTrackView
         }
       } //if loopend
     } // if playing
+    else {
+      previewFadespeed = 1000;
+    }
   }
 
   /**
@@ -280,15 +329,22 @@ public class MultiTrackView
   public void allOff() {
     // reset timeslice selections
     for( int i=0; i<numTracks; i++) { 
-      for( int j=0; j<numSlices; j++) { 
-        tracks[i].selects[j] = false;
-      }
+      allOffTrack( i );
     }
-    repaint(); 
+  }
+  /**
+   * Sets all timeslices for a particular track to be not selected
+   */
+  public void allOffTrack( int trackindex ) {
+    for( int i=0; i<numSlices; i++) {
+      tracks[ trackindex ].selects[i] = false;
+    }
   }
 
   /** 
    * select all the slices in a given column
+   * @param slicenum time slice index
+   * @param state select or deselect
    */
   public void selectSlice( int slicenum, boolean state ) { 
     for( int i=0; i< numTracks; i++ ) 
@@ -303,7 +359,7 @@ public class MultiTrackView
   }
 
   public void setSelectedColor( Color c ) {
-    l.debug("setSelectedColor: "+c);
+    //l.debug("setSelectedColor: "+c);
     for( int i=0; i<numTracks; i++) {
       for( int j=0; j<numSlices; j++) { 
         if( tracks[i].selects[j] ) {
@@ -325,7 +381,7 @@ public class MultiTrackView
   }
  
   /**
-   *
+   * Get the time slice index of the current playing slice
    */
   public int getCurrSliceNum() {
     int cs=0;
@@ -347,17 +403,28 @@ public class MultiTrackView
 
   // --------------------------------------------------------------------------
   
+  /**
+   * Returns true if mouse is within a time slice.
+   * @param mx mouse x-coord
+   * @param slicenum index of time slice
+   */
   public boolean isSliceHit( int mx, int slicenum ) {
     return isSliceHit( mx, sx + (slicenum*sliceWidth), sliceWidth );
   }
+  /**
+   * Returns true if mouse is within a time slice.
+   * @param mx1 mouse x-coord start pos
+   * @param mx2 mouse x-coord end pos
+   * @param slicenum index of time slice
+   */
   public boolean isSliceHitRanged( int mx1, int mx2, int slicenum ) {
     return isSliceHitRanged( mx1, mx2, sx + (slicenum*sliceWidth), sliceWidth );
   }
-  // point 1D
+  // generalized version of above
   public boolean isSliceHit(int mx, int slicex, int slicew ) {
     return (mx < (slicex + slicew ) && mx >= slicex); 
   }
-  // ranged 1D
+  // generalized version of above
   public boolean isSliceHitRanged( int mx1,int mx2, int slicex, int slicew ) {
     if( mx2 > mx1 ) 
       return (mx1 < (slicex + slicew ) && mx2 >= slicex);
@@ -390,17 +457,21 @@ public class MultiTrackView
 
     return p.contains(mp);  // check if mouseclick on playhead
   }
+  
+  /**
+   * Copy any selection from old track to new track
+   */
+  public void copySelects( int newtrackindex, int oldtrackindex ) {
+    for( int i=0; i<numSlices; i++) 
+      tracks[newtrackindex].selects[i] = tracks[oldtrackindex].selects[i];
+  }
 
   public void mousePressed(MouseEvent e) {
     l.debug("MultiTrack.mousePressed: "+e.getPoint());
-    if( (e.getModifiers() & InputEvent.META_MASK) == 0 )  // alt/cmd pressed
-      allOff();
-
     Point mp = e.getPoint();
-
     mouseClickedPt = mp;
 
-    // handle playhead hits in mouseDragged
+    // playhead hits handled fully in mouseDragged
     // record location of hit in mouseClickedPt and go on
     playheadClicked = isPlayheadClicked(mp);
     if( playheadClicked ) {
@@ -414,28 +485,17 @@ public class MultiTrackView
         (mp.y > j*trackHeight + scrubHeight) && 
         (mp.y < (j+1)*trackHeight + scrubHeight) ;
 
-      if( intrack ) currTrack = j;  // for track selection
-
-      if( intrack && (mp.x >= 3 && mp.x <= 3+15 ) )   // enable button
+      if( intrack && (mp.x >= 3 && mp.x <= 3+15 ) ) // enable button
         toggleTrackEnable(j);
       else if( intrack && (mp.x >= 26 && mp.x <= 26+20 ) ) // addr button
         doTrackDialog(j);
-      else {  // FIXME: this doesn't need to execute for each track
-        
-        for( int i=0;i<numSlices;i++) {
-          if( isSliceHit( mp.x, i ) ) {
-            selectSlice(i,true); 
-            println("slice:"+i);
-          }
-          //toggleSlice(i);
-          else if ((e.getModifiers() & InputEvent.META_MASK) == 0) 
-            selectSlice(i,false); // fixme: this doesn't work
-        }
-        
+      else if( intrack ) {                         // just track selection
+        copySelects(j, currTrack);
+        allOffTrack( currTrack );
+        currTrack = j;  
       }
-
     }
-
+    
     repaint();
   }
 
@@ -479,6 +539,7 @@ public class MultiTrackView
         playHeadCurr = trackWidth;
     } 
     else {
+      /*
       // make multiple selection of timeslices on mousedrag
       int x = e.getPoint().x;
       for( int i=0; i<numSlices; i++) {
@@ -486,6 +547,7 @@ public class MultiTrackView
           selectSlice(i,true);
         }
       }
+      */
     }
 
     repaint();
@@ -498,44 +560,9 @@ public class MultiTrackView
     tracks[track].active = !tracks[track].active;
   }
 
-  /*
-  //
-  // if all tracks active, deactivate all other tracks, active this track
-  // if some non-this tracks deactive, toggle track active
-  // if only this track active, re-active all tracks
-  // (this seems needlessly complex,btw)
-  //
-  public void toggleSolo1(int track) {
-    boolean someactive = false;
-    boolean thisactive = false;
-    int activecount = 0;
-    for( int i=0; i<numTracks; i++ ) { // find which tracks are active
-      if( timeTracks[i].active ) {
-        someactive = true;
-        if( i==track ) thisactive = true;
-        activecount++;
-      }
-    }
-    println("cnt:"+activecount+", some:"+someactive+", this:"+thisactive);
-    if( activecount == numTracks ) {  // traditional solo case
-      for( int i=0; i<numTracks; i++ )
-        timeTracks[i].active = false; 
-      timeTracks[track].active = true; // solo only this track
-    }
-    else if( someactive ) {              // if we're already soloing, reactive
-      if( activecount==1 && timeTracks[track].active ) {
-        for( int i=0; i<numTracks; i++ )
-          timeTracks[i].active = true; 
-      }
-      else 
-        timeTracks[track].active = !timeTracks[track].active;
-    }
-  }
-  */
-
   //
   public void doTrackDialog(int track) {
-    int blinkmAddr = blinkmAddrs[track];
+    int blinkmAddr = tracks[track].blinkmaddr;
     String s = (String)
       JOptionPane.showInputDialog(
                                   this,
@@ -552,7 +579,7 @@ public class MultiTrackView
       try { 
         blinkmAddr = Integer.parseInt(s);
         if( blinkmAddr >=0 && blinkmAddr < 127 ) { // i2c limits
-          blinkmAddrs[track] = blinkmAddr;
+          tracks[track].blinkmaddr = blinkmAddr;
         }
       } catch(Exception e) {}
       

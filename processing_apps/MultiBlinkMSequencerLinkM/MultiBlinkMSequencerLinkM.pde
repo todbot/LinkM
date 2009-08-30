@@ -33,38 +33,44 @@ Font silkfont;
 
 JDialog mf;  // the main holder of the app
 JColorChooser colorChooser;
-//ColorPreview colorPreview;
 MultiTrackView multitrack;
 TrackView trackview;
 PlayButton pb;
-
 JPanel connectPanel;
+JFileChooser fc;
 
 // number of slices in the timeline == number of script lines written to BlinkM
-int numSlices = 48;
-// number of different blinkms
-int numTracks = 8;
+int numSlices = 48;  
+int numTracks = 8;    // number of different blinkms
+
 // default blinkm addresses used, can change by clicking on the addresses in UI
-int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
+//int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
 
 // overall dimensions
-int mainWidth = 825;
+int mainWidth  = 825;
 int mainHeight = 640;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
 
-// the possible durations for the loop
-int[] durations = { 3, 30, 120 };
-int durationCurrent = durations[0];
+// maps duration in seconds to duration in ticks (durTicks) and fadespeed
+public static class Timing  {
+   public int duration;
+   public byte durTicks;
+   public byte fadeSpeed;
+   public Timing(int d,byte t,byte f) { duration=d; durTicks=t; fadeSpeed=f; }
+}
 
-// mapping of duration to ticks      (array must be same length as 'durations')
-public byte[] durTicks   = { (byte)   1, (byte) 18, (byte) 72 };
-// mapping of duration to fadespeeds (array must be same length as 'durations')
-public byte[] fadeSpeeds = { (byte) 100, (byte) 25, (byte)  5 };
+public static Timing[] timings = new Timing [] {
+    new Timing(   3, (byte)  1, (byte) 100 ),
+    new Timing(  30, (byte) 18, (byte)  25 ),
+    new Timing( 100, (byte) 25, (byte)   5 ),
+ };
+
+int durationCurrent = timings[0].duration;
 
 
 PApplet p;
-Util util = new Util();
+Util util = new Util();  // can't be a static class because of getClass() in it
 
 Color cBlk        = new Color(0,0,0);               // black like my soul
 Color fgLightGray = new Color(230, 230, 230);
@@ -123,6 +129,9 @@ void draw() {
   multitrack.tick( millisPerTick );
   trackview.tick( millisPerTick ); 
   // not exactly 1/frameRate, but good enough I think
+
+  //multitrack.setSelectedColor(colorChooser.getColor());
+    
 }
 
 
@@ -176,6 +185,22 @@ void setupGUI() {
   mf.setVisible(true);
   mf.setResizable(false);
 
+  fc = new JFileChooser( super.sketchPath ); 
+  fc.setFileFilter( new javax.swing.filechooser.FileFilter() {
+      public boolean accept(File f) {
+        if (f.isDirectory()) 
+          return true;
+        if (f.getName().endsWith("txt") ||
+            f.getName().endsWith("TXT")) 
+          return true;
+        return false;
+      }
+      public String getDescription() {
+        return "TXT files";
+      }
+    }
+    );
+
 }
 
 
@@ -184,15 +209,35 @@ JPanel makeColorChooserPanel() {
   JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
   colorChooser = new JColorChooser();
   colorChooser.setBackground(bgLightGray);
+
   colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
       public void stateChanged(ChangeEvent e) {
         Color c = colorChooser.getColor();
         multitrack.setSelectedColor(c);
-      }      
+      }
     });
-  colorChooser.setPreviewPanel( new JPanel() ); //colorPreview );
+
+  /*
+  // look for javax.swing.colorchooser.DefaltSwatchChooserPanel
+  AbstractColorChooserPanel[] cps = colorChooser.getChooserPanels();
+  for( int i=0; i< cps.length; i++ ) {
+    String s = cps[i].getClass().getCanonicalName();
+    println("s:'"+s+"'");
+    if( s.equals("javax.swing.colorchooser.DefaultSwatchChooserPanel") ) {
+      println("woot");
+      cps[i].addMouseListener( new MouseAdapter() { 
+          public void mousePressed(MouseEvent e) {
+            l.debug("tod click!");
+            multitrack.setSelectedColor( colorChooser.getColor() );
+          }
+        } );
+    }
+  */
+
+  colorChooser.setPreviewPanel( new JPanel() ); // we have our custom preview
   colorChooser.setBackground(bgLightGray);
   colorChooserPanel.add( colorChooser );
+  colorChooser.setColor( tlDarkGray );
   return colorChooserPanel;
 }
 
@@ -264,6 +309,22 @@ boolean connectIfNeeded() {
   }
   isConnected = true;
   return true; // connect successful
+}
+
+
+// used generally to make BlinkM color match preview color
+boolean sendBlinkMColor( int blinkmAddr, Color c ) {    
+  l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
+  //int addr = 0;
+  /*
+    try { 
+    linkm.fadeToRGB( addr, c);  // FIXME:  which track 
+    } catch( IOException ioe) {
+    // hmm, what to do here
+    return false;
+    }
+  */
+  return true;
 }
 
 /**
@@ -341,20 +402,105 @@ public void prepareForPreview(int loopduration) {
   }
 }
 
+
+/**
+ *
+ */
+void loadTrack() { 
+  loadTrack(multitrack.currTrack);
+}
+
+/**
+ * Load a text file containing a light script, turn it into BlinkMScriptLines
+ */
+void loadTrack(int tracknum) {
+  int returnVal = fc.showOpenDialog(mf);  // this does most of the work
+  if (returnVal != JFileChooser.APPROVE_OPTION) {
+    println("Open command cancelled by user.");
+    return;
+  }
+  File file = fc.getSelectedFile();
+  if( file != null ) {
+    String[] lines = linkm.loadFile( file );
+    BlinkMScript script = linkm.parseScript( lines );
+    if( script == null ) {
+      System.err.println("bad format in file");
+      return;
+    }
+    script = script.trimComments(); 
+    int len = script.length();
+    println("script len:"+len);  // FIXME: check script len overrun
+    if( len > numSlices ) { // danger!
+      len = numSlices;
+    }
+    int j=0;
+    for( int i=0; i<len; i++ ) { 
+      BlinkMScriptLine sl = script.get(i);
+      if( sl.cmd == 'c' ) { // color command
+        Color c = new Color( sl.arg1, sl.arg2, sl.arg3 );
+        multitrack.tracks[tracknum].slices[j++] = c;
+      }
+    }
+    multitrack.repaint();
+  }
+}
+
+
+/**
+ *
+ */
+ void saveTrack() {
+  saveTrack( multitrack.currTrack );
+}
+/**
+ * 
+ */
+void saveTrack(int tracknum) {
+  int returnVal = fc.showSaveDialog(mf);  // this does most of the work
+  if( returnVal != JFileChooser.APPROVE_OPTION) {
+    println("Save command cacelled by user.");
+    return;
+  }
+  File file = fc.getSelectedFile();
+  if (file.getName().endsWith("txt") ||
+      file.getName().endsWith("TXT")) {
+    BlinkMScript script = new BlinkMScript();
+    Color[] slices = multitrack.tracks[tracknum].slices;
+    int durTicks = getDurTicks();
+    for( int i=0; i< slices.length; i++) {
+      Color c = slices[i];
+      int r = c.getRed()  ;
+      int g = c.getGreen();
+      int b = c.getBlue() ;
+      script.add( new BlinkMScriptLine( durTicks, 'c', r,g,b) );
+    }    
+    linkm.saveFile( file, script.toString() );
+  }
+}
+
+
+// ------------------------------------------------
+
+
+public byte getDurTicks() { 
+  return getDurTicks(durationCurrent);
+}
+
 // uses global var 'durations'
 public byte getDurTicks(int loopduration) {
-  for( int i=0; i<durations.length; i++ ) {
-    if( durations[i] == loopduration )
-      return durTicks[i];
+  for( int i=0; i< timings.length; i++ ) {
+    if( timings[i].duration == loopduration )
+      return timings[i].durTicks;
   }
-  return durTicks[0]; // failsafe
+  return timings[0].durTicks; // failsafe
 }
+
 // this is so lame
 public byte getFadeSpeed(int loopduration) {
-  for( int i=0; i<durations.length; i++ ) {
-    if( durations[i] == loopduration )
-      return fadeSpeeds[i];
+  for( int i=0; i< timings.length; i++ ) {
+    if( timings[i].duration == loopduration )
+      return timings[i].fadeSpeed;
   }
-  return fadeSpeeds[0]; // failsafe
+  return timings[0].fadeSpeed; // failsafe
 }
 

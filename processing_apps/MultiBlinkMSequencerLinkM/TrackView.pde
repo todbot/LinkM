@@ -17,11 +17,10 @@ public class TrackView
   private Color playHeadC = new Color(255, 0, 0);
   private float playHeadCurr;
   private boolean playheadClicked = false;
+  private Point mouseClickedPt;
 
   private int w,h;
   private int scrubHeight;
-
-  private Point mouseClickedPt;
 
   public TrackView(MultiTrackView multitrack, int w, int h) {
     this.mtv = multitrack;
@@ -35,6 +34,7 @@ public class TrackView
     addMouseListener(this);
     addMouseMotionListener(this);
 
+    playHeadCurr = mtv.playHeadCurr;  // kept in sync by tick()
   }
 
 
@@ -68,7 +68,9 @@ public class TrackView
   }
 
   public void tick(float millisSinceLastTick) { 
+    playHeadCurr = mtv.playHeadCurr;
     if( mtv.playing ) {
+
     }
     repaint();
   }
@@ -103,17 +105,25 @@ public class TrackView
   
   public void mousePressed(MouseEvent e) {
     l.debug("TrackView.mousePressed: "+e.getPoint());
-    if( (e.getModifiers() & InputEvent.META_MASK) == 0 )  // alt/cmd pressed
-      mtv.allOff();
+    //if( (e.getModifiers() & InputEvent.META_MASK) == 0 )  // alt/cmd pressed
+    //  mtv.allOff();
 
     Point mp = e.getPoint();
     mouseClickedPt = mp;
+    
+    // handle playhead hits in mouseDragged
+    // record location of hit in mouseClickedPt and go on
+    l.debug("phc:"+playHeadCurr);
+    playheadClicked = isPlayheadClicked(mp);
+    if( playheadClicked ) {
+      l.debug("yes");
+      repaint();
+      return;
+    }
 
     for( int i=0;i<mtv.numSlices;i++) {
-      if( mtv.isSliceHit( mp.x, i ) ) {
+      if( mtv.isSliceHit( mp.x, i ) ) 
         mtv.getCurrTrack().selects[i] = true; 
-        println("tv.slice:"+i);
-      }
       else if ((e.getModifiers() & InputEvent.META_MASK) == 0) 
         mtv.getCurrTrack().selects[i] = false; // FIXME: this doesn't work
     }
@@ -123,23 +133,33 @@ public class TrackView
   public void mouseReleased(MouseEvent e) {
     Point mouseReleasedPt = e.getPoint();
     int clickCnt = e.getClickCount();
+
+    playheadClicked = false;
   }    
   
   public void mouseMoved(MouseEvent e) {
   }
   
   public void mouseDragged(MouseEvent e) {
-    //if( !playheadDragged(e) ) { 
-    //else {
-    // make multiple selection of timeslices on mousedrag
-
-    int x = e.getPoint().x;
-    for( int i=0; i<numSlices; i++) {
-      if( mtv.isSliceHitRanged( x, mouseClickedPt.x, i) ) {
-        mtv.getCurrTrack().selects[i] = true;
+    // uck, copy-n-paste antipattern
+    if (playheadClicked) {             // if playhead is selected move it
+      playHeadCurr = e.getPoint().x;
+          
+      // bounds check for playhead
+      if (playHeadCurr < mtv.sx)   // such a bad hack copy-paste
+        playHeadCurr = mtv.sx;
+      else if (playHeadCurr > mtv.trackWidth)
+        playHeadCurr = mtv.trackWidth;
+    } 
+    else {
+      // make multiple selection of timeslices on mousedrag
+      int x = e.getPoint().x;
+      for( int i=0; i<numSlices; i++) {
+        if( mtv.isSliceHitRanged( x, mouseClickedPt.x, i) ) {
+          mtv.getCurrTrack().selects[i] = true;
+        }
       }
     }
-
     repaint();
     mtv.repaint();
   }

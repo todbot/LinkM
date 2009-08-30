@@ -18,8 +18,8 @@ public class ChannelsTop extends JPanel {
         
     add( Box.createRigidArea(new Dimension(25,0) ) );
 
-    ImageIcon chText = new Util().createImageIcon("blinkm_text_channels.gif",
-                                                  "CHANNELS");
+    ImageIcon chText = util.createImageIcon("blinkm_text_channels.gif",
+                                            "CHANNELS");
     JLabel chLabel = new JLabel(chText);
     add(chLabel);
         
@@ -29,14 +29,14 @@ public class ChannelsTop extends JPanel {
     buttonLegend = new JLabel();
     add(buttonLegend);
 
-    JButton loadAllBtn = new Util().makeButton("blinkm_butn_loadall_on.gif", 
-                                               "blinkm_butn_loadall_hov.gif", 
-                                               "LoadAll", bgLightGray);
+    JButton loadAllBtn = util.makeButton("blinkm_butn_loadall_on.gif", 
+                                         "blinkm_butn_loadall_hov.gif", 
+                                         "LoadAll", bgLightGray);
     add(loadAllBtn);
 
-    JButton saveAllBtn = new Util().makeButton("blinkm_butn_saveall_on.gif", 
-                                               "blinkm_butn_saveall_hov.gif", 
-                                               "SaveAll", bgLightGray);
+    JButton saveAllBtn = util.makeButton("blinkm_butn_saveall_on.gif", 
+                                         "blinkm_butn_saveall_hov.gif", 
+                                         "SaveAll", bgLightGray);
     add(saveAllBtn);
         
     add( Box.createRigidArea(new Dimension(15,0) ) );

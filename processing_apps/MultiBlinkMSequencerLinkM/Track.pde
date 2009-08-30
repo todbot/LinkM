@@ -13,6 +13,7 @@ public class Track {
   boolean isLoop = true;           // loop or no loop
   boolean active = false;
 
+  int blinkmaddr = -1;  // default address, means "not configured"
   
   /**
    * @param numSlices number of slices in a track

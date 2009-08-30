@@ -78,9 +78,10 @@ public class BurnDialog extends JDialog implements ActionListener {
           colorlist.add( multitrack.tracks[j].slices[i] );
         msgtop.setText( msg_uploading );
         
-        int blinkmAddr = blinkmAddrs[j];  // get this track i2c address
+        int blinkmAddr = multitrack.tracks[j].blinkmaddr;// get track i2c addr
 
         // burn the list, and saying which colors are 'unused'
+        // used method in MultiB
         burn( blinkmAddr, colorlist, tlDarkGray, durationCurrent,
               multitrack.looping, progressbar);
         
