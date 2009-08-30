@@ -186,14 +186,8 @@ public class LinkM
       // command handling
 
       if( cmd.equals("upload") ) {
-        ArrayList lines = linkm.loadFile( file );  // FIXME: kinda hacky here
-        StringBuffer sb = new StringBuffer();
-        for (int i = 0; i < lines.size(); i++) {
-          String l = (String) lines.get(i);
-          sb.append(l); sb.append("\n");
-        }
-
-        BlinkMScript script = linkm.parseScript( sb.toString() );
+        String[] lines = linkm.loadFile( file );
+        BlinkMScript script = linkm.parseScript( lines );
         if( script == null ) {
           System.err.println("bad format in file");
           return;
@@ -722,46 +716,60 @@ public class LinkM
   }
 
   /**
-   * Load a text file and turn it into an ArrayList of Strings.
+   * Load a text file and turn it into an array of Strings.
    */
-  static final public ArrayList loadFile( String filename ) {
+  static final public String[] loadFile( String filename ) {
     return loadFile( new File(filename) );
   }
 
   /**
    * Load a text file and turn it into an ArrayList of Strings.
    */
-  static final public ArrayList loadFile( File filename ) {
-    ArrayList<String> lines = new ArrayList<String>();
+  static final public String[] loadFile( File filename ) {
+    ArrayList<String> linesl = new ArrayList<String>();
     String line;
     BufferedReader in = null;
     try { 
       in = new BufferedReader(new FileReader(filename));
       while( (line = in.readLine()) != null ) {
-        lines.add( line );
+        linesl.add( line );
       }
     }
     catch( Exception ex ) { 
       System.err.println("error: "+ex);
-      lines = null;
+      linesl = null;
     }
     finally { 
       try { if( in!=null) in.close(); } catch(Exception ex) {}
     }
-    return lines;
+    
+    if( linesl != null ) { 
+      String[] lines = new String[ linesl.size() ];
+      for( int i=0; i<linesl.size(); i++) {
+        lines[i] = linesl.get(i);
+      }
+      return lines;
+    }
+    return null;
+  }
+
+  static final public boolean saveFile( String filename, String scriptstr ) { 
+    return saveFile( new File(filename), scriptstr );
   }
 
   /**
-   * Take an ArrayList of Strings and save it to as a text file.
+   * Take a script in String format and save it to as a text file.
    */
-  static final public boolean saveFile( String filename, ArrayList lines ) {
+  static final public boolean saveFile( File file, String scriptstr ) { 
     //File f = new File( filename );
     BufferedWriter out = null;
     try { 
-      out = new BufferedWriter(new FileWriter( filename ));
-      for( int i=0; i<lines.size(); i++ ) { 
-        out.write( (String)lines.get(i) );
-      }
+      out = new BufferedWriter(new FileWriter( file ));
+      out.write(scriptstr);
+      //String lines[] = scriptstr.split("\n");
+      //for( int i=0; i<lines.length; i++ ) { 
+      //  out.write( lines[i]+"\n" );   // FIXME:  don't need to split it up?
+      //}
     } catch( Exception ex ) { 
       System.err.println("error: "+ex);
       return false;

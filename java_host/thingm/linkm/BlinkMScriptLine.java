@@ -9,10 +9,10 @@ package thingm.linkm;
  * also includes string rendering
  */
 public class BlinkMScriptLine {
-  int dur = 0xff;
-  char cmd = (char)0x00;   // indicates uninit'd line
-  int  arg1,arg2,arg3;
-  String comment;
+  public int dur = 0xff;
+  public char cmd = (char)0x00;   // indicates uninit'd line
+  public int  arg1,arg2,arg3;
+  public String comment;
   
   public BlinkMScriptLine() {
   }
@@ -20,7 +20,7 @@ public class BlinkMScriptLine {
   public BlinkMScriptLine( int d, char c, int a1, int a2, int a3 ) {
     dur = d;
     cmd = c;
-    arg1 = a1; 
+    arg1 = a1;
     arg2 = a2;
     arg3 = a3;
   }
