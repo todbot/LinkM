@@ -46,6 +46,7 @@ public class MultiTrackView
 
   private long startTime = 0;             // debug, start time of play
 
+  TrackView tv;
 
   /**
    * @param numTracks  number of tracks in this multitrack
@@ -74,9 +75,9 @@ public class MultiTrackView
     tracks = new Track[numTracks];
     previewColors = new Color[numTracks];
     for( int j=0; j<numTracks; j++ ) {
-      tracks[j] = new Track( numSlices );
+      tracks[j] = new Track( numSlices, nullColor );
       tracks[j].blinkmaddr = 10+j;  // set default addrs
-      previewColors[j] = tlDarkGray;
+      previewColors[j] = nullColor;
     }
 
     currTrack = 0;
@@ -87,6 +88,9 @@ public class MultiTrackView
     reset();
   }
 
+  public void addTrackView( TrackView tview ) {
+    tv = tview;
+  }
 
   /**
    * @Override
@@ -111,7 +115,7 @@ public class MultiTrackView
 
     drawTrackMarker(g);
 
-    drawPlayHead(g);   // it goes on top, so it gets painted last
+    drawPlayHead(g, playHeadCurr);   // it goes on top, so it gets painted last
    
   }
 
@@ -193,7 +197,7 @@ public class MultiTrackView
   /**
    *
    */
-  void drawPlayHead(Graphics2D g) {
+  void drawPlayHead(Graphics2D g, float playHeadCurr) {
     // paint scrub area
     g.setColor(fgLightGray);
     g.fillRect(0, 0, getWidth(), scrubHeight-spacerWidth);
@@ -270,7 +274,7 @@ public class MultiTrackView
         currSlice = newSlice;
         for( int i=0; i<numTracks; i++ ) {
           Color c = tracks[i].slices[currSlice];
-          if( c!=null && c != tlDarkGray ) { // the default "off", a hack FIXME
+          if( c!=null && c != nullColor ) { // the default "off", a hack FIXME
             sendBlinkMColor( tracks[i].blinkmaddr, c );
           }
         }
@@ -293,6 +297,8 @@ public class MultiTrackView
     else {
       previewFadespeed = 1000;
     }
+
+    if( tv!=null) tv.tick(millisSinceLastTick);
   }
 
   /**
@@ -302,6 +308,7 @@ public class MultiTrackView
     l.debug("starting to play for dur: " + durationCurrent);
     playing = true;
     startTime = System.currentTimeMillis();
+    if( tv!=null) tv.play();
   }
 
   /**
@@ -311,6 +318,7 @@ public class MultiTrackView
     l.debug("stop"); 
     playing = false;
     l.debug("elapsedTime:"+(System.currentTimeMillis() - startTime));
+    if( tv!=null) tv.stop();
   }
 
   /**
@@ -320,6 +328,7 @@ public class MultiTrackView
     stop();
     playHeadCurr = sx;
     repaint();
+    if( tv!=null) tv.reset();
   }
 
   /**
@@ -537,6 +546,7 @@ public class MultiTrackView
         playHeadCurr = sx;
       else if (playHeadCurr > trackWidth)
         playHeadCurr = trackWidth;
+      if( tv!=null ) tv.playHeadCurr = playHeadCurr;
     } 
     else {
       /*
