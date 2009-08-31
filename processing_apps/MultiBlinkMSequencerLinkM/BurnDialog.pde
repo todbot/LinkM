@@ -67,26 +67,18 @@ public class BurnDialog extends JDialog implements ActionListener {
     okbut.setVisible(true);
   }
 
+  // FIXME: On this whole thing, it's a mess
   class Burner implements Runnable {
     public void run() {
-        
-      multitrack.stop();
 
-      for( int j=0; j<numTracks; j++ ) {
-        ArrayList colorlist = new ArrayList();
-        for( int i=0; i<numSlices; i++)    // FIXME
-          colorlist.add( multitrack.tracks[j].slices[i] );
-        msgtop.setText( msg_uploading );
-        
-        int blinkmAddr = multitrack.tracks[j].blinkmaddr;// get track i2c addr
+      msgtop.setText( msg_uploading );
+    
+      boolean rc = doBurn();
 
-        // burn the list, and saying which colors are 'unused'
-        // used method in MultiB
-        burn( blinkmAddr, colorlist, tlDarkGray, durationCurrent,
-              multitrack.looping, progressbar);
-        
-        msgtop.setText( msg_uploading + msg_done );
-      }
+      if( rc == true ) 
+          msgtop.setText( msg_uploading + msg_done );
+      else 
+          msgtop.setText( msg_error );
 
       msgbot.setText( msg_nowplaying );
       

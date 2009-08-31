@@ -81,6 +81,8 @@ Color tlDarkGray  = new Color(55, 55, 55);          // dark color for timeline
 Color cHighLight  = new Color(255, 0, 0);           // used for selections
 Color briOrange   = new Color(0xFB,0xC0,0x80);      // bright yellow/orange
 Color muteOrange  = new Color(0xBC,0x83,0x45);
+
+Color nullColor   = tlDarkGray;
  
 /**
  * Processing's setup()
@@ -127,11 +129,8 @@ void draw() {
   float millisPerTick = (1/frameRate) * 1000;
   // tick tock
   multitrack.tick( millisPerTick );
-  trackview.tick( millisPerTick ); 
   // not exactly 1/frameRate, but good enough I think
 
-  //multitrack.setSelectedColor(colorChooser.getColor());
-    
 }
 
 
@@ -237,7 +236,7 @@ JPanel makeColorChooserPanel() {
   colorChooser.setPreviewPanel( new JPanel() ); // we have our custom preview
   colorChooser.setBackground(bgLightGray);
   colorChooserPanel.add( colorChooser );
-  colorChooser.setColor( tlDarkGray );
+  colorChooser.setColor( nullColor );
   return colorChooserPanel;
 }
 
@@ -314,7 +313,7 @@ boolean connectIfNeeded() {
 
 // used generally to make BlinkM color match preview color
 boolean sendBlinkMColor( int blinkmAddr, Color c ) {    
-  l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
+  //l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
   //int addr = 0;
   /*
     try { 
@@ -327,6 +326,53 @@ boolean sendBlinkMColor( int blinkmAddr, Color c ) {
   return true;
 }
 
+public boolean doBurn() {
+
+  multitrack.stop();
+  boolean rc = false;
+
+  int durticks = getDurTicks();
+  int fadespeed = getFadeSpeed();
+  int reps = (byte)((multitrack.looping) ? 0 : 1);  
+
+  BlinkMScriptLine scriptLine;
+  Color c;
+  int blinkmAddr;
+  try { 
+    for( int j=0; j<numTracks; j++ ) {
+      blinkmAddr = multitrack.tracks[j].blinkmaddr; // get track i2c addr
+      for( int i=0; i<numSlices; i++) {
+        c =  multitrack.tracks[j].slices[i];         
+        if( c == nullColor )
+          c = cBlk;
+        
+        scriptLine = new BlinkMScriptLine( durticks, 'c', 
+                                          c.getRed(),c.getGreen(),c.getBlue());
+        linkm.writeScriptLine( blinkmAddr, i, scriptLine);
+      }    
+      
+      // set script length     cmd   id         length         reps
+      linkm.setScriptLengthRepeats( blinkmAddr, numSlices, reps);
+      
+      // set boot params   addr, mode,id,reps,fadespeed,timeadj
+      linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
+      
+      // set playback fadespeed
+      linkm.setFadeSpeed( blinkmAddr, fadespeed);
+
+    } // for numTracks
+    
+    // and play the script on all blinkms
+    linkm.playScript( 0 );  // FIXME:  use LinkM to syncM
+
+  } catch( IOException ioe ) { 
+    println("burn error: "+ioe);
+    rc = false;
+  }
+  return rc;
+}
+
+
 /**
  * Burn a list of colors to a BlinkM
  * @param blinkmAddr the address of the BlinkM to write to
@@ -335,12 +381,11 @@ boolean sendBlinkMColor( int blinkmAddr, Color c ) {
  * @param duration  how long the entire list should last for, in seconds
  * @param loop      should the list be looped or not
  * @param progressbar if not-null, will update a progress bar
- */
-public void burn(int blinkmAddr, ArrayList colorlist, 
-                 Color nullColor, int duration, boolean loop, 
-                 JProgressBar progressbar) {
+ *
+public boolean burn(int blinkmAddr, ArrayList colorlist, 
+                    Color nullColor, int duration, boolean loop, 
+                    JProgressBar progressbar) {
   
-  //byte[] cmd = new byte[8];
   byte fadespeed = getFadeSpeed(duration);
   byte durticks = getDurTicks(duration);
   byte reps = (byte)((loop) ? 0 : 1);  
@@ -368,7 +413,7 @@ public void burn(int blinkmAddr, ArrayList colorlist,
       i++;
     }
     
-    // set script length   cmd   id         length         reps
+    // set script length     cmd   id         length         reps
     linkm.setScriptLengthRepeats( blinkmAddr, colorlist.size(), reps);
     
     // set boot params   addr, mode,id,reps,fadespeed,timeadj
@@ -382,9 +427,11 @@ public void burn(int blinkmAddr, ArrayList colorlist,
     
   } catch( IOException ioe ) {
     l.error("couldn't burn: "+ioe);
+    return false;
   }
+  return true;
 }
-
+*/
 
 /**
  * Prepare blinkm for playing preview scripts
@@ -401,7 +448,6 @@ public void prepareForPreview(int loopduration) {
     // FIXME: hmm, what to do here
   }
 }
-
 
 /**
  *
@@ -429,22 +475,30 @@ void loadTrack(int tracknum) {
     }
     script = script.trimComments(); 
     int len = script.length();
-    println("script len:"+len);  // FIXME: check script len overrun
-    if( len > numSlices ) { // danger!
-      len = numSlices;
+    if( len > numSlices ) {      // danger!
+      len = numSlices;           // cut off so we don't overrun
     }
     int j=0;
     for( int i=0; i<len; i++ ) { 
       BlinkMScriptLine sl = script.get(i);
-      if( sl.cmd == 'c' ) { // color command
+      if( sl.cmd == 'c' ) { // if color command
         Color c = new Color( sl.arg1, sl.arg2, sl.arg3 );
         multitrack.tracks[tracknum].slices[j++] = c;
       }
     }
-    multitrack.repaint();
+    multitrack.repaint();  // hmm
   }
 }
 
+void loadAllTracks() {
+  int returnVal = fc.showOpenDialog(mf);  // this does most of the work
+  if (returnVal != JFileChooser.APPROVE_OPTION) {
+    println("Open command cancelled by user.");
+    return;
+  }
+  File file = fc.getSelectedFile();
+
+}
 
 /**
  *
@@ -459,7 +513,7 @@ void saveTrack(int tracknum) {
   int returnVal = fc.showSaveDialog(mf);  // this does most of the work
   if( returnVal != JFileChooser.APPROVE_OPTION) {
     println("Save command cacelled by user.");
-    return;
+    return;  // FIXME: need to deal with no .txt name no file saving
   }
   File file = fc.getSelectedFile();
   if (file.getName().endsWith("txt") ||
@@ -495,6 +549,9 @@ public byte getDurTicks(int loopduration) {
   return timings[0].durTicks; // failsafe
 }
 
+public byte getFadeSpeed() { 
+  return getFadeSpeed(durationCurrent);
+}
 // this is so lame
 public byte getFadeSpeed(int loopduration) {
   for( int i=0; i< timings.length; i++ ) {

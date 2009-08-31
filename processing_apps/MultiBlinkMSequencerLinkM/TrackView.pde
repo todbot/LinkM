@@ -24,6 +24,7 @@ public class TrackView
 
   public TrackView(MultiTrackView multitrack, int w, int h) {
     this.mtv = multitrack;
+    mtv.addTrackView(this);
 
     this.w = w;           // overall width 
     this.h = h;
@@ -48,7 +49,7 @@ public class TrackView
     mtv.drawTrack( g, mtv.currTrack,  
                    mtv.sx, scrubHeight, w, h-scrubHeight  );
 
-    mtv.drawPlayHead(g);  // draws on me, not on mtv
+    mtv.drawPlayHead(g, playHeadCurr);  // draws on me, not on mtv
 
     drawPreview(g);
     
@@ -67,14 +68,24 @@ public class TrackView
 
   }
 
+  // called by mtv
   public void tick(float millisSinceLastTick) { 
-    playHeadCurr = mtv.playHeadCurr;
     if( mtv.playing ) {
-
+      playHeadCurr = mtv.playHeadCurr;
     }
     repaint();
   }
-
+  // called by mtv
+  public void play() {
+  }
+  // called by mtv
+  public void stop() { 
+  }
+  // called by mtv
+  public void reset() {
+    playHeadCurr = mtv.playHeadCurr;
+    repaint();
+  }
 
   // --------------------------------------------------------------------------
 
@@ -95,16 +106,16 @@ public class TrackView
    */
   public boolean isPlayheadClicked(Point mp) {
     Polygon p = new Polygon();  // creating bounding box for playhead
-    p.addPoint((int)playHeadCurr - 3, 0);
-    p.addPoint((int)playHeadCurr + 3, 0);
-    p.addPoint((int)playHeadCurr + 3, getHeight());
-    p.addPoint((int)playHeadCurr - 3, getHeight());
+    p.addPoint((int)playHeadCurr - 4, 0);
+    p.addPoint((int)playHeadCurr + 4, 0);
+    p.addPoint((int)playHeadCurr + 4, getHeight());
+    p.addPoint((int)playHeadCurr - 4, getHeight());
 
     return p.contains(mp);  // check if mouseclick on playhead
   }
   
   public void mousePressed(MouseEvent e) {
-    l.debug("TrackView.mousePressed: "+e.getPoint());
+    //l.debug("TrackView.mousePressed: "+e.getPoint());
     //if( (e.getModifiers() & InputEvent.META_MASK) == 0 )  // alt/cmd pressed
     //  mtv.allOff();
 
@@ -144,12 +155,12 @@ public class TrackView
     // uck, copy-n-paste antipattern
     if (playheadClicked) {             // if playhead is selected move it
       playHeadCurr = e.getPoint().x;
-          
       // bounds check for playhead
       if (playHeadCurr < mtv.sx)   // such a bad hack copy-paste
         playHeadCurr = mtv.sx;
       else if (playHeadCurr > mtv.trackWidth)
         playHeadCurr = mtv.trackWidth;
+      mtv.playHeadCurr = playHeadCurr;
     } 
     else {
       // make multiple selection of timeslices on mousedrag
