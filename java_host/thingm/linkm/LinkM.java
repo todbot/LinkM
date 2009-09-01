@@ -690,7 +690,7 @@ public class LinkM
   }
 
 
-  public void debug( String s ) {
+  static public void debug( String s ) {
     if(debug>0) println(s);
   }
 
@@ -789,7 +789,7 @@ public class LinkM
   /**
    * Take an array of Strings and turn them into a BlinkMScript object
    */
-  static final public BlinkMScript parseScript( String[] lines ){
+  static final public BlinkMScript parseScript( String[] lines ) {
     BlinkMScriptLine bsl; 
     BlinkMScript script = new BlinkMScript();
 
@@ -823,6 +823,57 @@ public class LinkM
     return script;
   }
 
+  /**
+   * Take an array of Strings and turn them into an array BlinkMScripts
+   * (assumes the strings actually comprised more than one script)
+   * FIXME: this is a really dumb way of doing this, gotta think more Perly
+   */
+  static final public BlinkMScript[] parseScripts( String[] lines ) {
+    String scriptbeginpat = "^\\s*\\{\\s*$";
+    String scriptendpat   = "^\\s*\\}\\s*$";  // don't forget comma
+    Pattern pb = Pattern.compile(scriptbeginpat);
+    Pattern pe = Pattern.compile(scriptendpat);
+    int i=0;
+    int ib,ie;  // begining and end pos of a single script
+    ArrayList<BlinkMScript> scriptlist = new ArrayList<BlinkMScript>();
+    while( i < lines.length ) { 
+      String l = lines[i];
+      Matcher mb = pb.matcher( l );
+      if( mb.find() ) {               // found open paren 
+        //debug("parseScripts: open paren at line "+i);
+        i++;  // skip to next line
+        ib = i;  // save begining pos of script
+        while( i < lines.length ) {
+          l = lines[i];
+          //debug("line "+i+":'"+l+"'");
+          Matcher me = pe.matcher( l ); // look for close paren
+          if( me.find() ) { 
+            //debug("parseScripts: close paren at line "+i);
+            ie = i;  // save end
+            String[] scriptlines = new String[ie-ib];
+            System.arraycopy( lines, ib, scriptlines, 0, (ie-ib) );
+            //for( int k=0; k<scriptlines.length; k++)
+            //  debug("scriptlines["+k+"]: "+scriptlines[k]);
+            BlinkMScript script = parseScript( scriptlines );
+            scriptlist.add( script );
+            //debug("parseScripts: script added.");
+            break;
+          } 
+          i++;
+        } // while still in file
+      } // if begining found
+      i++;  // otherwise go to next line
+    }
+
+    if( scriptlist.size() > 0 ) {
+      BlinkMScript[] scripts = new BlinkMScript[ scriptlist.size() ];
+      for( i=0; i<scriptlist.size(); i++) {
+        scripts[i] = scriptlist.get(i);
+      }
+      return scripts;
+    }
+    return null;
+  }
 
   //-------------------------------------------------------------------------
   // Utilty Class methods
