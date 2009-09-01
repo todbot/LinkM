@@ -37,13 +37,9 @@ public class PlayButton {
             // stop playing uploaded script, prep for preview playing
             prepareForPreview(durationCurrent);
             multitrack.play();
-            //channels.play();
-            //timeline.play(); 
           }
           else {
             multitrack.reset();
-            //channels.reset();
-            //timeline.reset();
           }
 
           isPlaying = !isPlaying;
