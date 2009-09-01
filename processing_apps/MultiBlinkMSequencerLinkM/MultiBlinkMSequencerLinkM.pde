@@ -164,7 +164,6 @@ void setupGUI() {
   BoxLayout controlsLayout = new BoxLayout(controlsPanel, BoxLayout.X_AXIS);
   controlsPanel.setLayout(controlsLayout);
   controlsPanel.add( colorChooserPanel );
-  //controlsPanel.add( colorPreview );
   controlsPanel.add( Box.createHorizontalGlue() );
   controlsPanel.add( buttonPanel );
 
@@ -467,8 +466,8 @@ void loadTrack(int tracknum) {
   }
   File file = fc.getSelectedFile();
   if( file != null ) {
-    String[] lines = linkm.loadFile( file );
-    BlinkMScript script = linkm.parseScript( lines );
+    String[] lines = LinkM.loadFile( file );
+    BlinkMScript script = LinkM.parseScript( lines );
     if( script == null ) {
       System.err.println("bad format in file");
       return;
@@ -497,7 +496,35 @@ void loadAllTracks() {
     return;
   }
   File file = fc.getSelectedFile();
+  if( file != null ) {
+    LinkM.debug = 1;
+    String[] lines = LinkM.loadFile( file );
+    BlinkMScript scripts[] = LinkM.parseScripts( lines );
+    if( scripts == null ) {
+      System.err.println("bad format in file");
+      return;
+    }
 
+    for( int k=0; k<scripts.length; k++) { 
+      BlinkMScript script = scripts[k];
+      //println(i+":\n"+scripts[i].toString());
+      script = script.trimComments(); 
+      int len = script.length();
+      if( len > numSlices ) {      // danger!
+        len = numSlices;           // cut off so we don't overrun
+      }
+      int j=0;
+      for( int i=0; i<len; i++ ) { 
+        BlinkMScriptLine sl = script.get(i);
+        if( sl.cmd == 'c' ) { // if color command
+          Color c = new Color( sl.arg1, sl.arg2, sl.arg3 );
+          multitrack.tracks[k].slices[j++] = c;
+        }
+      }
+    }
+
+  } //if(file!=null)
+  multitrack.repaint();
 }
 
 /**
@@ -528,10 +555,41 @@ void saveTrack(int tracknum) {
       int b = c.getBlue() ;
       script.add( new BlinkMScriptLine( durTicks, 'c', r,g,b) );
     }    
-    linkm.saveFile( file, script.toString() );
+    LinkM.saveFile( file, script.toString() );
   }
 }
 
+/**
+ *
+ */
+void saveAllTracks() {
+  int returnVal = fc.showSaveDialog(mf);  // this does most of the work
+  if( returnVal != JFileChooser.APPROVE_OPTION) {
+    println("Save command cacelled by user.");
+    return;  // FIXME: need to deal with no .txt name no file saving
+  }
+  File file = fc.getSelectedFile();
+  if (file.getName().endsWith("txt") ||
+      file.getName().endsWith("TXT")) {
+
+    StringBuffer sb = new StringBuffer();
+    for( int k=0; k<numTracks; k++ ) {
+      BlinkMScript script = new BlinkMScript();
+      Color[] slices = multitrack.tracks[k].slices;
+      int durTicks = getDurTicks();
+      for( int i=0; i< slices.length; i++) {
+        Color c = slices[i];
+        int r = c.getRed()  ;
+        int g = c.getGreen();
+        int b = c.getBlue() ;
+        script.add( new BlinkMScriptLine( durTicks, 'c', r,g,b) );
+      }
+      sb.append( script.toString() );  // render track to string
+    }
+
+    LinkM.saveFile( file, sb.toString() );  
+  }
+}
 
 // ------------------------------------------------
 

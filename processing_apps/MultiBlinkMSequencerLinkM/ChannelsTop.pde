@@ -61,6 +61,20 @@ public class ChannelsTop extends JPanel {
           buttonLegend.setVisible(false);
         }
       } );
+    loadAllBtn.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent ae) {
+          l.debug("loadAll");
+          loadAllTracks();
+        }    
+      }
+      );
+    saveAllBtn.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent ae) {
+          l.debug("saveAll");
+          saveAllTracks();
+        }    
+      }
+      );
 
   }
     

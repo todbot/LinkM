@@ -128,34 +128,5 @@ public class TimelineTop extends JPanel {
       );
 
   }
-    /*
-    // add Help button
-    JButton helpBtn = new Util().makeButton("blinkm_butn_help_on.gif", 
-                                            "blinkm_butn_help_hov.gif", 
-                                            "Help", bgLightGray);
-    this.add(helpBtn);
-        
-    helpBtn.addActionListener(new ActionListener() {
-        public void actionPerformed(ActionEvent ae) {
-          l.debug("help...");
-          p.link("http://thingm.com/products/blinkm/help", "_blank"); 
-        }    
-      }
-      );
-                              
-    // add About button
-    JButton aboutBtn = new Util().makeButton("blinkm_butn_about_on.gif", 
-                                             "blinkm_butn_about_hov.gif", 
-                                             "About", bgLightGray);
-    this.add(aboutBtn);
-        
-    aboutBtn.addActionListener(new ActionListener() {
-        public void actionPerformed(ActionEvent ae) {
-          l.debug("help...");
-          p.link("http://thingm.com/products/blinkm", "_blank"); 
-        }    
-      }
-      );
-    */
     
 }
