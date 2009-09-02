@@ -145,7 +145,7 @@ public class MultiTrackView
       g.fillRect( x+1, y+1, sliceWidth-2, h-2 );
       boolean sel = track.selects[i];
       if( track.selects[i] ) { // if selected 
-        g.setStroke( new BasicStroke(1.0f) );
+        g.setStroke( new BasicStroke(1.1f) );
         g.setColor(cHighLight);
         g.drawRect(x, y, sliceWidth-1, h-1 );
       }
@@ -158,11 +158,13 @@ public class MultiTrackView
    */
   void drawTrackMarker(Graphics2D g) { 
     // hilite currTrack with marker
-    int tx = sx;
+    int tx = 0; // was sx
     int ty = scrubHeight + (currTrack*trackHeight) ;
     //g.setColor( new Color( 200,140,140));
+    g.setStroke( new BasicStroke(1.0f));
     g.setColor( muteOrange );
-    g.drawRect( tx,ty, trackWidth, trackHeight+1 );
+    //g.drawRect( tx,ty, trackWidth, trackHeight+1 );
+    g.drawRect( tx,ty, w-1, trackHeight+1 );
   }
 
   /**
@@ -171,24 +173,26 @@ public class MultiTrackView
    * @param tnum track number (0..maxtracks)
    */
   void drawTrackButtons(Graphics2D g ) {
-    int ty = 4 + scrubHeight ;
+    g.setStroke( new BasicStroke(1.0f) );
+    int ty = 2 + scrubHeight ;
+    int th = trackHeight - 3;
     for( int tnum=0; tnum<numTracks; tnum++ ) {
       g.setColor( briOrange);
-      g.drawRect(  3,ty+tnum*trackHeight, 15,10 );  // enable button outline 
-      g.drawRect( 25,ty+tnum*trackHeight, 20,10 );  // addr button outline 
+      g.drawRect(  3,ty+tnum*trackHeight, 15,th );  // enable button outline 
+      g.drawRect( 25,ty+tnum*trackHeight, 20,th );  // addr button outline 
       
       if( tracks[tnum].active == true ) { 
         g.setColor( muteOrange );
-        g.fillRect(  4, ty+1+tnum*trackHeight, 14,9 );  // enable button insides
+        g.fillRect(  4, ty+1+tnum*trackHeight, 14,th-1 ); // enable butt insides
         
         int blinkmAddr = tracks[tnum].blinkmaddr; // this track's i2c address
         if( blinkmAddr != -1 ) { // if it's been set to something meaningful
-          g.fillRect( 26, ty+1+tnum*trackHeight, 19,9 );  // addr button insides
+          g.fillRect( 26, ty+1+tnum*trackHeight, 19,th-1 ); // addr butt insides
           g.setColor( cBlk );
           int offs = 26;
           offs = ( blinkmAddr < 100 ) ? offs += 6 : offs;
           offs = ( blinkmAddr < 10 )  ? offs += 5 : offs;
-          g.drawString( ""+blinkmAddr, offs, ty+8+tnum*trackHeight);// addr text
+          g.drawString( ""+blinkmAddr, offs, ty+9+tnum*trackHeight);// addr text
         }
       }
     }
@@ -289,9 +293,8 @@ public class MultiTrackView
         if( looping ) {  // if we loop
           play();      // start again
         } 
-        else {        // or we stay stopped
-          //pb.setToPlay();  // FIXME:   accesses global PlayButton object
-          buttonPanel.setToPlay();  // just in case? not needed?
+        else {        // or no loop, so stop after one play
+          buttonPanel.setToPlay();  // set play/stop button back to play
         }
       } //if loopend
     } // if playing

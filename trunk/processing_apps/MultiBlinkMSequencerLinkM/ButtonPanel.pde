@@ -27,7 +27,6 @@ public class ButtonPanel extends JPanel {
     this.setBackground(bgDarkGray);
     
     // add play button
-    //pb = new PlayButton();
     makePlayButton();
     //pb.b.setAlignmentX(Component.CENTER_ALIGNMENT);
     

@@ -35,7 +35,6 @@ JDialog mf;  // the main holder of the app
 JColorChooser colorChooser;
 MultiTrackView multitrack;
 TrackView trackview;
-//PlayButton pb;
 ButtonPanel buttonPanel;
 JPanel connectPanel;
 JFileChooser fc;

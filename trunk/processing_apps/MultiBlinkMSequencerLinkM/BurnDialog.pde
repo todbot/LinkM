@@ -49,7 +49,6 @@ public class BurnDialog extends JDialog implements ActionListener {
     setVisible(true);
     
     multitrack.reset(); // stop preview script
-    //pb.setToPlay();  // rest play button
     buttonPanel.setToPlay();  // reset play button
 
     // so dumb we have to spawn a thread for this
