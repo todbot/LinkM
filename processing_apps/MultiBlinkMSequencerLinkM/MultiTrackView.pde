@@ -290,7 +290,8 @@ public class MultiTrackView
           play();      // start again
         } 
         else {        // or we stay stopped
-          pb.setToPlay();  // FIXME:   accesses global PlayButton object
+          //pb.setToPlay();  // FIXME:   accesses global PlayButton object
+          buttonPanel.setToPlay();  // just in case? not needed?
         }
       } //if loopend
     } // if playing

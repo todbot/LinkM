@@ -35,7 +35,8 @@ JDialog mf;  // the main holder of the app
 JColorChooser colorChooser;
 MultiTrackView multitrack;
 TrackView trackview;
-PlayButton pb;
+//PlayButton pb;
+ButtonPanel buttonPanel;
 JPanel connectPanel;
 JFileChooser fc;
 
@@ -153,7 +154,7 @@ void setupGUI() {
   //  FIXME: this will change when preview-per-track exists
   //colorPreview             = new ColorPreview();
   JPanel colorChooserPanel = makeColorChooserPanel();
-  ButtonPanel buttonPanel  = new ButtonPanel(399, 250);  //was 310, FIXME:
+  buttonPanel       = new ButtonPanel(399, 250); //was 310,FIXME: why this size?
 
   JPanel controlsPanel = new JPanel();
   controlsPanel.setBackground(bgDarkGray);  //sigh, gotta do this on every panel
