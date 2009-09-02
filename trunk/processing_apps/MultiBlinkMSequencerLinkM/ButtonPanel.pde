@@ -6,7 +6,12 @@
 public class ButtonPanel extends JPanel {
 
   JButton uploadBtn, downloadBtn;
-
+  JButton playBtn;
+  private ImageIcon iconPlay;
+  private ImageIcon iconPlayHov;
+  private ImageIcon iconStop;
+  private ImageIcon iconStopHov;
+  
   /**
    *
    */
@@ -14,17 +19,18 @@ public class ButtonPanel extends JPanel {
     //BoxLayout layout =  new BoxLayout( this, BoxLayout.Y_AXIS);
     //layout.
     //this.setLayout( layout );
-
+    
     //this.setBorder(BorderFactory.createCompoundBorder(  // debug
     // BorderFactory.createLineBorder(Color.red),this.getBorder()));
-
+    
     this.setPreferredSize(new Dimension(aWidth,aHeight));
     this.setBackground(bgDarkGray);
-
+    
     // add play button
-    pb = new PlayButton();
+    //pb = new PlayButton();
+    makePlayButton();
     //pb.b.setAlignmentX(Component.CENTER_ALIGNMENT);
-
+    
     // add upload button
     uploadBtn = new Util().makeButton("blinkm_butn_upload_on_2.png",
                                       "blinkm_butn_upload_hov_2.png",
@@ -33,7 +39,7 @@ public class ButtonPanel extends JPanel {
     // action listener for burn button
     uploadBtn.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
-          new BurnDialog(mf, downloadBtn);
+          new BurnDialog(mf, uploadBtn);
         }
       });
     downloadBtn = new Util().makeButton("blinkm_butn_download_on_2.png",
@@ -46,10 +52,11 @@ public class ButtonPanel extends JPanel {
           //new BurnDialog(mf,burnBtn);
         }
       });
-
-    ImageIcon connImg = new Util().createImageIcon("blinkm_separator_horiz_larg.gif", "separator horizontal");
+    
+    ImageIcon connImg = new Util().createImageIcon("blinkm_separator_horiz_larg.gif", 
+                                                   "separator horizontal");
     //connImg.setAlignmentX(Component.CENTER_ALIGNMENT);
-
+    
     // add Help button
     JButton helpBtn = new Util().makeButton("blinkm_butn_help_on.gif", 
                                             "blinkm_butn_help_hov.gif", 
@@ -91,12 +98,79 @@ public class ButtonPanel extends JPanel {
     minibuttonPanel.add(Box.createRigidArea(new Dimension(10,0)));
 
 
-    this.add(pb.b);  // why did i do this?
+    this.add(playBtn);  // why did i do this?
     this.add(updnPanel);
     this.add(Box.createRigidArea(new Dimension(0,5)));
     this.add(new JLabel(connImg));      // add separator
     this.add(Box.createRigidArea(new Dimension(0,5)));
     this.add(minibuttonPanel);
   }
+  
+
+  /**
+   *
+   */
+  public void makePlayButton() { 
+    
+    iconPlay    = new Util().createImageIcon("blinkm_butn_play_on_2.png", 
+                                             "Play"); 
+    iconPlayHov = new Util().createImageIcon("blinkm_butn_play_hov_2.png", 
+                                             "Play"); 
+    iconStop    = new Util().createImageIcon("blinkm_butn_stop_on_2.png", 
+                                             "Stop"); 
+    iconStopHov = new Util().createImageIcon("blinkm_butn_stop_hov_2.png", 
+                                             "Stop"); 
+    playBtn = new JButton();
+    playBtn.setOpaque(true);
+    playBtn.setBorderPainted( false );
+    playBtn.setBackground(bgDarkGray);
+    playBtn.setRolloverEnabled(true);
+    setPlayIcon();
+
+    playBtn.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent ae) {
+          // if we are going from not playing to playing, start timeline
+          if( !multitrack.playing ) {
+            // stop playing uploaded script, prep for preview playing
+            prepareForPreview(durationCurrent);  // global func
+            multitrack.play();
+          }
+          else {
+            multitrack.reset();
+          }
+          
+          //isPlaying = !isPlaying;
+          l.debug("Playing: " + multitrack.playing);
+          setPlayIcon();
+
+          multitrack.allOff();  // hmmm.
+
+        }
+      });
+  }
+
+  /**
+   *
+   */
+  public void setPlayIcon() {
+    if( multitrack.playing ) {
+      playBtn.setIcon(iconStop);
+      playBtn.setRolloverIcon(iconStopHov); 
+    } 
+    else {
+      playBtn.setIcon(iconPlay);
+      playBtn.setRolloverIcon(iconPlayHov); 
+    } 
+  }
+
+  /**
+   *
+   */
+  public void setToPlay() {
+    playBtn.setIcon(iconPlay);
+    playBtn.setRolloverIcon(iconPlayHov); 
+    //isPlaying = false;
+  }
 
 }
+

@@ -23,7 +23,7 @@ public class BurnDialog extends JDialog implements ActionListener {
     super();
     burnBtn = aBurnBtn;
     burnBtn.setEnabled(false);
-
+    
     setTitle("BlinkM Upload");
 
     JPanel panel = new JPanel(new GridLayout(0,1));
@@ -49,7 +49,8 @@ public class BurnDialog extends JDialog implements ActionListener {
     setVisible(true);
     
     multitrack.reset(); // stop preview script
-    pb.setToPlay();  // rest play button
+    //pb.setToPlay();  // rest play button
+    buttonPanel.setToPlay();  // reset play button
 
     // so dumb we have to spawn a thread for this
     new Thread( new Burner() ).start();
