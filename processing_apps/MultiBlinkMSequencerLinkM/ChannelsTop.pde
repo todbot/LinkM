@@ -12,7 +12,7 @@ public class ChannelsTop extends JPanel {
    */
   public ChannelsTop() {
     // set color of this panel
-    setBackground(bgLightGray);
+    setBackground(cBgLightGray);
     setLayout( new BoxLayout(this, BoxLayout.X_AXIS) );
     setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
         
@@ -31,12 +31,12 @@ public class ChannelsTop extends JPanel {
 
     JButton loadAllBtn = util.makeButton("blinkm_butn_loadall_on.gif", 
                                          "blinkm_butn_loadall_hov.gif", 
-                                         "LoadAll", bgLightGray);
+                                         "LoadAll", cBgLightGray);
     add(loadAllBtn);
 
     JButton saveAllBtn = util.makeButton("blinkm_butn_saveall_on.gif", 
                                          "blinkm_butn_saveall_hov.gif", 
-                                         "SaveAll", bgLightGray);
+                                         "SaveAll", cBgLightGray);
     add(saveAllBtn);
         
     add( Box.createRigidArea(new Dimension(15,0) ) );

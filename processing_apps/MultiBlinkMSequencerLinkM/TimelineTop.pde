@@ -13,14 +13,14 @@ public class TimelineTop extends JPanel {
    */
   public TimelineTop() {
     // set color of this panel
-    setBackground(bgLightGray);
+    setBackground(cBgLightGray);
     setLayout( new BoxLayout(this, BoxLayout.X_AXIS) );
     setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
 
     durChoice = new JComboBox();
-    durChoice.addItem( timings[0].duration+ " seconds");  
-    durChoice.addItem( timings[1].duration+ " seconds");
-    durChoice.addItem( timings[2].duration+ " seconds");
+    for( int i=0; i< timings.length; i++ ) {
+        durChoice.addItem( timings[i].duration+ " seconds");  
+    }
 
         
     add( Box.createRigidArea(new Dimension(25,0) ) );
@@ -40,7 +40,7 @@ public class TimelineTop extends JPanel {
     add( Box.createRigidArea(new Dimension(15,0) ) );
 
     // action listener for duration choice pull down
-    durChoice.setBackground(bgLightGray);
+    durChoice.setBackground(cBgLightGray);
     durChoice.setMaximumSize( durChoice.getPreferredSize() ); 
     durChoice.addItemListener(new ItemListener() {
         public void itemStateChanged(ItemEvent ie) {
@@ -61,7 +61,7 @@ public class TimelineTop extends JPanel {
     add(loopCheckLbl);
 
     JCheckBox loopCheck = new JCheckBox("", true);
-    loopCheck.setBackground(bgLightGray);
+    loopCheck.setBackground(cBgLightGray);
     add(loopCheck);
 
     ActionListener actionListener = new ActionListener() {
@@ -83,12 +83,12 @@ public class TimelineTop extends JPanel {
 
     JButton loadOneBtn = new Util().makeButton("blinkm_butn_loadall_on.gif", 
                                                "blinkm_butn_loadall_hov.gif", 
-                                               "LoadOne", bgLightGray);    
+                                               "LoadOne", cBgLightGray);    
     add(loadOneBtn);
 
     JButton saveOneBtn = new Util().makeButton("blinkm_butn_saveall_on.gif", 
                                                "blinkm_butn_saveall_hov.gif", 
-                                               "SaveOne", bgLightGray);
+                                               "SaveOne", cBgLightGray);
     add(saveOneBtn);
 
     add( Box.createRigidArea(new Dimension(15,0) ) );

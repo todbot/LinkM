@@ -29,7 +29,7 @@ public class TrackView
     this.w = w;           // overall width 
     this.h = h;
     this.setPreferredSize(new Dimension(this.w, this.h));
-    this.setBackground(bgDarkGray);
+    this.setBackground(cBgDarkGray);
     scrubHeight = mtv.scrubHeight;
 
     addMouseListener(this);

@@ -23,9 +23,9 @@ String VERSION = "002";
 
 Log l = new Log();
 
-LinkM linkm = new LinkM();
+LinkM linkm = new LinkM();  // linkm obj only used in this file
 
-boolean isConnected = false;   // FIXME: this isn't used yet
+boolean isConnected = false;   // FIXME: verify semantics correct on this
 
 String silkfontPath = "slkscrb.ttf";  // in "data" directory
 Font silkfont;
@@ -52,7 +52,7 @@ int mainHeight = 640;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
 
-// maps duration in seconds to duration in ticks (durTicks) and fadespeed
+// maps duration in seconds to duration in BlinkM ticks (durTicks) and fadespeed
 public static class Timing  {
    public int duration;
    public byte durTicks;
@@ -60,10 +60,12 @@ public static class Timing  {
    public Timing(int d,byte t,byte f) { duration=d; durTicks=t; fadeSpeed=f; }
 }
 
+// the supported track durations
 public static Timing[] timings = new Timing [] {
     new Timing(   3, (byte)  1, (byte) 100 ),
     new Timing(  30, (byte) 18, (byte)  25 ),
     new Timing( 100, (byte) 25, (byte)   5 ),
+    new Timing( 300, (byte) 75, (byte)   2 ),
  };
 
 int durationCurrent = timings[0].duration;
@@ -72,17 +74,17 @@ int durationCurrent = timings[0].duration;
 PApplet p;
 Util util = new Util();  // can't be a static class because of getClass() in it
 
-Color cBlk        = new Color(0,0,0);               // black like my soul
-Color fgLightGray = new Color(230, 230, 230);
-Color bgLightGray = new Color(200, 200, 200);
-Color bgMidGray   = new Color(140, 140, 140);
-Color bgDarkGray  = new Color(100, 100, 100);
-Color tlDarkGray  = new Color(55, 55, 55);          // dark color for timeline
-Color cHighLight  = new Color(255, 0, 0);           // used for selections
-Color briOrange   = new Color(0xFB,0xC0,0x80);      // bright yellow/orange
-Color muteOrange  = new Color(0xBC,0x83,0x45);
+Color cBlack       = new Color(0,0,0);               // black like my soul
+Color cFgLightGray = new Color(230, 230, 230);
+Color cBgLightGray = new Color(200, 200, 200);
+Color cBgMidGray   = new Color(140, 140, 140);
+Color cBgDarkGray  = new Color(100, 100, 100);
+Color tlDarkGray   = new Color(55,   55,  55);       // dark color for timeline
+Color cHighLight   = new Color(255,   0,   0);       // used for selections
+Color cBriOrange   = new Color(0xFB,0xC0,0x80);      // bright yellow/orange
+Color cMuteOrange  = new Color(0xBC,0x83,0x45);
 
-Color nullColor   = tlDarkGray;
+Color cEmpty   = tlDarkGray;
  
 /**
  * Processing's setup()
@@ -150,14 +152,12 @@ void setupGUI() {
   TimelineTop ttop  = new TimelineTop();
   trackview         = new TrackView( multitrack, mainWidth, 100 );
 
-  //  FIXME: this will change when preview-per-track exists
-  //colorPreview             = new ColorPreview();
   JPanel colorChooserPanel = makeColorChooserPanel();
   buttonPanel       = new ButtonPanel(399, 250); //was 310,FIXME: why this size?
 
   JPanel controlsPanel = new JPanel();
-  controlsPanel.setBackground(bgDarkGray);  //sigh, gotta do this on every panel
-  controlsPanel.setBorder(BorderFactory.createMatteBorder(10,0,0,0,bgDarkGray));
+  controlsPanel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
+  controlsPanel.setBorder(BorderFactory.createMatteBorder(10,0,0,0,cBgDarkGray));
   //controlsPanel.setBorder(BorderFactory.createCompoundBorder(  // debug
   //                 BorderFactory.createLineBorder(Color.red),
   //                 controlsPanel.getBorder()));
@@ -205,8 +205,9 @@ void setupGUI() {
 // just to get this out of the way 
 JPanel makeColorChooserPanel() {
   JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
+  
   colorChooser = new JColorChooser();
-  colorChooser.setBackground(bgLightGray);
+  colorChooser.setBackground(cBgLightGray);
 
   colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
       public void stateChanged(ChangeEvent e) {
@@ -215,34 +216,17 @@ JPanel makeColorChooserPanel() {
       }
     });
 
-  /*
-  // look for javax.swing.colorchooser.DefaltSwatchChooserPanel
-  AbstractColorChooserPanel[] cps = colorChooser.getChooserPanels();
-  for( int i=0; i< cps.length; i++ ) {
-    String s = cps[i].getClass().getCanonicalName();
-    println("s:'"+s+"'");
-    if( s.equals("javax.swing.colorchooser.DefaultSwatchChooserPanel") ) {
-      println("woot");
-      cps[i].addMouseListener( new MouseAdapter() { 
-          public void mousePressed(MouseEvent e) {
-            l.debug("tod click!");
-            multitrack.setSelectedColor( colorChooser.getColor() );
-          }
-        } );
-    }
-  */
-
   colorChooser.setPreviewPanel( new JPanel() ); // we have our custom preview
-  colorChooser.setBackground(bgLightGray);
+  colorChooser.setBackground(cBgLightGray);
   colorChooserPanel.add( colorChooser );
-  colorChooser.setColor( nullColor );
+  colorChooser.setColor( cEmpty );
   return colorChooserPanel;
 }
 
 //
 JPanel makeLowerPanel() {
   JPanel lp = new JPanel();
-  lp.setBackground(bgMidGray);
+  lp.setBackground(cBgMidGray);
   JLabel lowLabel = new JLabel("  version "+VERSION+" \u00a9 ThingM Corporation", JLabel.LEFT);
   lowLabel.setHorizontalAlignment(JLabel.LEFT);
   lp.setPreferredSize(new Dimension(855, 30));  // FIXME: hardcoded value yo
@@ -256,7 +240,7 @@ JPanel makeLowerPanel() {
  */
 void setupMainframe() {
   mf = new JDialog(new Frame(), "BlinkM Sequencer", false);
-  mf.setBackground(bgDarkGray);
+  mf.setBackground(cBgDarkGray);
   mf.setFocusable(true);
   mf.setSize( mainWidth, mainHeight);
   
@@ -300,6 +284,7 @@ boolean connectIfNeeded() {
       else {
         println("no blinkm found!");  // FIXME: pop up dialog?
       }
+      linkm.stopScript( 0 ); // stop all scripts
     } catch(IOException ioe) {
       println("connect:no linkm?\n"+ioe);
       return false;
@@ -311,20 +296,23 @@ boolean connectIfNeeded() {
 
 
 // used generally to make BlinkM color match preview color
-boolean sendBlinkMColor( int blinkmAddr, Color c ) {    
-  //l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
-  //int addr = 0;
+boolean sendBlinkMColor( int blinkmAddr, Color c ) {
+  l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
   /*
-    try { 
-    linkm.fadeToRGB( addr, c);  // FIXME:  which track 
-    } catch( IOException ioe) {
+  connectIfNeeded();
+  try { 
+    linkm.fadeToRGB( blinkmAddr, c);  // FIXME:  which track 
+  } catch( IOException ioe) {
     // hmm, what to do here
     return false;
-    }
+  }
   */
   return true;
 }
 
+/**
+ *
+ */
 public boolean doBurn() {
 
   multitrack.stop();
@@ -342,8 +330,8 @@ public boolean doBurn() {
       blinkmAddr = multitrack.tracks[j].blinkmaddr; // get track i2c addr
       for( int i=0; i<numSlices; i++) {
         c =  multitrack.tracks[j].slices[i];         
-        if( c == nullColor )
-          c = cBlk;
+        if( c == cEmpty )
+          c = cBlack;
         
         scriptLine = new BlinkMScriptLine( durticks, 'c', 
                                           c.getRed(),c.getGreen(),c.getBlue());
@@ -376,13 +364,13 @@ public boolean doBurn() {
  * Burn a list of colors to a BlinkM
  * @param blinkmAddr the address of the BlinkM to write to
  * @param colorlist an ArrayList of the Colors to burn (java Color objs)
- * @param nullColor a color in the list that should be treated as nothing
+ * @param emptyColor a color in the list that should be treated as nothing
  * @param duration  how long the entire list should last for, in seconds
  * @param loop      should the list be looped or not
  * @param progressbar if not-null, will update a progress bar
  *
 public boolean burn(int blinkmAddr, ArrayList colorlist, 
-                    Color nullColor, int duration, boolean loop, 
+                    Color emptyColor, int duration, boolean loop, 
                     JProgressBar progressbar) {
   
   byte fadespeed = getFadeSpeed(duration);

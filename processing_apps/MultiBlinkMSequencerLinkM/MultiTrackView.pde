@@ -75,9 +75,9 @@ public class MultiTrackView
     tracks = new Track[numTracks];
     previewColors = new Color[numTracks];
     for( int j=0; j<numTracks; j++ ) {
-      tracks[j] = new Track( numSlices, nullColor );
+      tracks[j] = new Track( numSlices, cEmpty );
       tracks[j].blinkmaddr = 10+j;  // set default addrs
-      previewColors[j] = nullColor;
+      previewColors[j] = cEmpty;
     }
 
     currTrack = 0;
@@ -101,7 +101,7 @@ public class MultiTrackView
     //                   RenderingHints.VALUE_ANTIALIAS_ON);
     super.paintComponent(g); 
 
-    g.setColor( bgDarkGray );
+    g.setColor( cBgDarkGray );
     g.fillRect( 0,0, getWidth(), getHeight() );
 
 
@@ -134,7 +134,7 @@ public class MultiTrackView
 
   void drawTrack(Graphics2D g, int tracknum, int x,int y, int w, int h ) {
     //l.debug("drawTrack: i:"+tracknum+",x:"+x+",y:"+y+",w:"+w+",h:"+h);
-    g.setColor( bgDarkGray );
+    g.setColor( cBgDarkGray );
     g.fillRect( x, y, w, h);
     Track track = tracks[tracknum];
 
@@ -162,7 +162,7 @@ public class MultiTrackView
     int ty = scrubHeight + (currTrack*trackHeight) ;
     //g.setColor( new Color( 200,140,140));
     g.setStroke( new BasicStroke(1.0f));
-    g.setColor( muteOrange );
+    g.setColor( cMuteOrange );
     //g.drawRect( tx,ty, trackWidth, trackHeight+1 );
     g.drawRect( tx,ty, w-1, trackHeight+1 );
   }
@@ -177,18 +177,18 @@ public class MultiTrackView
     int ty = 2 + scrubHeight ;
     int th = trackHeight - 3;
     for( int tnum=0; tnum<numTracks; tnum++ ) {
-      g.setColor( briOrange);
+      g.setColor( cBriOrange);
       g.drawRect(  3,ty+tnum*trackHeight, 15,th );  // enable button outline 
       g.drawRect( 25,ty+tnum*trackHeight, 20,th );  // addr button outline 
       
       if( tracks[tnum].active == true ) { 
-        g.setColor( muteOrange );
+        g.setColor( cMuteOrange );
         g.fillRect(  4, ty+1+tnum*trackHeight, 14,th-1 ); // enable butt insides
         
         int blinkmAddr = tracks[tnum].blinkmaddr; // this track's i2c address
         if( blinkmAddr != -1 ) { // if it's been set to something meaningful
           g.fillRect( 26, ty+1+tnum*trackHeight, 19,th-1 ); // addr butt insides
-          g.setColor( cBlk );
+          g.setColor( cBlack );
           int offs = 26;
           offs = ( blinkmAddr < 100 ) ? offs += 6 : offs;
           offs = ( blinkmAddr < 10 )  ? offs += 5 : offs;
@@ -203,7 +203,7 @@ public class MultiTrackView
    */
   void drawPlayHead(Graphics2D g, float playHeadCurr) {
     // paint scrub area
-    g.setColor(fgLightGray);
+    g.setColor(cFgLightGray);
     g.fillRect(0, 0, getWidth(), scrubHeight-spacerWidth);
 
     g.setStroke( new BasicStroke(0.5f) );
@@ -222,7 +222,7 @@ public class MultiTrackView
     g.fillPolygon(p);
 
   }
-
+  
   /**
    *
    */
@@ -233,13 +233,13 @@ public class MultiTrackView
       int rt = ct.getRed();
       int gt = ct.getGreen();
       int bt = ct.getBlue();
-      int ro  = c.getRed();
-      int go  = c.getGreen();
-      int bo  = c.getBlue();
-      ro = color_slide( ro,rt, previewFadespeed);
-      go = color_slide( go,gt, previewFadespeed);
-      bo = color_slide( bo,bt, previewFadespeed);
-      previewColors[i] = new Color( ro,go,bo );
+      int rn = c.getRed();  // 'n' for now
+      int gn = c.getGreen();
+      int bn = c.getBlue();
+      rn = color_slide( rn,rt, previewFadespeed);
+      gn = color_slide( gn,gt, previewFadespeed);
+      bn = color_slide( bn,bt, previewFadespeed);
+      previewColors[i] = new Color( rn,gn,bn );
       
       int ty =  spacerWidth + scrubHeight + (i*trackHeight);
       g.setColor( previewColors[i] );
@@ -278,8 +278,12 @@ public class MultiTrackView
         currSlice = newSlice;
         for( int i=0; i<numTracks; i++ ) {
           Color c = tracks[i].slices[currSlice];
-          if( c!=null && c != nullColor ) { // the default "off", a hack FIXME
-            sendBlinkMColor( tracks[i].blinkmaddr, c );
+          if( tracks[i].active ) {
+            if( c!=null && c != cEmpty ) { 
+              sendBlinkMColor( tracks[i].blinkmaddr, c );
+            } else if( c == cEmpty ) {
+              sendBlinkMColor( tracks[i].blinkmaddr, cBlack );
+            }
           }
         }
       }
@@ -372,11 +376,16 @@ public class MultiTrackView
   }
 
   public void setSelectedColor( Color c ) {
+    boolean sentColor = false;
     //l.debug("setSelectedColor: "+c);
     for( int i=0; i<numTracks; i++) {
       for( int j=0; j<numSlices; j++) { 
         if( tracks[i].selects[j] ) {
           tracks[i].slices[j] = c;
+          if( !sentColor ) {
+            sendBlinkMColor( tracks[i].blinkmaddr, c);
+            sentColor=true;  // FIXME: hmmm
+          }
         }
       }
     }
