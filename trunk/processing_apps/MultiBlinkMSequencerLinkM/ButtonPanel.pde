@@ -24,7 +24,7 @@ public class ButtonPanel extends JPanel {
     // BorderFactory.createLineBorder(Color.red),this.getBorder()));
     
     this.setPreferredSize(new Dimension(aWidth,aHeight));
-    this.setBackground(bgDarkGray);
+    this.setBackground(cBgDarkGray);
     
     // add play button
     makePlayButton();
@@ -33,7 +33,7 @@ public class ButtonPanel extends JPanel {
     // add upload button
     uploadBtn = new Util().makeButton("blinkm_butn_upload_on_2.png",
                                       "blinkm_butn_upload_hov_2.png",
-                                      "Upload to BlinkM", bgDarkGray);
+                                      "Upload to BlinkM", cBgDarkGray);
     //burnBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
     // action listener for burn button
     uploadBtn.addActionListener(new ActionListener() {
@@ -43,7 +43,7 @@ public class ButtonPanel extends JPanel {
       });
     downloadBtn = new Util().makeButton("blinkm_butn_download_on_2.png",
                                         "blinkm_butn_download_hov_2.png",
-                                        "Download from BlinkM", bgDarkGray);
+                                        "Download from BlinkM", cBgDarkGray);
     //burnBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
     // action listener for burn button
     downloadBtn.addActionListener(new ActionListener() {
@@ -59,7 +59,7 @@ public class ButtonPanel extends JPanel {
     // add Help button
     JButton helpBtn = new Util().makeButton("blinkm_butn_help_on.gif", 
                                             "blinkm_butn_help_hov.gif", 
-                                            "Help", bgDarkGray);
+                                            "Help", cBgDarkGray);
     //helpBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
     helpBtn.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
@@ -71,7 +71,7 @@ public class ButtonPanel extends JPanel {
     // add About button
     JButton aboutBtn = new Util().makeButton("blinkm_butn_about_on.gif", 
                                              "blinkm_butn_about_hov.gif", 
-                                             "About", bgDarkGray);
+                                             "About", cBgDarkGray);
     aboutBtn.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
           l.debug("help...");
@@ -81,14 +81,14 @@ public class ButtonPanel extends JPanel {
       );
 
     JPanel updnPanel = new JPanel();
-    updnPanel.setBackground(bgDarkGray);
+    updnPanel.setBackground(cBgDarkGray);
     updnPanel.add(downloadBtn);
     updnPanel.add(uploadBtn);
 
     JPanel minibuttonPanel = new JPanel();
     BoxLayout minibuttonLayout= new BoxLayout(minibuttonPanel,BoxLayout.X_AXIS);
     minibuttonPanel.setLayout(minibuttonLayout);
-    minibuttonPanel.setBackground(bgDarkGray);
+    minibuttonPanel.setBackground(cBgDarkGray);
     minibuttonPanel.setPreferredSize(new Dimension(aWidth, 50)); //FIXME
 
     minibuttonPanel.add( Box.createHorizontalGlue() );
@@ -122,7 +122,7 @@ public class ButtonPanel extends JPanel {
     playBtn = new JButton();
     playBtn.setOpaque(true);
     playBtn.setBorderPainted( false );
-    playBtn.setBackground(bgDarkGray);
+    playBtn.setBackground(cBgDarkGray);
     playBtn.setRolloverEnabled(true);
     setPlayIcon();
 

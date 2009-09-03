@@ -18,7 +18,7 @@ public class Track {
   /**
    * @param numSlices number of slices in a track
    */
-  public Track(int numSlices, Color nullColor ) {
+  public Track(int numSlices, Color cEmpty ) {
     this.numSlices = numSlices;
     this.active = false;
     this.isLoop = true;
@@ -27,7 +27,7 @@ public class Track {
     selects = new boolean[numSlices];
     
     for( int i=0; i<numSlices; i++ ) {
-      slices[i] = nullColor; // default color
+      slices[i] = cEmpty; // default color
       selects[i] = false;
     }
 
