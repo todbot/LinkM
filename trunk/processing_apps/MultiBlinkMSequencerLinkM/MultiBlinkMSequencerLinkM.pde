@@ -48,7 +48,7 @@ int numTracks = 8;    // number of different blinkms
 
 // overall dimensions
 int mainWidth  = 825;
-int mainHeight = 640;  // was 455
+int mainHeight = 620;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
 
@@ -96,8 +96,7 @@ void setup() {
 
   try { 
     // load up the lovely silkscreen font
-    File f = new File( dataPath( silkfontPath ));
-    FileInputStream in = new FileInputStream(f);
+    InputStream in = getClass().getResourceAsStream(silkfontPath);
     Font dynamicFont = Font.createFont(Font.TRUETYPE_FONT, in);
     silkfont = dynamicFont.deriveFont( 8f );
 
@@ -239,11 +238,17 @@ JPanel makeLowerPanel() {
  * Create the containing frame (or JDialog in this case) 
  */
 void setupMainframe() {
-  mf = new JDialog(new Frame(), "BlinkM Sequencer", false);
+  Frame f = new Frame();
+  // FIXME: why doesn't either of these seem to work
+  //ImageIcon i = new Util().createImageIcon("blinkm_thingm_logo.gif","title");
+  //f.setIconImage(i.getImage());
+  f.setIconImage(Toolkit.getDefaultToolkit().getImage("blinkm_thingm_logo.gif"));
+  mf = new JDialog( f, "BlinkM Sequencer", false);
   mf.setBackground(cBgDarkGray);
   mf.setFocusable(true);
   mf.setSize( mainWidth, mainHeight);
-  
+
+
   // handle window close events
   mf.addWindowListener(new WindowAdapter() {
       public void windowClosing(WindowEvent e) {

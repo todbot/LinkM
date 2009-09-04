@@ -47,7 +47,7 @@ public class TrackView
     super.paintComponent(g); 
 
     mtv.drawTrack( g, mtv.currTrack,  
-                   mtv.sx, scrubHeight, w, h-scrubHeight  );
+                   mtv.sx, scrubHeight-1, w, h-scrubHeight-5  ); // Hmmmm
 
     mtv.drawPlayHead(g, playHeadCurr);  // draws on me, not on mtv
 
@@ -106,38 +106,33 @@ public class TrackView
    */
   public boolean isPlayheadClicked(Point mp) {
     Polygon p = new Polygon();  // creating bounding box for playhead
-    p.addPoint((int)playHeadCurr - 4, 0);
-    p.addPoint((int)playHeadCurr + 4, 0);
-    p.addPoint((int)playHeadCurr + 4, getHeight());
-    p.addPoint((int)playHeadCurr - 4, getHeight());
-
+    int phc = (int)playHeadCurr;
+    p.addPoint( phc - 4, 0);
+    p.addPoint( phc + 4, 0);
+    p.addPoint( phc + 4, getHeight());
+    p.addPoint( phc - 4, getHeight());
     return p.contains(mp);  // check if mouseclick on playhead
   }
   
   public void mousePressed(MouseEvent e) {
-    //l.debug("TrackView.mousePressed: "+e.getPoint());
-    //if( (e.getModifiers() & InputEvent.META_MASK) == 0 )  // alt/cmd pressed
-    //  mtv.allOff();
 
     Point mp = e.getPoint();
     mouseClickedPt = mp;
     
-    // handle playhead hits in mouseDragged
-    // record location of hit in mouseClickedPt and go on
-    l.debug("phc:"+playHeadCurr);
     playheadClicked = isPlayheadClicked(mp);
     if( playheadClicked ) {
-      l.debug("yes");
-      repaint();
-      return;
+    // handle playhead hits in mouseDragged
+    // record location of hit in mouseClickedPt and go on
     }
-
-    for( int i=0;i<mtv.numSlices;i++) {
-      if( mtv.isSliceHit( mp.x, i ) ) 
-        mtv.getCurrTrack().selects[i] = true; 
-      else if ((e.getModifiers() & InputEvent.META_MASK) == 0) 
-        mtv.getCurrTrack().selects[i] = false; // FIXME: this doesn't work
+    else { 
+      for( int i=0;i<mtv.numSlices;i++) {
+        if( mtv.isSliceHit( mp.x, i ) ) 
+          mtv.getCurrTrack().selects[i] = true; 
+        else if ((e.getModifiers() & InputEvent.META_MASK) == 0) 
+          mtv.getCurrTrack().selects[i] = false; // FIXME: this doesn't work
+      }
     }
+      mtv.repaint();
   }
   
   
