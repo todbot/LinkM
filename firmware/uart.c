@@ -14,13 +14,16 @@
 #include "uart.h"
 
 /*
- * Initialize the UART to 9600 Bd, tx/rx, 8N1.
+ * Initialize the UART UART_BAUD speed, tx/rx, 8N1.
+ * NOTE: now uses double-speed mode
  */
 void
 uart_init(void)
 {
   UBRR0H = 0;
-  UBRR0L = ((F_CPU / (16UL * UART_BAUD)) - 1);
+  //UBRR0L = ((F_CPU / (16UL * UART_BAUD)) - 1);  // for normal mode
+  UBRR0L = ((F_CPU / (8UL * UART_BAUD)) - 1);    // for doublespeed mode
+  UCSR0A |= _BV(U2X0);
   UCSR0B = _BV(TXEN0) | _BV(RXEN0); /* tx/rx enable */
 }
 

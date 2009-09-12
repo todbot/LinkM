@@ -13,7 +13,8 @@
 
 #include <stdio.h>
 
-#define UART_BAUD 19200
+// NOTE: modified uart_init() to use double-speed mode --tod
+#define UART_BAUD 115200
 
 /*
  * Perform UART startup initialization.

@@ -9,6 +9,8 @@
 #include <inttypes.h>
 #include <compat/twi.h>
 
+#include <util/delay.h>
+
 #include "i2cmaster.h"
 
 
@@ -23,6 +25,10 @@
 #define SCL_CLOCK  100000L
 #endif
 
+// was 6000000ul for straight nop loop
+#ifndef I2C_USTIMEOUT
+#define I2C_USTIMEOUT     100
+#endif
 
 /*************************************************************************
  Initialization of the I2C bus interface. Need to be called only once
@@ -37,9 +43,26 @@ void i2c_init(void)
 }/* i2c_init */
 
 
+// Wait for the interupt flag to clear in the TWI hardware
+// If locks because the interrupt didn't clear, we loop
+// until a timeout peroid of I2C_TIMEOUT
+// (taken from openservo, which had a bug in it: semi-colon at while line end)
+//static inline int i2c_wait_int()
+uint8_t i2c_wait_int()
+{
+    uint16_t t = 0;
+    while((TWCR & _BV(TWINT)) == 0) {
+        _delay_us(1);
+        if (t++ > I2C_USTIMEOUT)
+            return 1;
+    }
+
+    return 0;
+}
+
 /*************************************************************************	
   Issues a start condition and sends address and transfer direction.
-  return 0 = device accessible, 1= failed to access device
+  return 0 = device accessible, 1= failed to access device, -1 = timeout
 *************************************************************************/
 unsigned char i2c_start(unsigned char address)
 {
@@ -49,8 +72,9 @@ unsigned char i2c_start(unsigned char address)
 	TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);
 
 	// wait until transmission completed
-	while(!(TWCR & (1<<TWINT)));
-
+	//while(!(TWCR & (1<<TWINT)));
+    if( i2c_wait_int() ) return 1; // Check to see if the interrupt is clear
+    
 	// check value of TWI Status Register. Mask prescaler bits.
 	twst = TW_STATUS & 0xF8;
 	if ( (twst != TW_START) && (twst != TW_REP_START)) return 1;
@@ -60,7 +84,8 @@ unsigned char i2c_start(unsigned char address)
 	TWCR = (1<<TWINT) | (1<<TWEN);
 
 	// wail until transmission completed and ACK/NACK has been received
-	while(!(TWCR & (1<<TWINT)));
+	//while(!(TWCR & (1<<TWINT)));
+    if( i2c_wait_int() ) return 1;// Check to see if the interrupt is clear
 
 	// check value of TWI Status Register. Mask prescaler bits.
 	twst = TW_STATUS & 0xF8;
@@ -100,7 +125,7 @@ void i2c_start_wait(unsigned char address)
     
     	// wail until transmission completed
     	while(!(TWCR & (1<<TWINT)));
-    
+        
     	// check value of TWI Status Register. Mask prescaler bits.
     	twst = TW_STATUS & 0xF8;
     	if ( (twst == TW_MT_SLA_NACK )||(twst ==TW_MR_DATA_NACK) ) 
@@ -144,7 +169,12 @@ void i2c_stop(void)
 	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
 	
 	// wait until stop condition is executed and bus released
-	while(TWCR & (1<<TWSTO));
+    uint8_t t=0;
+	while(TWCR & (1<<TWSTO)) { 
+        _delay_us(1);
+        if (t++ > I2C_USTIMEOUT)
+            return;   // FIXME: should return error?
+    }
 
 }/* i2c_stop */
 
@@ -165,7 +195,8 @@ unsigned char i2c_write( unsigned char data )
 	TWCR = (1<<TWINT) | (1<<TWEN);
 
 	// wait until transmission completed
-	while(!(TWCR & (1<<TWINT)));
+	//while(!(TWCR & (1<<TWINT)));
+    if( i2c_wait_int() ) return 1; // Check to see if the interrupt is clear
 
 	// check value of TWI Status Register. Mask prescaler bits
 	twst = TW_STATUS & 0xF8;
@@ -178,12 +209,14 @@ unsigned char i2c_write( unsigned char data )
 /*************************************************************************
  Read one byte from the I2C device, request more data from device 
  
- Return:  byte read from I2C device
+ Return:  byte read from I2C device, or -1 on timeout
 *************************************************************************/
-unsigned char i2c_readAck(void)
+//unsigned char i2c_readAck(void)
+int i2c_readAck(void)
 {
 	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
-	while(!(TWCR & (1<<TWINT)));    
+	//while(!(TWCR & (1<<TWINT)));    
+    if( i2c_wait_int() ) return -1; // Check to see if the interrupt is clear
 
     return TWDR;
 
@@ -193,13 +226,17 @@ unsigned char i2c_readAck(void)
 /*************************************************************************
  Read one byte from the I2C device, read is followed by a stop condition 
  
- Return:  byte read from I2C device
+ Return:  byte read from I2C device, or -1 on timeout
 *************************************************************************/
-unsigned char i2c_readNak(void)
+//unsigned char i2c_readNak(void)
+int i2c_readNak(void)
 {
 	TWCR = (1<<TWINT) | (1<<TWEN);
-	while(!(TWCR & (1<<TWINT)));
+	//while(!(TWCR & (1<<TWINT)));
+    if( i2c_wait_int() ) return -1; // Check to see if the interrupt is clear
 	
     return TWDR;
 
 }/* i2c_readNak */
+
+
