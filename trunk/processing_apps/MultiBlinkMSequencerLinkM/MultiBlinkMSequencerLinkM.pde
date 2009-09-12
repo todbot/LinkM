@@ -1,5 +1,31 @@
 // Copyright (c) 2007-2009, ThingM Corporation
-
+//
+// MultiBlinkMSequencerLinkM --  Multi track sequencer for BlinkM using LinkM
+// =========================
+// 
+// A. Use case for LinkM connect + disconnect:
+// 1. on startup, scan for linkm.
+// 2. if linkm found, 
+//    a. connect 
+//    b. no dialog
+//    c. change connect button to "disconnect"  // ("connected to linkm")
+// 3. if linkm NOT found, change button to "connect" 
+// 4. if linkm error occurs while in use,
+//    a. set connectFailed=true
+//    b. change button to "connect failed"
+//    c. pop up dialog box on script stop, offering to reconnect
+//
+// B. Use case for Arduino connect + disconnect:
+// 1. on startup, scan for linkm as before, follow steps A1,2,3
+// 2. on connect button press, show connect dialog
+// 3. connect dialog contains two radio buttons: linkm & arduino w/blinkmcommuni
+//    a. arduino select has combobox of serial ports 
+// 4. on arduino select
+//    a. verify connect
+//    b. close dialog
+//    c. change connect button to "disconnect" // ("connected to arduino")
+// 
+// 
 // 
 // To-do:
 // - tune fade time for both real blinkm & preview
@@ -25,7 +51,8 @@ Log l = new Log();
 
 LinkM linkm = new LinkM();  // linkm obj only used in this file
 
-boolean isConnected = false;   // FIXME: verify semantics correct on this
+boolean connected = false;   // FIXME: verify semantics correct on this
+boolean connectFailed = false;
 
 String silkfontPath = "slkscrb.ttf";  // in "data" directory
 Font silkfont;
@@ -43,12 +70,14 @@ JFileChooser fc;
 int numSlices = 48;  
 int numTracks = 8;    // number of different blinkms
 
+int blinkmBaseAddr = 10;
+
 // default blinkm addresses used, can change by clicking on the addresses in UI
 //int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
 
 // overall dimensions
 int mainWidth  = 825;
-int mainHeight = 620;  // was 455
+int mainHeight = 630;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
 
@@ -115,6 +144,8 @@ void setup() {
   p = this;
   
   setupGUI();
+
+  connect();
 }
 
 /**
@@ -274,52 +305,107 @@ void setupMainframe() {
 
 /**
  * Open up the LinkM and set it up if it hasn't been
- * Sets and uses the global variable 'isConnected'
+ * Sets and uses the global variable 'connected'
  */
-boolean connectIfNeeded() {
-  if( !isConnected ) {
-    try { 
-      linkm.open();
-      linkm.i2cEnable(true);
-      byte[] addrs = linkm.i2cScan(1,17);  // FIXME: not a full scan
-      int cnt = addrs[0];
-      if( cnt>0 ) {
-        //bladdr = addrs[1];   // FIXME:  pick first address
+boolean connect() {
+  l.debug("connect");
+  try { 
+    linkm.open();
+    linkm.i2cEnable(true);
+    byte[] addrs = linkm.i2cScan(9,17);  // FIXME: not a full scan
+    int cnt = addrs.length;
+    if( cnt>0 ) {
+      multitrack.disableAllTracks();   // enable tracks for blinkms found
+      for( int i=0; i<cnt; i++) {
+        byte a = addrs[i];
+        if( a >= blinkmBaseAddr && a < blinkmBaseAddr + numTracks ) {
+          multitrack.toggleTrackEnable( a - blinkmBaseAddr);
+        }
       }
-      else {
-        println("no blinkm found!");  // FIXME: pop up dialog?
-      }
-      linkm.stopScript( 0 ); // stop all scripts
-    } catch(IOException ioe) {
-      println("connect:no linkm?\n"+ioe);
-      return false;
+      // FIXME: should dialog popup saying blinkms found but not in right addr?
     }
+    else {
+      println("no blinkm found!");  // FIXME: pop up dialog?
+    }
+    linkm.stopScript( 0 ); // stop all scripts
+  } catch(IOException ioe) {
+    println("connect:no linkm?  "+ioe);
+    return false;
   }
-  isConnected = true;
+  multitrack.repaint();
+
+  connected = true;
   return true; // connect successful
 }
 
 
-// used generally to make BlinkM color match preview color
+/**
+ * Sends a single color to a single BlinkM
+ * Used during live playback and making blinkm match preview
+ */
 boolean sendBlinkMColor( int blinkmAddr, Color c ) {
   l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
-  /*
-  connectIfNeeded();
+  if( !connected ) return true;
   try { 
     linkm.fadeToRGB( blinkmAddr, c);  // FIXME:  which track 
   } catch( IOException ioe) {
     // hmm, what to do here
     return false;
   }
-  */
+
   return true;
 }
 
 /**
- *
+ * Prepare blinkm for playing preview scripts
  */
-public boolean doBurn() {
+public void prepareForPreview(int loopduration) {
+  byte fadespeed = getFadeSpeed(loopduration);
+  //l.debug("prepareForPreview: fadespeed:"+fadespeed);
+  if( !connected ) return;
 
+  int blinkmAddr = 0x00;  // FIXME: ????
+  try { 
+    linkm.stopScript( blinkmAddr );
+    linkm.setFadeSpeed( blinkmAddr, fadespeed );
+  } catch(IOException ioe ) {
+    // FIXME: hmm, what to do here
+    println("prepareForPreview: "+ioe);
+  }
+}
+
+/**
+ * What happens when "download" button is pressed
+ */
+public boolean doDownload() {
+  BlinkMScript script;
+  BlinkMScriptLine scriptLine;
+  Color c;
+  int blinkmAddr;
+    for( int j=0; j< numTracks; j++ ) {
+      blinkmAddr = multitrack.tracks[j].blinkmaddr;
+      try { 
+        script = linkm.readScript( blinkmAddr, 0, true );  // read all
+        for( int i=0; i< script.length(); i++) {
+          scriptLine = script.get(i);
+          // FIXME: maybe move this into BlinkMScriptLine
+          if( scriptLine.cmd == 'c' ) {  // only pay attention to color cmds
+            c = new Color( scriptLine.arg1,scriptLine.arg2,scriptLine.arg3 );
+            multitrack.tracks[j].slices[i] = c;
+          }
+        }
+      } catch( IOException ioe ) {
+        println("doDownload: on track #"+j+",addr:"+blinkmAddr+"  "+ioe);
+      }
+    }
+  return true;
+}
+
+/**
+ * What happens when "upload" button is pressed
+ */
+public boolean doUpload() {
+  if( !connected ) return false;
   multitrack.stop();
   boolean rc = false;
 
@@ -365,81 +451,8 @@ public boolean doBurn() {
 }
 
 
-/**
- * Burn a list of colors to a BlinkM
- * @param blinkmAddr the address of the BlinkM to write to
- * @param colorlist an ArrayList of the Colors to burn (java Color objs)
- * @param emptyColor a color in the list that should be treated as nothing
- * @param duration  how long the entire list should last for, in seconds
- * @param loop      should the list be looped or not
- * @param progressbar if not-null, will update a progress bar
- *
-public boolean burn(int blinkmAddr, ArrayList colorlist, 
-                    Color emptyColor, int duration, boolean loop, 
-                    JProgressBar progressbar) {
-  
-  byte fadespeed = getFadeSpeed(duration);
-  byte durticks = getDurTicks(duration);
-  byte reps = (byte)((loop) ? 0 : 1);  
-  
-  Color c;
-  BlinkMScriptLine scriptLine;
 
-  l.debug("burn: addr:"+blinkmAddr+" durticks:"+durticks+" fadespeed:"+fadespeed);
-  
-  //build up the byte array to send
-  Iterator iter = colorlist.iterator();
-  int i=0;
-  try { 
-    while( iter.hasNext() ) {
-      l.debug("burn: writing script line "+i);
-      c = (Color) iter.next();
-      if( c == nullColor )
-        c = cBlk;
-      
-      scriptLine = new BlinkMScriptLine( durticks, 'c', 
-                                         c.getRed(),c.getGreen(),c.getBlue());
-      linkm.writeScriptLine( blinkmAddr, i, scriptLine);
-      
-      if( progressbar !=null) progressbar.setValue(i);  // hack
-      i++;
-    }
-    
-    // set script length     cmd   id         length         reps
-    linkm.setScriptLengthRepeats( blinkmAddr, colorlist.size(), reps);
-    
-    // set boot params   addr, mode,id,reps,fadespeed,timeadj
-    linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
-    
-    // set playback fadespeed
-    linkm.setFadeSpeed( blinkmAddr, fadespeed);
-    
-    // and play the script
-    linkm.playScript( blinkmAddr );
-    
-  } catch( IOException ioe ) {
-    l.error("couldn't burn: "+ioe);
-    return false;
-  }
-  return true;
-}
-*/
-
-/**
- * Prepare blinkm for playing preview scripts
- */
-public void prepareForPreview(int loopduration) {
-  byte fadespeed = getFadeSpeed(loopduration);
-  l.debug("prepareForPreview: fadespeed:"+fadespeed);
-
-  int blinkmAddr = 0x00;  // FIXME: ????
-  try { 
-    linkm.stopScript( blinkmAddr );
-    linkm.setFadeSpeed( blinkmAddr, fadespeed );
-  } catch(IOException ioe ) {
-    // FIXME: hmm, what to do here
-  }
-}
+// ----------------------------------------------------------------------------
 
 /**
  *
@@ -612,3 +625,65 @@ public byte getFadeSpeed(int loopduration) {
   return timings[0].fadeSpeed; // failsafe
 }
 
+
+/**
+ * OLD, FOR REFERENCE ONLY
+ *
+ * Burn a list of colors to a BlinkM
+ * @param blinkmAddr the address of the BlinkM to write to
+ * @param colorlist an ArrayList of the Colors to burn (java Color objs)
+ * @param emptyColor a color in the list that should be treated as nothing
+ * @param duration  how long the entire list should last for, in seconds
+ * @param loop      should the list be looped or not
+ * @param progressbar if not-null, will update a progress bar
+ *
+public boolean burn(int blinkmAddr, ArrayList colorlist, 
+                    Color emptyColor, int duration, boolean loop, 
+                    JProgressBar progressbar) {
+  
+  byte fadespeed = getFadeSpeed(duration);
+  byte durticks = getDurTicks(duration);
+  byte reps = (byte)((loop) ? 0 : 1);  
+  
+  Color c;
+  BlinkMScriptLine scriptLine;
+
+  l.debug("burn: addr:"+blinkmAddr+" durticks:"+durticks+" fadespeed:"+fadespeed);
+  
+  //build up the byte array to send
+  Iterator iter = colorlist.iterator();
+  int i=0;
+  try { 
+    while( iter.hasNext() ) {
+      l.debug("burn: writing script line "+i);
+      c = (Color) iter.next();
+      if( c == nullColor )
+        c = cBlk;
+      
+      scriptLine = new BlinkMScriptLine( durticks, 'c', 
+                                         c.getRed(),c.getGreen(),c.getBlue());
+      linkm.writeScriptLine( blinkmAddr, i, scriptLine);
+      
+      if( progressbar !=null) progressbar.setValue(i);  // hack
+      i++;
+    }
+    
+    // set script length     cmd   id         length         reps
+    linkm.setScriptLengthRepeats( blinkmAddr, colorlist.size(), reps);
+    
+    // set boot params   addr, mode,id,reps,fadespeed,timeadj
+    linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
+    
+    // set playback fadespeed
+    linkm.setFadeSpeed( blinkmAddr, fadespeed);
+    
+    // and play the script
+    linkm.playScript( blinkmAddr );
+    
+  } catch( IOException ioe ) {
+    l.error("couldn't burn: "+ioe);
+    return false;
+  }
+  return true;
+}
+*/

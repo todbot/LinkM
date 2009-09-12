@@ -48,6 +48,7 @@ public class ButtonPanel extends JPanel {
     // action listener for burn button
     downloadBtn.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
+          doDownload();
           //new BurnDialog(mf,burnBtn);
         }
       });
