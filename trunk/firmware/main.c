@@ -41,6 +41,8 @@
  *  3   <resp_byte_1>
  *  4   ...
  *
+ * 2009, Tod E. Kurt, ThingM, http://thingm.com/
+ *
  */
 
 #include <avr/io.h>
@@ -69,7 +71,8 @@
 #define PIN_USB_DPLUS          PD2
 #define PIN_USB_DMINUS         PD3
 
-//#define DEBUG   1
+// uncomment to enable debugging to serial port
+#define DEBUG   1
 
 /* ------------------------------------------------------------------------- */
 /* ----------------------------- USB interface ----------------------------- */
@@ -161,21 +164,26 @@ void handleMessage(void)
     if( cmd == LINKM_CMD_I2CTRANS ) {
         uint8_t addr      = mbufp[4];  // byte 4: i2c addr or command
 
+        printf("A.");
         if( addr >= 0x80 ) {   // invalid valid I2C address
             outmsgbuf[1] = LINKM_ERR_BADARGS;
             return;
         }
 
+        printf("B.");
         if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
+            printf("!");
             outmsgbuf[1] = LINKM_ERR_I2C;
             i2c_stop();
             return;
         }
+        printf("C.");
         // start succeeded, so send data
         for( uint8_t i=0; i<num_sent-1; i++) {
             i2c_write( mbufp[5+i] );   // byte 5-N: i2c command to send
         } 
 
+        printf("D.");
         if( num_recv != 0 ) {
             statusLedSet(1);
             if( i2c_rep_start( (addr<<1) | I2C_READ ) == 1 ) { // start i2c
@@ -183,12 +191,18 @@ void handleMessage(void)
             }
             else {
                 for( uint8_t i=0; i<num_recv; i++) {
-                    uint8_t c = i2c_read( (i!=(num_recv-1)) ); // read from i2c
+                    //uint8_t c = i2c_read( (i!=(num_recv-1)) );// read from i2c
+                    int c = i2c_read( (i!=(num_recv-1)) ); // read from i2c
+                    if( c == -1 ) {  // timeout, get outx
+                        outmsgbuf[1] = LINKM_ERR_I2CREAD;
+                        break;
+                    }
                     outmsgbuf[2+i] = c;             // store in response buff
                 }
             }
             statusLedSet(0);
         }
+        printf("Z.\n");
         i2c_stop();  // done!
     }
     // i2c write
