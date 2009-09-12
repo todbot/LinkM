@@ -73,7 +73,7 @@ public class BurnDialog extends JDialog implements ActionListener {
 
       msgtop.setText( msg_uploading );
     
-      boolean rc = doBurn();
+      boolean rc = doUpload();
 
       if( rc == true ) 
           msgtop.setText( msg_uploading + msg_done );

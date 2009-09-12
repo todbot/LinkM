@@ -76,7 +76,7 @@ public class MultiTrackView
     previewColors = new Color[numTracks];
     for( int j=0; j<numTracks; j++ ) {
       tracks[j] = new Track( numSlices, cEmpty );
-      tracks[j].blinkmaddr = 10+j;  // set default addrs
+      tracks[j].blinkmaddr = blinkmBaseAddr +j;  // set default addrs
       previewColors[j] = cEmpty;
     }
 
@@ -578,6 +578,11 @@ public class MultiTrackView
 
 
   // ------------------------------------------------------------------------
+
+  public void disableAllTracks() {
+    for( int i=0; i< tracks.length; i++) 
+      tracks[i].active = false;
+  }
 
   public void toggleTrackEnable(int track) {
     tracks[track].active = !tracks[track].active;
