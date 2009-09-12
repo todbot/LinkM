@@ -45,6 +45,9 @@ public class BlinkMScriptLine {
   public void addComment(String s) {
     comment = s;
   }
+  public boolean commentOnly() { 
+    return( cmd==0x00 && comment != null );
+  }
   
   public String toStringSimple() {
     return "{"+dur+", {'"+cmd+"',"+arg1+","+arg2+","+arg3+"}},";
@@ -52,11 +55,12 @@ public class BlinkMScriptLine {
   public String toFormattedString() {
     return toString();
   }
+
   // this seems pretty inefficient with all the string cats
   public String toString() {
     String s;
-    if( cmd==0x00 && comment !=null ) {
-      s = comment;
+    if( commentOnly() ) {
+      s = "//"+comment;  // FIXME: this is a bug?
     }
     else {
       String cmdstr = "'"+cmd+"'";

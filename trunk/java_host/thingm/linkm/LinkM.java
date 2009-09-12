@@ -723,7 +723,7 @@ public class LinkM
   }
 
   /**
-   * Load a text file and turn it into an ArrayList of Strings.
+   * Load a text file and turn it into an array of Strings.
    */
   static final public String[] loadFile( File filename ) {
     ArrayList<String> linesl = new ArrayList<String>();
@@ -753,6 +753,9 @@ public class LinkM
     return null;
   }
 
+  /**
+   *
+   */
   static final public boolean saveFile( String filename, String scriptstr ) { 
     return saveFile( new File(filename), scriptstr );
   }
@@ -766,10 +769,6 @@ public class LinkM
     try { 
       out = new BufferedWriter(new FileWriter( file ));
       out.write(scriptstr);
-      //String lines[] = scriptstr.split("\n");
-      //for( int i=0; i<lines.length; i++ ) { 
-      //  out.write( lines[i]+"\n" );   // FIXME:  don't need to split it up?
-      //}
     } catch( Exception ex ) { 
       System.err.println("error: "+ex);
       return false;
@@ -793,10 +792,12 @@ public class LinkM
     BlinkMScriptLine bsl; 
     BlinkMScript script = new BlinkMScript();
 
+    // matches a single line in form: {  100, {'c', 0xff,0x66,0x33}}
     String linepat = "\\{(.+?),\\{'(.+?)',(.+?),(.+?),(.+?)\\}\\}";
     Pattern p = Pattern.compile(linepat);
     if( lines==null ) return null;
     for( int i=0; i< lines.length; i++) { 
+      bsl = null;
       String l = lines[i];
 
       String[] lineparts = l.split("//");  // in case there's a comment
@@ -815,10 +816,12 @@ public class LinkM
             bsl.addComment( lineparts[1] );
       }
       else {  // didn't match everything => bad line
-        bsl = new BlinkMScriptLine();
-        bsl.addComment( l );  // so add the bad line as a comment
+        if( lineparts.length > 1 ) {
+          bsl = new BlinkMScriptLine();
+          bsl.addComment( lineparts[1] );  // so add the bad line as a comment
+        }
       }
-      script.add( bsl );
+      if( bsl != null ) script.add( bsl );
     }
     return script;
   }
@@ -830,7 +833,7 @@ public class LinkM
    */
   static final public BlinkMScript[] parseScripts( String[] lines ) {
     String scriptbeginpat = "^\\s*\\{\\s*$";
-    String scriptendpat   = "^\\s*\\}\\s*$";  // don't forget comma
+    String scriptendpat   = "^\\s*\\}\\s*$";  // FIXME:don't forget comma
     Pattern pb = Pattern.compile(scriptbeginpat);
     Pattern pe = Pattern.compile(scriptendpat);
     int i=0;
