@@ -235,13 +235,14 @@ void loadFile() {
   }
   File file = fc.getSelectedFile();
   if( file != null ) {
-    ArrayList lines = linkm.loadFile( file );
-    StringBuffer sb = new StringBuffer();
-    for (int i = 0; i < lines.size(); i++) {
-      String l = (String) lines.get(i);
-      sb.append(l); sb.append("\n");
+    String[] lines = LinkM.loadFile( file );
+    BlinkMScript script = LinkM.parseScript( lines );
+    if( script == null ) {
+      System.err.println("bad format in file");
+      return;
     }
-    editArea.setText(sb.toString()); // copy it all to the edit textarea
+    
+    editArea.setText(script.toString()); // copy it all to the edit textarea
     editArea.setCaretPosition(0);
     //scriptLines = linkm.parseScript( lines ); // and parse it
   }
