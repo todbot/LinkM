@@ -63,7 +63,7 @@ public class BlinkMScript {
     BlinkMScriptLine line;
     for( int i=0; i< length(); i++) { 
       line = get(i);
-      if( line.cmd == 0x00 && line.comment!=null ) {
+      if( line.commentOnly() ) {
         // comment-only line, skip
       } else { 
         newscript.add(line);
@@ -80,13 +80,14 @@ public class BlinkMScript {
   }
 
   public String toString(boolean withLineNums ) { 
-    String str = "{\n";
+    String str = ""; //"{\n";
     BlinkMScriptLine line;
     for( int i=0; i< length(); i++ ) {
       line = get(i);
-      str += ((withLineNums)?i:"")+"\t"+ line.toFormattedString() +"\n";
+      //str += ((withLineNums)?i:"")+"\t"+ line.toFormattedString() +"\n";
+      str += ((withLineNums)?(i+"\t"):"")+ line.toFormattedString() +"\n";
     }
-    str += "}\n";
+    //str += "}\n";
     return str;
     
   }
