@@ -7,6 +7,9 @@
 # License: GNU GPL v2 (see License.txt), GNU GPL v3 or proprietary (CommercialLicense.txt)
 # This Revision: $Id: Makefile 692 2008-11-07 15:07:40Z cs $
 
+#TARGET = main
+TARGET = linkm
+
 #MCU  = atmega88
 MCU  = atmega168
 F_CPU   = 12000000	# in Hz
@@ -24,7 +27,7 @@ AVRDUDE = avrdude -c avrispmkii -P usb -p $(MCU) # edit this line for your progr
 CFLAGS  = -Iusbdrv -I. -I../c_host -DDEBUG_LEVEL=0
 OBJECTS = twimaster.c uart.c
 OBJECTS += usbdrv/usbdrv.o usbdrv/usbdrvasm.o usbdrv/oddebug.o 
-OBJECTS += main.o 
+OBJECTS += $(TARGET).o 
 
 COMPILE = avr-gcc -std=gnu99 -Wall -Os -DF_CPU=$(F_CPU) $(CFLAGS) -mmcu=$(MCU)
 
@@ -112,13 +115,13 @@ all: hex
 # symbolic targets:
 help:
 	@echo "This Makefile has no default rule. Use one of the following:"
-	@echo "make hex ....... to build main.hex"
+	@echo "make hex ....... to build $(TARGET).hex"
 	@echo "make program ... to flash the firmware"
 	@echo "make fuse ...... to flash the fuses"
 	@echo "make flash ..... to flash the firmware" 
 	@echo "make clean ..... to delete objects and hex file"
 
-hex: main.hex
+hex: $(TARGET).hex
 
 program: flash
 
@@ -129,12 +132,12 @@ fuse:
 	$(AVRDUDE) -U hfuse:w:$(FUSE_H):m -U lfuse:w:$(FUSE_L):m
 
 # rule for uploading firmware:
-flash: main.hex
-	$(AVRDUDE) -U flash:w:main.hex:i
+flash: $(TARGET).hex
+	$(AVRDUDE) -U flash:w:$(TARGET).hex:i
 
 # rule for deleting dependent files (those which can be built by Make):
 clean:
-	rm -f main.hex main.lst main.obj main.cof main.list main.map main.eep.hex main.elf *.o usbdrv/*.o main.s usbdrv/oddebug.s usbdrv/usbdrv.s
+	rm -f $(TARGET).hex $(TARGET).lst $(TARGET).obj $(TARGET).cof $(TARGET).list $(TARGET).map $(TARGET).eep.hex $(TARGET).elf *.o usbdrv/*.o $(TARGET).s usbdrv/oddebug.s usbdrv/usbdrv.s
 
 # Generic rule for compiling C files:
 .c.o:
@@ -158,18 +161,18 @@ clean:
 usbdrv:
 	cp -r ../../../usbdrv .
 
-main.elf: usbdrv $(OBJECTS)	# usbdrv dependency only needed because we copy it
-	$(COMPILE) -o main.elf $(OBJECTS)
+$(TARGET).elf: usbdrv $(OBJECTS)	# usbdrv dependency only needed because we copy it
+	$(COMPILE) -o $(TARGET).elf $(OBJECTS)
 
-main.hex: main.elf
-	rm -f main.hex main.eep.hex
-	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
-	avr-size --mcu=$(MCU) --format=avr main.elf
+$(TARGET).hex: $(TARGET).elf
+	rm -f $(TARGET).hex $(TARGET).eep.hex
+	avr-objcopy -j .text -j .data -O ihex $(TARGET).elf $(TARGET).hex
+	avr-size --mcu=$(MCU) --format=avr $(TARGET).elf
 
 # debugging targets:
 
-disasm:	main.elf
-	avr-objdump -d main.elf
+disasm:	$(TARGET).elf
+	avr-objdump -d $(TARGET).elf
 
 cpp:
-	$(COMPILE) -E main.c
+	$(COMPILE) -E $(TARGET).c
