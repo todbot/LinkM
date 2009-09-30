@@ -106,10 +106,17 @@ static int numWrites;
 static uint8_t msgbuf[REPORT_COUNT];
 static uint8_t outmsgbuf[REPORT_COUNT];
 
+uint8_t playing;       // boolean
+static volatile uint32_t tick;         // tick tock clock
+uint8_t script_id;     // script id to play
+uint16_t script_len;   // number of script lines in script
+uint16_t script_tick;  // number of ticks between script lines
+uint16_t script_pos;   // current position in the script
+
+#ifdef DEBUG
 // setup serial routines to become stdio
 extern int uart_putchar(char c, FILE *stream);
 extern int uart_getchar(FILE *stream);
-#ifdef DEBUG
 FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 #endif
 
@@ -134,6 +141,8 @@ void i2cEnable(int v) {
 }
 
 // 
+// Called from usbFunctionWrite() when we've received the entire USB message
+// 
 void handleMessage(void)
 {
     outmsgbuf[0]++;                   // say we've handled a msg
@@ -156,11 +165,17 @@ void handleMessage(void)
 #endif
 
     // i2c transaction
-    // outmsgbuf[0] = transaction counter 
-    // outmsgbuf[1] = response code
-    // outmsgbuf[2] = i2c response byte 0  (if any)
-    // outmsgbuf[3] = i2c response byte 1  (if any)
+    // params:
+    //   mpbufp[4] == i2c addr
+    //   mpbufp[5..5+numsend] == data to write
+    // returns:
+    //   outmsgbuf[0] == transaction counter 
+    //   outmsgbuf[1] == response code
+    //   outmsgbuf[2] == i2c response byte 0  (if any)
+    //   outmsgbuf[3] == i2c response byte 1  (if any)
     // ...
+    // FIXME: because "num_sent" and "num_recv" are outside this command
+    //        it's confusing
     if( cmd == LINKM_CMD_I2CTRANS ) {
         uint8_t addr      = mbufp[4];  // byte 4: i2c addr or command
 
@@ -171,7 +186,7 @@ void handleMessage(void)
         }
 
         printf("B.");
-        if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
+        if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c trans
             printf("!");
             outmsgbuf[1] = LINKM_ERR_I2C;
             i2c_stop();
@@ -181,7 +196,7 @@ void handleMessage(void)
         // start succeeded, so send data
         for( uint8_t i=0; i<num_sent-1; i++) {
             i2c_write( mbufp[5+i] );   // byte 5-N: i2c command to send
-        } 
+        }
 
         printf("D.");
         if( num_recv != 0 ) {
@@ -191,7 +206,7 @@ void handleMessage(void)
             }
             else {
                 for( uint8_t i=0; i<num_recv; i++) {
-                    //uint8_t c = i2c_read( (i!=(num_recv-1)) );// read from i2c
+                    //uint8_t c = i2c_read( (i!=(num_recv-1)) );//read from i2c
                     int c = i2c_read( (i!=(num_recv-1)) ); // read from i2c
                     if( c == -1 ) {  // timeout, get outx
                         outmsgbuf[1] = LINKM_ERR_I2CREAD;
@@ -206,8 +221,13 @@ void handleMessage(void)
         i2c_stop();  // done!
     }
     // i2c write
-    // outmsgbuf[0] = transaction counter 
-    // outmsgbuf[1] = response code
+    // params:
+    //   mbufp[4]     == i2c addr
+    //   mbufp[5]     == read after write boolean (1 == read, 0 = no read)
+    // returns:
+    //   outmsgbuf[0] == transaction counter 
+    //   outmsgbuf[1] == response code
+    // FIXME: this function doesn't work i think
     else if( cmd == LINKM_CMD_I2CWRITE ) {
         uint8_t addr      = mbufp[4];  // byte 4: i2c addr or command
         uint8_t doread    = mbufp[5];  // byte 5: do read or not after this
@@ -217,7 +237,7 @@ void handleMessage(void)
             return;
         }
 
-        if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
+        if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c trans
             outmsgbuf[1] = LINKM_ERR_I2C;
             i2c_stop();
             return;
@@ -231,13 +251,16 @@ void handleMessage(void)
         }
     }
     // i2c read
-    // outmsgbuf[0] = transaction counter 
-    // outmsgbuf[1] = response code
-    // outmsgbuf[2] = i2c response byte 0  (if any)
-    // outmsgbuf[3] = i2c response byte 1  (if any)
+    // params:
+    //   mpbuf[4]     == i2c addr 
+    // returns:
+    //   outmsgbuf[0] == transaction counter 
+    //   outmsgbuf[1] == response code
+    //   outmsgbuf[2] == i2c response byte 0  (if any)
+    //   outmsgbuf[3] == i2c response byte 1  (if any)
     // ...
     else if( cmd == LINKM_CMD_I2CREAD ) {
-        uint8_t addr      = mbufp[4];  // byte 4: i2c addr or command
+        uint8_t addr      = mbufp[4];  // byte 4: i2c addr 
 
         if( num_recv == 0 ) {
             outmsgbuf[1] = LINKM_ERR_BADARGS;
@@ -258,11 +281,15 @@ void handleMessage(void)
         i2c_stop();
     }
     // i2c bus scan
-    // outmsgbuf[0] == transaction counter
-    // outmsgbuf[1] == response code
-    // outmsgbuf[2] == number of devices found
-    // outmsgbuf[3] == addr of 1st device
-    // outmsgbuf[4] == addr of 2nd device
+    // params:
+    //   mbufp[4]     == start addr
+    //   mbufp[5]     == end addr
+    // returns:
+    //   outmsgbuf[0] == transaction counter
+    //   outmsgbuf[1] == response code
+    //   outmsgbuf[2] == number of devices found
+    //   outmsgbuf[3] == addr of 1st device
+    //   outmsgbuf[4] == addr of 2nd device
     // ...
     else if( cmd == LINKM_CMD_I2CSCAN ) {
         uint8_t addr_start = mbufp[4];  // byte 4: start addr of scan
@@ -273,7 +300,7 @@ void handleMessage(void)
         }
         int numfound = 0;
         for( uint8_t a = 0; a < (addr_end-addr_start); a++ ) {
-            if( i2c_start( ((addr_start+a)<<1)|I2C_WRITE)==0 ) { // device found
+            if( i2c_start( ((addr_start+a)<<1)|I2C_WRITE)==0 ) { // dev found
                 outmsgbuf[3+numfound] = addr_start+a;  // save the address 
                 numfound++;
             }
@@ -282,34 +309,57 @@ void handleMessage(void)
         outmsgbuf[2] = numfound;
     }
     // i2c bus connect/disconnect
-    // outmsgbuf[0] == transaction counter
-    // outmsgbuf[1] == response code
+    // params:
+    //   mpbuf[4]  == connect (1) or disconnect (0)
+    // returns:
+    //   outmsgbuf[0] == transaction counter
+    //   outmsgbuf[1] == response code
     else if( cmd == LINKM_CMD_I2CCONN  ) {
         uint8_t conn = mbufp[4];        // byte 4: connect/disconnect boolean
         i2cEnable( conn );
     }
     // i2c init
-    // outmsgbuf[0] == transaction counter
-    // outmsgbuf[1] == response code
+    // params:
+    //   none
+    // returns:
+    //   outmsgbuf[0] == transaction counter
+    //   outmsgbuf[1] == response code
     else if( cmd == LINKM_CMD_I2CINIT ) {  // FIXME: what's the real soln here?
         i2c_stop();
         _delay_ms(1);
         i2c_init();
     }
     // set status led state
-    // outmsgbuf[0] == transaction counter
-    // outmsgbuf[1] == response code
+    // params:
+    //   mbufp[4]  == on (1) or off (0)
+    // returns:
+    //   outmsgbuf[0] == transaction counter
+    //   outmsgbuf[1] == response code
     else if( cmd == LINKM_CMD_STATLED ) {
-        uint8_t led = mbufp[4];        // byte 4: connect/disconnect boolean
+        uint8_t led = mbufp[4];        // byte 4: on/off boolean
         statusLedSet( led );
     }
-    // cmd 0x98 == get status led state
-    // outmsgbuf[0] == transaction counter
-    // outmsgbuf[1] == response code
-    // outmsgbuf[2] == state of status LED
+    // get status led state
+    // params:
+    //   none
+    // returns:
+    //   outmsgbuf[0] == transaction counter
+    //   outmsgbuf[1] == response code
+    //   outmsgbuf[2] == state of status LED
     else if( cmd == LINKM_CMD_STATLEDGET ) {
         // no arguments, just a single return byte
         outmsgbuf[2] = statusLedGet();
+    }
+    // set play statemachine
+    // params:
+    //   mbufp[4] == 
+    // outmsgbuf
+    else if( cmd == LINKM_CMD_PLAY_SET ) { 
+        playing     = mbufp[4];  // turn on or off playing
+        script_id   = mbufp[5];  // which script to play, usually 0
+        script_tick = mbufp[6];  // time in ticks between script lines
+        //script_pos  = mbufp[6];  // starting position, usually 0
+        script_len  = mbufp[7];  // len of script, usually 48 for script 0
     }
     // cmd xxxx == 
 }
@@ -351,7 +401,7 @@ uchar   usbFunctionWrite(uchar *data, uchar len)
     return bytesRemaining == 0; // return 1 if this was the last chunk 
 }
 
-/* ------------------------------------------------------------------------- */
+// ------------------------------------------------------------------------- 
 
 usbMsgLen_t usbFunctionSetup(uchar data[8])
 {
@@ -378,7 +428,57 @@ usbMsgLen_t usbFunctionSetup(uchar data[8])
     return 0;
 }
 
-/* ------------------------------------------------------------------------- */
+// -------------------------------------------------------------------------
+
+//
+//
+//
+
+ISR(TIMER1_OVF_vect)
+{
+    tick++;   // need to make sure this happens every 33.33ms
+}
+
+/**
+ * Send I2C play script command to blinkm
+ * returns zero on success, non-zero on fail
+ */
+int blinkmPlayScript(uint8_t addr, uint8_t id, uint8_t reps, uint8_t pos)
+{
+    if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
+        i2c_stop();
+        return 1;
+    }
+    i2c_write( 'p' );
+    i2c_write( id );  
+    i2c_write( reps );
+    i2c_write( pos );
+    i2c_stop();   // done!
+    return 0;
+}
+
+/**
+ * Stand-alone play state machine
+ * Drives BlinkMs to play back their scripts in sync
+ */
+void playTicker(void)
+{
+    if( !playing ) return;
+    //printf("st:%d t:%d\n",script_tick,tick);
+    if( tick > script_tick ) {
+        printf("tick!");
+        tick = 0;
+        //blinkmPlayScript( 0, script_id, 0, script_pos );
+        statusLedToggle();
+        script_pos++;
+        if( script_pos == script_len ) {  // loop
+            script_pos = 0;
+        }
+    }
+
+}
+
+// ------------------------------------------------------------------------- 
 
 int main(void)
 {
@@ -392,7 +492,7 @@ int main(void)
     // That's the way we need D+ and D-. Therefore we don't need any
     // additional hardware initialization.
     
-    DDRB |= (1<< PB4)|(1<< PB0);      // make PB4 output for LED, PB0 for enable
+    DDRB |= (1<< PB4)|(1<< PB0);     // make PB4 output for LED, PB0 for enable
 
     statusLedSet( 1 );
     
@@ -410,7 +510,7 @@ int main(void)
 
     i2cEnable(1);                    // enable i2c buffer chip
 
-    // debug
+    // debug: insert some known data into the outbuffer
     outmsgbuf[8] = 0xde;
     outmsgbuf[9] = 0xad;
     outmsgbuf[10] = 0xbe;
@@ -429,13 +529,19 @@ int main(void)
         _delay_ms(1);
     }
     usbDeviceConnect();
-    
+
+    // set up periodic timer for state machine
+    TCCR1B |= _BV( CS10 );   // FIXME: this is likely wrong
+    TIFR1  |= _BV( TOV1 );         // clear interrupt flag
+    TIMSK1 |= _BV( TOIE1 );        // enable overflow interrupt
+
     sei();
     DBG1(0x01, 0, 0);       // debug output: main loop starts 
     for(;;){                // main event loop 
         DBG1(0x02, 0, 0);     // debug output: main loop iterates 
         wdt_reset();
         usbPoll();
+        playTicker();
     }
     return 0;
 }
