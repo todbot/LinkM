@@ -149,8 +149,11 @@ public class LinkM
         cmd = "upload";
       }
       else if( a.equals("--download")) {
-        //file = args[++j];
         cmd = "download";
+      }
+      else if( a.equals("--setaddr")) { 
+        arg = parseHexDecInt( getArg(args,++j,"") );  // new addr
+        cmd = "setaddr";
       }
       else if( a.equals("--readinputs")) { 
         cmd = "readinputs";
@@ -200,20 +203,36 @@ public class LinkM
         }
 
         println("Uploading "+len+" line script to BlinkM address "+addr);
+        long st = System.currentTimeMillis();
         linkm.writeScript( addr, script );
+        long et = System.currentTimeMillis();
+        println("time to upload: "+(et-st)+" millisecs");
       }
       else if( cmd.equals("download") ) {
         if( addr == 0 ) { 
           println("Address 0 is not allowed. Set address with --addr=<addr>");
           return;
         }
-        println("Downloading script from ...");
+        println("Downloading script #0 from BlinkM addr "+addr+"...");
         BlinkMScriptLine line = null;
+
+        long st = System.currentTimeMillis();
         BlinkMScript script = linkm.readScript( addr, 0, false );
+        long et = System.currentTimeMillis();
+        println("time to download: "+(et-st)+" millisecs");
+
         for(int i=0; i< script.length(); i++ ) {
           line = script.get(i);
           println(line.toString());  
         }
+      }
+      else if( cmd.equals("setaddr") ) {
+        if( addr == 0 ) { 
+          println("Address 0 is not allowed. Set old addr with --addr=<addr>");
+          return;
+        }
+        println("Changing BlinkM I2C from "+addr+" to "+arg);
+        linkm.setAddress( addr, (int)arg );
       }
       else if( cmd.equals("i2cscan") ) { 
         if( addr == 0 ) addr = 1; // don't scan general call / broadcast addr
@@ -447,6 +466,16 @@ public class LinkM
     commandi2c( cmdbuf, recvbuf );
     return recvbuf;
   }
+  
+  /**
+   * Sets the I2C address of a BlinkM
+   */
+  public void setAddress(int addr, int newaddr)
+    throws IOException { 
+    byte[] cmdbuf = { (byte)addr, (byte)'A', (byte)newaddr, 
+                      (byte)0xD0, (byte)0x0D, (byte)newaddr };
+    commandi2c( cmdbuf, null );
+  }
 
   /**
    * Play a light script
@@ -498,6 +527,33 @@ public class LinkM
   public void fadeToRGB(int addr, Color color) 
     throws IOException { 
     fadeToRGB( addr, color.getRed(), color.getGreen(), color.getBlue());
+  }
+
+  /**
+   *
+   */
+  public void fadeToRandomRGB(int addr, int r, int g, int b) 
+    throws IOException { 
+    byte[] cmdbuf = { (byte)addr, 'C', (byte)r, (byte)g, (byte)b };
+    commandi2c( cmdbuf, null );
+  }
+
+  /**
+   *
+   */
+  public void fadeToHSB(int addr, int h, int s, int b)
+    throws IOException {
+    byte[] cmdbuf = { (byte)addr, 'h', (byte)h, (byte)s, (byte)b };
+    commandi2c( cmdbuf, null );
+  }
+
+  /**
+   *
+   */
+  public void fadeToRandomHSB(int addr, int h, int s, int b)
+    throws IOException {
+    byte[] cmdbuf = { (byte)addr, 'H', (byte)h, (byte)s, (byte)b };
+    commandi2c( cmdbuf, null );
   }
 
   /**
@@ -557,7 +613,7 @@ public class LinkM
     throws IOException {
     byte[] cmdbuf = { (byte)addr, 'L', 0, (byte)len, (byte)reps };
     commandi2c( cmdbuf, null );
-    pause(20);  // enforce wait for EEPROM write
+    pause(10);  // enforce wait for EEPROM write
   }
 
   /**
@@ -583,6 +639,9 @@ public class LinkM
   /**
    * Write an entire BlinkM light script as a BlinkMScript
    * to blinkm at address 'addr'.
+   * NOTE: for a 48-line script, this takes about 858 msecs because of 
+   *       enforced 10 msec delay and HID overhead from small report size
+   * FIXME: speed this up by implementing second report size 
    * @param addr blinkm addr
    * @param script BlinkMScript object of script lines
    */
@@ -599,6 +658,7 @@ public class LinkM
 
   /**
    * Write a single BlinkM light script line at position 'pos'.
+   * FIXME: hard-coded script_id 0 (only one that can be written for now, still)
    */
   public void writeScriptLine( int addr, int pos, BlinkMScriptLine line )
     throws IOException {
@@ -616,7 +676,7 @@ public class LinkM
     cmdbuf[8] = (byte)line.arg3;    // cmd arg3
     
     commandi2c( cmdbuf, null);
-    pause(20); // enforce at least 4.5msec delay between EEPROM writes
+    pause(10); // enforce at least 4.5msec delay between EEPROM writes
   }
 
   /**
@@ -642,6 +702,7 @@ public class LinkM
 
   /**
    * Read an entire light script from a BlinkM at address 'addr' 
+   * FIXME: this only really works for script_id==0
    * @param readAll read all script lines, or just the good ones
    */
   public BlinkMScript readScript( int addr, int script_id, boolean readAll ) 
