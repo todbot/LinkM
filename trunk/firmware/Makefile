@@ -10,16 +10,19 @@
 #TARGET = main
 TARGET = linkm
 
-#MCU  = atmega88
-MCU  = atmega168
+MCU  = atmega88
+#MCU  = atmega88p
+#MCU  = atmega168
 F_CPU   = 12000000	# in Hz
 #F_CPU   = 16000000	# in Hz
 
 #for atmega88
+FUSE_L=0xdf
+FUSE_H=0xde
 
 # for atmega8
-#FUSE_L  = 0xdf # see below for fuse values for particular devices
-#FUSE_H  = 0xdd 
+#FUSE_L=0xdf # see below for fuse values for particular devices
+#FUSE_H=0xdd 
 
 #AVRDUDE = avrdude -c usbasp -p $(MCU) # edit this line for your programmer
 AVRDUDE = avrdude -c avrispmkii -P usb -p $(MCU) # edit this line for your programmer

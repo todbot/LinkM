@@ -62,14 +62,14 @@
 #include "linkm-lib.h"
 
 // these aren't used anywhere, just here to note them
-#define PIN_LED_STATUS         PB4
-#define PIN_I2C_ENABLE         PB0
+#define PIN_LED_STATUS         PORTB4
+#define PIN_I2C_ENABLE         PORTB5
 
-#define PIN_I2C_SCL            PC5
-#define PIN_I2C_SDA            PC4
+#define PIN_I2C_SDA            PORTC4
+#define PIN_I2C_SCL            PORTC5
 
-#define PIN_USB_DPLUS          PD2
-#define PIN_USB_DMINUS         PD3
+#define PIN_USB_DPLUS          PORTD2
+#define PIN_USB_DMINUS         PORTD3
 
 // uncomment to enable debugging to serial port
 #define DEBUG   1
@@ -123,21 +123,21 @@ FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 /* ------------------------------------------------------------------------- */
 void statusLedToggle(void)
 {
-    PORTB ^= (1<< PB4);  // toggles LED
+    PORTB ^= (1<< PIN_LED_STATUS);  // toggles LED
 }
 void statusLedSet(int v)
 {
-    if( v ) PORTB  |=  (1<<PB4);
-    else    PORTB  &=~ (1<<PB4);
+    if( v ) PORTB  |=  (1<<PIN_LED_STATUS);
+    else    PORTB  &=~ (1<<PIN_LED_STATUS);
 }
 uint8_t statusLedGet(void)
 {
-    return (PINB & (1<<PB4)) ? 1 : 0;
+    return (PINB & (1<<PIN_LED_STATUS)) ? 1 : 0;
 }
 
 void i2cEnable(int v) {
-    if( v ) PORTB  |=  (1<<PB0);
-    else    PORTB  &=~ (1<<PB0);
+    if( v ) PORTB  |=  (1<<PIN_I2C_ENABLE);
+    else    PORTB  &=~ (1<<PIN_I2C_ENABLE);
 }
 
 // 
@@ -482,7 +482,7 @@ void playTicker(void)
 
 int main(void)
 {
-    uchar   i;
+    uchar   i,j;
     
     wdt_enable(WDTO_1S);
     // Even if you don't use the watchdog, turn it off here. On newer devices,
@@ -492,12 +492,17 @@ int main(void)
     // That's the way we need D+ and D-. Therefore we don't need any
     // additional hardware initialization.
     
-    DDRB |= (1<< PB4)|(1<< PB0);     // make PB4 output for LED, PB0 for enable
+    DDRB |= (1<< PIN_LED_STATUS) | (1<< PIN_I2C_ENABLE); // make pins outputs 
 
     statusLedSet( 1 );
     
-    for( i=0; i<10; i++)  // wait for power to stabilize & blink status
-        _delay_ms(10);
+    for( j=0; j<20; j++ ) {
+        statusLedToggle();
+        wdt_reset();
+        for( i=0; i<10; i++) { // wait for power to stabilize & blink status
+            _delay_ms(10);
+        }
+    }
 
 #ifdef DEBUG
     uart_init();                // initialize UART hardware
@@ -505,7 +510,7 @@ int main(void)
     puts("linkm dongle test");
 #endif
 
-    PORTC |= _BV(PC5) | _BV(PC4);    // enable pullups on SDA & SCL
+    PORTC |= _BV(PORTC5) | _BV(PORTC4);    // enable pullups on SDA & SCL FIXME
     i2c_init();                      // init I2C interface
 
     i2cEnable(1);                    // enable i2c buffer chip
@@ -530,10 +535,12 @@ int main(void)
     }
     usbDeviceConnect();
 
+    /*
     // set up periodic timer for state machine
     TCCR1B |= _BV( CS10 );   // FIXME: this is likely wrong
     TIFR1  |= _BV( TOV1 );         // clear interrupt flag
     TIMSK1 |= _BV( TOIE1 );        // enable overflow interrupt
+    */
 
     sei();
     DBG1(0x01, 0, 0);       // debug output: main loop starts 
@@ -541,7 +548,7 @@ int main(void)
         DBG1(0x02, 0, 0);     // debug output: main loop iterates 
         wdt_reset();
         usbPoll();
-        playTicker();
+        //playTicker();
     }
     return 0;
 }
