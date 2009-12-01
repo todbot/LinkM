@@ -108,16 +108,25 @@ these macros are defined, the boot loader usees them.
 
 static inline void  bootLoaderInit(void)
 {
-  //PORTD = (1 << PD3); // activate pull-up for key 
-  DDRC  |=  (1<< PC4);  // make it an output
-  //DDRC  &=~ (1<< PC5);  // make an input (shouldn't be neccesary)
-  PORTC &=~ (1<< PC4);  // set it low
-  PORTC |=  (1<< PC5);  // turn on pullup
+    //DDRB  |= (1<< PORTB5);   // turn on output for PIN_I2C_ENABLE
+    //PORTB |= (1<< PORTB5);   // enable i2c
+    //DDRC  |=  (1<< PORTC5);  // make SCL an output
+    //PORTC &=~ (1<< PORTC5);  // set SCL low
+    //DDRC  &=~ (1<< PORTC4);  // make SDA an input  (shouldn't be necessary)
+    //PORTC |=  (1<< PORTC4);  // set SDA pullup 
 
-  _delay_us(10);  // wait for levels to stabilize 
+    //PORTD = (1 << PD3);   // activate pull-up for key 
+    //DDRC  &=~ (1<< PC5);  // make an input (shouldn't be neccesary)
+  
+    DDRB  |=  (1<< PORTB4);    // make MISO/status an output
+    PORTB |=  (1<< PORTB4);    // turn on LED
+    DDRB  &=~ (1<< PORTB3);    // make MOSI an input
+    PORTB |=  (1<< PORTB3);    // turn on MOSI pull-up
+    _delay_us(10);  // wait for levels to stabilize 
 }
 
-#define bootLoaderCondition()   ((PINC & (1<< PC5)) == 0)   // True if jumper is set 
+#define bootLoaderCondition()  ((PINB & (1<< PORTB3)) == 0) // True if MOSI low 
+//#define bootLoaderCondition()   ((PINC & (1<< PORTC4)) == 0)   // True if SDA is low 
 //#define bootLoaderCondition()   (1)   // True if jumper is set 
 
 #endif

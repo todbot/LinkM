@@ -16,18 +16,31 @@
 
 #DEVICE = atmega8
 DEVICE = atmega88
+#DEVICE = atmega88p
 BOOTLOADER_ADDRESS = 1800
 F_CPU = 12000000
+#F_CPU = 16000000
 
 # for atmega88  (from fusecalc)
-FUSEL = 0xdf
-FUSEH = 0xd5
-FUSEE = 0xf8
+#FUSEL = 0xdf
+#FUSEH = 0xd5
+#FUSEE = 0xf8
 
-# for atmega88  (from arduino due)
-#FUSEL = 0xFF
-#FUSEH = 0xDA
-#FUSEE = 0x05
+
+#diecimila.bootloader.low_fuses=0xff
+#diecimila.bootloader.high_fuses=0xdd
+#diecimila.bootloader.extended_fuses=0x00
+#diecimila.bootloader.path=atmega
+#diecimila.bootloader.file=ATmegaBOOT_168_diecimila.hex
+#diecimila.bootloader.unlock_bits=0x3F
+#diecimila.bootloader.lock_bits=0x0F
+
+# for atmega88  (from arduino duemilinov)
+FUSEL = 0xFF
+FUSEH = 0xDD
+FUSEE = 0x00
+FUSELOCK = 0x0F
+FUSEUNLOCK = 0x3F
 
 # for atmega8
 #FUSEL = 0xdf
@@ -81,6 +94,7 @@ all:	main.hex
 .c.s:
 	$(COMPILE) -S $< -o $@
 
+program: flash
 flash:	all
 	$(AVRDUDE) -U flash:w:main.hex:i
 
@@ -92,9 +106,9 @@ fuse:
 
 lock:
 #	$(AVRDUDE) -U lock:w:0x2f:m
-	$(AVRDUDE) -U lock:w:0x0f:m
+	$(AVRDUDE) -U lock:w:$(FUSELOCK):m
 unlock:
-	$(AVRDUDE) -U lock:w:0x3f:m
+	$(AVRDUDE) -U lock:w:$(FUSEUNLOCK):m
 
 read_fuses:
 	$(AVRDUDE) --rd_fuses
