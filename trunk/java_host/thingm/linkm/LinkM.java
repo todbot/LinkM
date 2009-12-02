@@ -1,6 +1,8 @@
 /**
  * LinkM -- interface to LinkM USB dongle
  *
+ * This is both a library for use by other programs,
+ * as well as a command-line demonstration/utilty app
  *
  * Tasks:
  *  - Upload light script    (read text file)
@@ -71,6 +73,7 @@ public class LinkM
 "  --download <n>    Download light script n from blinkm (reqs addr & file) \n"+
 "  --linkmcmd        Send a raw linkm command  \n"+
 "  --statled <0|1>   Turn on or off status LED  \n"+
+"  --factoryreset    Restore a BlinkM to factory conditions \n"+
 "Options:\n"+
 "  -h, --help                   Print this help message\n"+
 "  -a addr, --addr=i2caddr      I2C address for command (default 0)\n"+
@@ -84,7 +87,7 @@ public class LinkM
   }
 
   public static void main(String args[]) {
-
+    
     if( args.length == 0 ) {
       usage();
     }
@@ -97,62 +100,65 @@ public class LinkM
     byte[] argbuf = null;
     
     // argument processing
-    int j=0;
-    while( j< args.length ) {
+    int ac=0;
+    while( ac< args.length ) {
       //for( int i=0; i< args.length; i++ ) {
-      String a = args[j];
+      String a = args[ac];
       if( a.equals("--addr") || a.equals("-a") ) {
-        addr = parseHexDecInt( getArg(args,++j,"") );
+        addr = parseHexDecInt( getArg(args,++ac,"") );
       }
       //else if( a.equals("--color") || a.equals("-c") ) {
-      //  color = parseHexDecInt( getArg(args,++j,"") );
+      //  color = parseHexDecInt( getArg(args,++ac,"") );
       //  cmd = "color";
       //}
       else if( a.equals("--debug") || a.equals("-d") || a.equals("-v") ) { 
         debug++;
       }
       else if( a.equals("--millis") || a.equals("-m") ) {
-        millis = parseHexDecInt( getArg(args,++j,"") );
+        millis = parseHexDecInt( getArg(args,++ac,"") );
       }
       else if( a.equals("--statled") ) {
-        arg = parseHexDecInt( getArg(args,++j,"") );
+        arg = parseHexDecInt( getArg(args,++ac,"") );
         cmd = "statled";
       }
       else if( a.equals("--i2cscan") ) {
         cmd = "i2cscan";
       }
       else if( a.equals("--i2cenable") ) {
-        arg = parseHexDecInt( getArg(args,++j,"") );
+        arg = parseHexDecInt( getArg(args,++ac,"") );
         cmd = "i2cenable";
       }
       else if( a.equals("--cmd")) {
-        argbuf = parseArgBuf( args[++j] );  // blinkm cmd, c,0xff,0x33,0xdd
+        argbuf = parseArgBuf( args[++ac] );  // blinkm cmd, c,0xff,0x33,0xdd
         cmd = "cmd";
       }
       else if( a.equals("--off") ) { 
-        addr = parseHexDecInt( getArg(args,++j,"") );
+        addr = parseHexDecInt( getArg(args,++ac,"") );
         cmd = "off";
       }
       else if( a.equals("--play")) { 
-        arg = parseHexDecInt( getArg(args,++j,"") );  // script num to play
+        arg = parseHexDecInt( getArg(args,++ac,"") );  // script num to play
         cmd = "play";
       }
       else if( a.equals("--stop")) {
         cmd = "stop";
       }
       else if( a.equals("--random")) {
-        arg = parseHexDecInt( getArg(args,++j,"") );  // number of rand colors
+        arg = parseHexDecInt( getArg(args,++ac,"") );  // number of rand colors
         cmd = "random";
       }
       else if( a.equals("--upload")) {
-        file = args[++j];
+        file = args[++ac];
         cmd = "upload";
       }
       else if( a.equals("--download")) {
         cmd = "download";
       }
+      else if( a.equals("--getversion")) {
+        cmd = "getversion";
+      }
       else if( a.equals("--setaddr")) { 
-        arg = parseHexDecInt( getArg(args,++j,"") );  // new addr
+        arg = parseHexDecInt( getArg(args,++ac,"") );  // new addr
         cmd = "setaddr";
       }
       else if( a.equals("--readinputs")) { 
@@ -161,13 +167,13 @@ public class LinkM
       else if( a.equals("--help")) { 
         cmd = "help";
       }
-      else if( a.equals("--factorysettings") ) {
-        cmd = "factorysettings";
+      else if( a.equals("--factoryreset") ) {
+        cmd = "factoryreset";
       }
       else { 
-        file = args[j];
+        file = args[ac];
       }
-      j++;
+      ac++;
     } // while
     
     if( cmd == null || cmd.equals("help") ) {
@@ -235,16 +241,23 @@ public class LinkM
         linkm.setAddress( addr, (int)arg );
       }
       else if( cmd.equals("i2cscan") ) { 
-        if( addr == 0 ) addr = 1; // don't scan general call / broadcast addr
-        println("I2C scan from addresses "+addr+" - "+(addr+16));
-        byte[] addrs = linkm.i2cScan(addr,addr+16);
-        if( addrs == null ) {
-          println("no I2C devices found");
-        } 
-        else {
-          int cnt = addrs.length;
-          for( int i=0; i<cnt; i++) 
-            println("device found at address "+addrs[i]);
+        //if( addr == 0 ) addr = 1; // don't scan general call / broadcast addr
+        println("I2C scan from addresses "+1+" - "+113);
+        ArrayList addrlist = new ArrayList();;
+        for( int i=0; i<7; i++ ) {
+          addr = i*16 + 1;
+          byte[] addrs = linkm.i2cScan(addr,addr+16);
+          if( addrs != null ) {
+            for( int j=0; j<addrs.length; j++ ) 
+              addrlist.add( new Integer(addrs[j]) );
+          }
+        }
+        if( addrlist.size() != 0 ) {
+          for( int i=0; i< addrlist.size(); i++) {
+            println("device found at addr: "+ (Integer)addrlist.get(i) );
+          }
+        } else { 
+          println("no devices found");
         }
       }
       else if( cmd.equals("i2cenable") ) { 
@@ -276,6 +289,18 @@ public class LinkM
             printHexString( "response: ", respbuf );
         }
       }
+      else if( cmd.equals("getversion") ) { 
+        if( addr == 0 ) { 
+          println("Address 0 is not allowed. Set address with --addr=<addr>");
+        }
+        println("Getting version at addr "+addr);
+        byte[] ver = linkm.getVersion( addr );
+        if( ver != null ) { 
+          println("version "+ver[0]+","+ver[1]);
+        } else {
+          println("error, getversion returned null");
+        }
+      }
       else if( cmd.equals("play") ) {
         println("Playing light script #"+arg+" at addr "+addr);
         linkm.playScript( addr, (int)arg, 0,0 );
@@ -288,13 +313,13 @@ public class LinkM
         println("Setting length to "+arg+" for addr "+addr);
         linkm.setScriptLengthRepeats( addr, (int)arg, 0 ); //  0 reps = inf
       }
-      else if( cmd.equals("factorysettings") ) {        
+      else if( cmd.equals("factoryreset") ) {        
         if( addr == 0 ) { 
           println("Address 0 is not allowed. Set address with --addr=<addr>");
           return;
         }
         println("Setting BlinkM to factory settings for addr "+addr);
-        linkm.setFactorySettings(addr);
+        linkm.doFactoryReset(addr);
       }
       else if( cmd.equals("readinputs") ) {
         if( addr == 0 ) {
@@ -440,6 +465,11 @@ public class LinkM
 
   /**
    * Send a common 1-cmd + 3-arg style of command, with no response.
+   * @param addr i2c address
+   * @param cmd first byte of command
+   * @param arg1 first argument (if any)
+   * @param arg2 first argument (if any)
+   * @param arg3 first argument (if any)
    */
   public void cmd3(int addr, int cmd, int arg1, int arg2, int arg3 )
     throws IOException {
@@ -449,6 +479,7 @@ public class LinkM
 
   /**
    * Turn BlinkM at address addr off.
+   * @param addr the i2c address of blinkm
    */
   public void off(int addr) 
     throws IOException { 
@@ -457,11 +488,13 @@ public class LinkM
   }
 
   /**
-   *
+   * Get the version of a BlinkM at a specific address
+   * @param addr the i2c address
+   * @returns 2 bytes of version info
    */
   public byte[] getVersion(int addr)
     throws IOException { 
-    byte[] cmdbuf = { (byte)addr, 'z' };
+    byte[] cmdbuf = { (byte)addr, 'Z' };
     byte[] recvbuf = new byte[ 2 ]; 
     commandi2c( cmdbuf, recvbuf );
     return recvbuf;
@@ -469,6 +502,8 @@ public class LinkM
   
   /**
    * Sets the I2C address of a BlinkM
+   * @param addr old address, can be 0 to change all connected BlinkMs
+   * @param newaddr new address
    */
   public void setAddress(int addr, int newaddr)
     throws IOException { 
@@ -479,6 +514,10 @@ public class LinkM
 
   /**
    * Play a light script
+   * @param addr the i2c address
+   * @param script_id id of light script (#0 is reprogrammable one)
+   * @param reps  number of repeats
+   * @param pos   position in script to play
    */
   public void playScript(int addr, int script_id, int reps, int pos) 
     throws IOException {
@@ -486,7 +525,8 @@ public class LinkM
     commandi2c( cmdbuf, null );
   }
   /**
-   * Pays the eeprom script (script id 0) from start, forever
+   * Plays the eeprom script (script id 0) from start, forever
+   * @param addr the i2c address of blinkm
    */
   public void playScript(int addr) 
     throws IOException {
@@ -495,6 +535,7 @@ public class LinkM
   
   /**
    * Stop any playing script at address 'addr'
+   * @param addr the i2c address of blinkm
    */
   public void stopScript(int addr) 
     throws IOException {
@@ -505,6 +546,7 @@ public class LinkM
   
   /**
    *
+   * @param addr the i2c address of blinkm
    */
   public void setRGB(int addr, int r, int g, int b) 
     throws IOException { 
@@ -514,6 +556,7 @@ public class LinkM
 
   /**
    *
+   * @param addr the i2c address of blinkm
    */
   public void fadeToRGB(int addr, int r, int g, int b) 
     throws IOException { 
@@ -523,6 +566,7 @@ public class LinkM
 
   /**
    *
+   * @param addr the i2c address of blinkm
    */
   public void fadeToRGB(int addr, Color color) 
     throws IOException { 
@@ -531,6 +575,7 @@ public class LinkM
 
   /**
    *
+   * @param addr the i2c address of blinkm
    */
   public void fadeToRandomRGB(int addr, int r, int g, int b) 
     throws IOException { 
@@ -540,6 +585,7 @@ public class LinkM
 
   /**
    *
+   * @param addr the i2c address of blinkm
    */
   public void fadeToHSB(int addr, int h, int s, int b)
     throws IOException {
@@ -549,6 +595,7 @@ public class LinkM
 
   /**
    *
+   * @param addr the i2c address of blinkm
    */
   public void fadeToRandomHSB(int addr, int h, int s, int b)
     throws IOException {
@@ -558,6 +605,7 @@ public class LinkM
 
   /**
    * Return the RGB color the BlinkM is currently at.
+   * @param addr the i2c address of blinkm
    */
   public Color getRGBColor( int addr )
     throws IOException { 
@@ -569,7 +617,8 @@ public class LinkM
   }
 
   /**
-   *
+   * Set fade speed of a BlinkM
+   * @param addr the i2c address of blinkm
    */
   public void setFadeSpeed(int addr, int fadespeed)
     throws IOException { 
@@ -578,7 +627,8 @@ public class LinkM
   }
 
   /**
-   *
+   * Set time adjust of a BlinkM
+   * @param addr the i2c address of blinkm
    */
   public void setTimeAdj(int addr, int timeadj)
     throws IOException { 
@@ -588,6 +638,7 @@ public class LinkM
 
   /**
    * Set boot params   cmd,mode,id,reps,fadespeed,timeadj
+   * @param addr the i2c address of blinkm
    */
   public void setStartupParams( int addr, int mode, int script_id, int reps, 
                                 int fadespeed, int timeadj )
@@ -600,6 +651,7 @@ public class LinkM
 
   /**
    * Default values for startup params
+   * @param addr the i2c address of blinkm
    */
   public void setStartupParamsDefault(int addr) throws IOException {
     setStartupParams( addr, 1, 0, 0, 8, 0 );
@@ -608,6 +660,7 @@ public class LinkM
   /**
    * Set light script default length and repeats.
    * reps == 0 means infinite repeats
+   * @param addr the i2c address of blinkm
    */
   public void setScriptLengthRepeats( int addr, int len, int reps)
     throws IOException {
@@ -618,6 +671,8 @@ public class LinkM
 
   /**
    *
+   * @param addr the i2c address of blinkm
+   * @note only works on MaxM or MinM
    */
   public byte[] readInputs( int addr ) throws IOException { 
     debug("BlinkMComm.readInputs");
@@ -629,6 +684,7 @@ public class LinkM
 
   /**
    *
+   * @param addr the i2c address of blinkm
    */
   public void writeScript( int addr, String scriptstr ) 
     throws IOException {
@@ -642,7 +698,7 @@ public class LinkM
    * NOTE: for a 48-line script, this takes about 858 msecs because of 
    *       enforced 10 msec delay and HID overhead from small report size
    * FIXME: speed this up by implementing second report size 
-   * @param addr blinkm addr
+   * @param addr the i2c address of blinkm
    * @param script BlinkMScript object of script lines
    */
   public void writeScript( int addr,  BlinkMScript script) 
@@ -659,6 +715,7 @@ public class LinkM
   /**
    * Write a single BlinkM light script line at position 'pos'.
    * FIXME: hard-coded script_id 0 (only one that can be written for now, still)
+   * @param addr the i2c address of blinkm
    */
   public void writeScriptLine( int addr, int pos, BlinkMScriptLine line )
     throws IOException {
@@ -682,6 +739,7 @@ public class LinkM
   /**
    * Read a BlinkMScriptLine from 'script_id' and pos 'pos', 
    * from BlinkM at 'addr'.
+   * @param addr the i2c address of blinkm
    */
   public BlinkMScriptLine readScriptLine( int addr, int script_id, int pos )
     throws IOException {
@@ -703,6 +761,7 @@ public class LinkM
   /**
    * Read an entire light script from a BlinkM at address 'addr' 
    * FIXME: this only really works for script_id==0
+   * @param addr the i2c address of blinkm
    * @param readAll read all script lines, or just the good ones
    */
   public BlinkMScript readScript( int addr, int script_id, boolean readAll ) 
@@ -726,6 +785,7 @@ public class LinkM
 
   /**
    * Read an entire light script, return as a string
+   * @param addr the i2c address of blinkm
    */
   public String readScriptToString( int addr, int script_id, boolean readAll )
     throws IOException {
@@ -736,21 +796,29 @@ public class LinkM
 
   /**
    * Set a BlinkM back to factory settings
+   * Sets the i2c address to 0x09
    * Writes a new light script and sets the startup paramters
+   * @param addr the i2c address of blinkm
    */
-  public void setFactorySettings( int addr ) throws IOException {
+  public void doFactoryReset( int addr ) throws IOException {
+    setAddress( addr, 0x09 );
+    addr = 0x09;
+    setStartupParamsDefault(addr);
+
     BlinkMScript script = new BlinkMScript();
-    script.add( new BlinkMScriptLine(  1, 'f', 10,0,0 ) );
+    script.add( new BlinkMScriptLine(  1, 'f',   10,   0,   0) );
     script.add( new BlinkMScriptLine(100, 'c', 0xff,0xff,0xff) );
     script.add( new BlinkMScriptLine( 50, 'c', 0xff,0x00,0x00) );
     script.add( new BlinkMScriptLine( 50, 'c', 0x00,0xff,0x00) );
     script.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0xff) );
 
     writeScript( addr, script);
-    setStartupParamsDefault(addr);
   }
 
-
+  /**
+   * simple debug facilty
+   * @param s string to print out for debug purposes
+   */
   static public void debug( String s ) {
     if(debug>0) println(s);
   }
@@ -771,7 +839,7 @@ public class LinkM
     case 'g': s = 3; break;
     case 'i': s = 1; break;
     case 'R': s = 5; break;
-    case 'Z': s = 1; break;
+    case 'Z': s = 2; break;
     }
     return s;
   }
