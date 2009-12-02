@@ -29,9 +29,11 @@ enum {
     LINKM_CMD_I2CSCAN,           // i2c bus scan     (2 args: start,end)
     LINKM_CMD_I2CCONN,           // i2c connect/disc (1 args: 1/0)
     LINKM_CMD_I2CINIT,           // i2c init         (0 args: )
-    //
+
+    // linkm board commands
     LINKM_CMD_STATLED = 100,     // status LED set   (1 args: 1/0)
     LINKM_CMD_STATLEDGET,        // status LED get   (0 args)
+    LINKM_CMD_PLAYSET            // set up play state machine (FIXME)
 };
 
 // Return values for linkm_command()

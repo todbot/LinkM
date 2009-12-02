@@ -61,7 +61,7 @@ int linkm_command(usbDevice_t *dev, int cmd,
         return LINKM_ERR_NOTOPEN;
     }
     memset( buf, 0, sizeof(buf));  // debug: zero everything (while testing)
-    buf[0] = 0;            // byte 0 : report id, required by usb functions
+    buf[0] = 1;            // byte 0 : report id, required by usb functions
     buf[1] = START_BYTE;   // byte 1 : start byte
     buf[2] = cmd;          // byte 2 : command
     buf[3] = num_send;     // byte 3 : num bytes to send (starting at byte 1+4) 
@@ -76,13 +76,20 @@ int linkm_command(usbDevice_t *dev, int cmd,
         fprintf(stderr, "error writing data: %s\n", linkm_error_msg(err));
         return err;
     }
+
+    // FIXME FIXME FIXME
+    // FIXME: shouldn't we always get a response back,
+    // so we can view error codes ?
+    // also, whats with the buf+3 down there, shouldn't it be buf+2?
+    // (don't tell me about report id in byte0, i don't believe it
+
     // if we should return a response from the command, do it
     if( num_recv !=0 ) {
         // FIXME: maybe put delay in here?
         //usleep( millisleep * 1000); // sleep millisecs waiting for response
         memset(buf, 0, sizeof(buf));  // clear out so to more easily see data
         len = sizeof(buf);
-        if((err = usbhidGetReport(dev, 0, (char*)buf, &len)) != 0) {
+        if((err = usbhidGetReport(dev, 1, (char*)buf, &len)) != 0) {
             fprintf(stderr, "error reading data: %s\n", linkm_error_msg(err));
             return err;
         } else {  // it was good

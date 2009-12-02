@@ -33,6 +33,7 @@ recv: 0x32 0x63 0x8a 0x00 0x00 0x8f 0x84 0xf6 0xff 0xbf 0x04 0x00 0x00 0x00 0x58
 static int debug = 0;
 
 // local states for the "cmd" option variable
+// yes, this has a lot of duplication with the enum in linkm-lib.h
 enum { 
     CMD_NONE = 0,
     CMD_LINKM_READ,
@@ -42,6 +43,7 @@ enum {
     CMD_LINKM_I2CSCAN,
     CMD_LINKM_I2CENABLE,
     CMD_LINKM_I2CINIT,
+    CMD_LINKM_PLAYSET,
     CMD_BLINKM_CMD,
     CMD_BLINKM_OFF,
     CMD_BLINKM_PLAY,
@@ -55,16 +57,16 @@ enum {
     CMD_BLINKM_RANDOM,
 };
 
-/* ------------------------------------------------------------------------- */
+// ------------------------------------------------------------------------- 
 
 void usage(char *myName)
 {
     printf(
-"Usage: %s <cmd> [options]\n"
-"\n"
+"Usage: \n"
+"  %s <cmd> [options]\n"
 "where <cmd> is one of:\n"
 "  --cmd <blinkmcmd> Send a blinkm command  \n"
-"  --off             Turn off blinkm at specified address (or all) \n"
+"  --off             Stop script & turn off blinkm at address (or all) \n"
 "  --play <n>        Play light script N \n"
 "  --stop            Stop playing light script \n"
 "  --getversion      Gets BlinkM version \n"
@@ -77,14 +79,18 @@ void usage(char *myName)
 "  --readinputs      Read inputs (on MaxM)\n"
 "  --linkmcmd        Send a raw linkm command  \n"
 "  --statled <0|1>   Turn on or off status LED  \n"
-"Options:\n"
+"  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params  \n"
+"and [options] are:\n"
 "  -h, --help                   Print this help message\n"
 "  -a addr, --addr=i2caddr      I2C address for command (default 0)\n"
 "  -f file, --afile=file        Read or save to this file\n"
 "  -m ms,   --miilis=millis     Set millisecs betwen actions (default 100)\n"
 "  -v, --verbose                verbose debugging msgs\n"
-"\n"
-"Note:  blah blah blah\n"
+"Examples:\n"
+"  linkm-tool --off                            # stop & turn off all blinkms\n"
+"  linkm-tool -a 9 --cmd \"'c',0xff,0x00,0xff\"  # fade to magenta \n"
+"  linkm-tool -a 9 --download 5                  # download script #5\n" 
+"  linkm-tool --playset \"1,0,4,48\"    # set linkm to play script0,spd4,len48\n"
 "\n", myName
            );
     exit(1);
@@ -148,6 +154,7 @@ int main(int argc, char **argv)
         {"random",     required_argument, &cmd,   CMD_BLINKM_RANDOM },
         {"setaddr",    required_argument, &cmd,   CMD_BLINKM_SETADDR },
         {"getversion", no_argument,       &cmd,   CMD_BLINKM_GETVERSION },
+        {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYSET },
         {NULL,         0,                 0,      0}
     };
 
@@ -157,17 +164,18 @@ int main(int argc, char **argv)
         switch (opt) {
         case 0:             // deal with long opts that have no short opts
             switch(cmd) { 
+            case CMD_LINKM_PLAYSET:
             case CMD_LINKM_WRITE:
             case CMD_LINKM_CMD:
             case CMD_BLINKM_CMD:
-                hexread(cmdbuf, optarg, sizeof(cmdbuf));
+                hexread(cmdbuf, optarg, sizeof(cmdbuf));  // cmd w/ hexlist arg
                 break;
             case CMD_LINKM_STATLED:
             case CMD_LINKM_I2CENABLE:
             case CMD_BLINKM_RANDOM:
             case CMD_BLINKM_SETADDR:
             case CMD_BLINKM_PLAY:
-                arg = strtol(optarg,NULL,0);
+                arg = strtol(optarg,NULL,0);   // cmd w/ number arg
                 break;
             }
             break;
@@ -232,6 +240,13 @@ int main(int argc, char **argv)
             if( num_recv ) hexdump("recv: ", recvbuf, 16);
         }
     }
+    else if( cmd == CMD_LINKM_PLAYSET ) {   // control LinkM's state machine
+        printf("linkm play set:\n");
+        err = linkm_command(dev, LINKM_CMD_PLAYSET, 4,0, cmdbuf, NULL);
+        if( err ) {
+            fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
+        }        
+    }
     else if( cmd == CMD_LINKM_STATLED ) {    // control LinkM's status LED 
         err = linkm_command(dev, LINKM_CMD_STATLED, 1,0,  (uint8_t*)&arg,NULL);
         if( err ) {
@@ -251,22 +266,24 @@ int main(int argc, char **argv)
         }
     }
     else if( cmd == CMD_LINKM_I2CSCAN ) { 
-        if( addr == 0 ) addr = 1;
-        printf("i2c scan from addresses %d - %d\n", addr, addr+16);
-        cmdbuf[0] = addr;     // start address: 01
-        cmdbuf[1] = addr+16;  // end address:   16
-        err = linkm_command(dev, LINKM_CMD_I2CSCAN, 2, 16, cmdbuf, recvbuf);
-        if( err ) {
-            fprintf(stderr,"error on i2c scan: %s\n",linkm_error_msg(err));
-        }
-        else {
-            if(debug) hexdump("recvbuf:", recvbuf, 16);
-            int cnt = recvbuf[0];
-            if( cnt == 0 ) {
-                printf("no I2C devices found\n");
-            } else { 
-                for( int i=0; i< cnt; i++ ) {
-                    printf("device found at address %d\n",recvbuf[1+i]);
+        //if( addr == 0 ) addr = 1;
+        printf("i2c scan from addresses %d - %d\n", 1, 113);
+        int saddr = addr;
+        for( int i=0; i < 7; i++ ) { 
+            saddr = i*16 + 1;
+            cmdbuf[0] = saddr;    // start address: 01
+            cmdbuf[1] = saddr+16; // end address:   16  // FIXME: allow arbitrary
+            err = linkm_command(dev, LINKM_CMD_I2CSCAN, 2, 16, cmdbuf, recvbuf);
+            if( err ) {
+                fprintf(stderr,"error on i2c scan: %s\n",linkm_error_msg(err));
+            }
+            else {
+                if(debug) hexdump("recvbuf:", recvbuf, 16);
+                int cnt = recvbuf[0];
+                if( cnt != 0 ) {
+                    for( int i=0; i< cnt; i++ ) {
+                        printf("device found at address %d\n",recvbuf[1+i]);
+                    }
                 }
             }
         }
@@ -284,6 +301,10 @@ int main(int argc, char **argv)
         }
     }
     else if( cmd == CMD_BLINKM_GETVERSION ) {
+        if( addr == 0 ) {
+            printf("Must specify non-zero address for download\n");
+            goto shutdown;
+        }
         printf("addr:%d: getting version\n", addr );
         cmdbuf[0] = addr;
         cmdbuf[1] = 'Z';
@@ -346,25 +367,27 @@ int main(int argc, char **argv)
         cmdbuf[0] = addr; 
         cmdbuf[1] = 'p';  // play script
         cmdbuf[2] = arg;
-        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 3,0, cmdbuf, NULL)) ) 
+        cmdbuf[3] = 0;
+        cmdbuf[4] = 0;
+        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL))) 
             fprintf(stderr,"error on play: %s\n",linkm_error_msg(err));
     }
     else if( cmd == CMD_BLINKM_STOP  ) {
         printf("addr %d: stopping scriptn", addr);
         cmdbuf[0] = addr; 
         cmdbuf[1] = 'o';  // stop script
-        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,0, cmdbuf, NULL)) ) 
+        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,0, cmdbuf, NULL))) 
             fprintf(stderr,"error on stop: %s\n",linkm_error_msg(err));
     }
     else if( cmd == CMD_BLINKM_OFF  ) {
         printf("addr %d: turning off\n", addr);
         cmdbuf[0] = addr; 
         cmdbuf[1] = 'o';  // stop script
-        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,0, cmdbuf, NULL)) ) 
+        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,0, cmdbuf, NULL))) 
             fprintf(stderr,"error on blinkmoff cmd: %s\n",linkm_error_msg(err));
         cmdbuf[1] = 'n';  // set rgb color now now
         cmdbuf[2] = cmdbuf[3] = cmdbuf[4] = 0x00;   // to zeros
-        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL)) ) 
+        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL))) 
             fprintf(stderr,"error on blinkmoff cmd: %s\n",linkm_error_msg(err));
     }
     else if( cmd == CMD_BLINKM_DOWNLOAD ) { 
@@ -379,7 +402,7 @@ int main(int argc, char **argv)
             cmdbuf[1] = 'R';    // go to color now
             cmdbuf[2] = arg;
             cmdbuf[3] = pos;
-            err = linkm_command(dev, LINKM_CMD_I2CTRANS, 4,5, cmdbuf, recvbuf );
+            err = linkm_command(dev, LINKM_CMD_I2CTRANS, 4,5, cmdbuf,recvbuf );
             if( err ) {
                 fprintf(stderr,"error on download cmd: %s\n",
                         linkm_error_msg(err));
@@ -393,9 +416,13 @@ int main(int argc, char **argv)
         
     }
     else if( cmd == CMD_BLINKM_UPLOAD ) {
-        
+        printf("unsupported right now\n");
     }
     else if( cmd == CMD_BLINKM_READINPUTS ) {
+        if( addr == 0 ) {
+            printf("Must specify non-zero address for download\n");
+            goto shutdown;
+        }
         cmdbuf[0] = addr;
         cmdbuf[1] = 'i';
         err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,4, cmdbuf, recvbuf );
