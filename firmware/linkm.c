@@ -61,6 +61,8 @@
 
 #include "linkm-lib.h"
 
+#define ENABLE_PLAYTICKER
+
 // these aren't used anywhere, just here to note them
 #define PIN_LED_STATUS         PORTB4
 #define PIN_I2C_ENABLE         PORTB5
@@ -79,7 +81,7 @@
 /* ------------------------------------------------------------------------- */
 
 #define REPORT_COUNT 16
-
+/*
 PROGMEM char usbHidReportDescriptor[22] = {    // USB report descriptor
     0x06, 0x00, 0xff,              // USAGE_PAGE (Generic Desktop)
     0x09, 0x01,                    // USAGE (Vendor Usage 1)
@@ -92,6 +94,27 @@ PROGMEM char usbHidReportDescriptor[22] = {    // USB report descriptor
     0xb2, 0x02, 0x01,              //   FEATURE (Data,Var,Abs,Buf)
     0xc0                           // END_COLLECTION
 };
+*/
+PROGMEM char usbHidReportDescriptor[33] = {
+    0x06, 0x00, 0xff,              // USAGE_PAGE (Generic Desktop)
+    0x09, 0x01,                    // USAGE (Vendor Usage 1)
+    0xa1, 0x01,                    // COLLECTION (Application)
+    0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
+    0x26, 0xff, 0x00,              //   LOGICAL_MAXIMUM (255)
+    0x75, 0x08,                    //   REPORT_SIZE (8)
+
+    0x85, 0x01,                    //   REPORT_ID (1)
+    0x95, REPORT_COUNT,            //   REPORT_COUNT (was 6)
+    0x09, 0x00,                    //   USAGE (Undefined)
+    0xb2, 0x02, 0x01,              //   FEATURE (Data,Var,Abs,Buf)
+
+    0x85, 0x02,                    //   REPORT_ID (2)
+    0x95, 0x83,                    //   REPORT_COUNT (131)
+    0x09, 0x00,                    //   USAGE (Undefined)
+    0xb2, 0x02, 0x01,              //   FEATURE (Data,Var,Abs,Buf)
+    0xc0                           // END_COLLECTION
+};
+
 /* Since we define only one feature report, we don't use report-IDs (which
  * would be the first byte of the report). The entire report consists of
  * REPORT_COUNT opaque data bytes.
@@ -354,12 +377,13 @@ void handleMessage(void)
     // params:
     //   mbufp[4] == 
     // outmsgbuf
-    else if( cmd == LINKM_CMD_PLAY_SET ) { 
+    else if( cmd == LINKM_CMD_PLAYSET ) { 
         playing     = mbufp[4];  // turn on or off playing
         script_id   = mbufp[5];  // which script to play, usually 0
         script_tick = mbufp[6];  // time in ticks between script lines
-        //script_pos  = mbufp[6];  // starting position, usually 0
         script_len  = mbufp[7];  // len of script, usually 48 for script 0
+        script_pos  = 0;
+        //script_pos  = mbufp[8];  // starting position, usually 0
     }
     // cmd xxxx == 
 }
@@ -436,7 +460,7 @@ usbMsgLen_t usbFunctionSetup(uchar data[8])
 
 ISR(TIMER1_OVF_vect)
 {
-    tick++;   // need to make sure this happens every 33.33ms
+    tick++;   // FIXME: need to make sure this happens every 33.33ms
 }
 
 /**
@@ -468,7 +492,7 @@ void playTicker(void)
     if( tick > script_tick ) {
         printf("tick!");
         tick = 0;
-        //blinkmPlayScript( 0, script_id, 0, script_pos );
+        blinkmPlayScript( 0, script_id, 0, script_pos );
         statusLedToggle();
         script_pos++;
         if( script_pos == script_len ) {  // loop
@@ -494,10 +518,10 @@ int main(void)
     
     DDRB |= (1<< PIN_LED_STATUS) | (1<< PIN_I2C_ENABLE); // make pins outputs 
 
-    statusLedSet( 1 );
+    statusLedSet( 0 );      // turn off LED to start
     
-    for( j=0; j<20; j++ ) {
-        statusLedToggle();
+    for( j=0; j<10; j++ ) {
+        statusLedToggle();  // then toggle LED
         wdt_reset();
         for( i=0; i<10; i++) { // wait for power to stabilize & blink status
             _delay_ms(10);
@@ -510,14 +534,16 @@ int main(void)
     puts("linkm dongle test");
 #endif
 
-    PORTC |= _BV(PORTC5) | _BV(PORTC4);    // enable pullups on SDA & SCL FIXME
+    // enable pullups on SDA & SCL
+    PORTC |= _BV(PIN_I2C_SDA) | _BV(PIN_I2C_SCL);
+
     i2c_init();                      // init I2C interface
 
     i2cEnable(1);                    // enable i2c buffer chip
 
     // debug: insert some known data into the outbuffer
-    outmsgbuf[8] = 0xde;
-    outmsgbuf[9] = 0xad;
+    outmsgbuf[8]  = 0xde;
+    outmsgbuf[9]  = 0xad;
     outmsgbuf[10] = 0xbe;
     outmsgbuf[11] = 0xef;
     for( int i=0; i<4; i++ ) {
@@ -535,12 +561,12 @@ int main(void)
     }
     usbDeviceConnect();
 
-    /*
+#ifdef ENABLE_PLAYTICKER
     // set up periodic timer for state machine
     TCCR1B |= _BV( CS10 );   // FIXME: this is likely wrong
     TIFR1  |= _BV( TOV1 );         // clear interrupt flag
     TIMSK1 |= _BV( TOIE1 );        // enable overflow interrupt
-    */
+#endif
 
     sei();
     DBG1(0x01, 0, 0);       // debug output: main loop starts 
@@ -548,7 +574,9 @@ int main(void)
         DBG1(0x02, 0, 0);     // debug output: main loop iterates 
         wdt_reset();
         usbPoll();
-        //playTicker();
+#ifdef ENABLE_PLAYTICKER
+        playTicker();
+#endif
     }
     return 0;
 }
