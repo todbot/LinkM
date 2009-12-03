@@ -31,9 +31,12 @@ enum {
     LINKM_CMD_I2CINIT,           // i2c init         (0 args: )
 
     // linkm board commands
-    LINKM_CMD_STATLED = 100,     // status LED set   (1 args: 1/0)
+    LINKM_CMD_VERSIONGET = 100,  // return linkm version
+    LINKM_CMD_STATLED,           // status LED set   (1 args: 1/0)
     LINKM_CMD_STATLEDGET,        // status LED get   (0 args)
-    LINKM_CMD_PLAYSET            // set up play state machine (FIXME)
+    LINKM_CMD_PLAYSET,           // set up play state machine (FIXME)
+    LINKM_CMD_EESAVE,            // save linkm state to EEPROM
+    LINKM_CMD_EELOAD,            // load linkm state from EEPROM
 };
 
 // Return values for linkm_command()
@@ -52,9 +55,12 @@ extern int linkm_debug;
 // public api
 int linkm_open(usbDevice_t** dev);
 void linkm_close(usbDevice_t* dev);
-int linkm_command(usbDevice_t* dev, int cmd, 
-                  int bytes_send, int bytes_recv,
-                  uint8_t* buf_send, uint8_t* buf_recv);
+int linkm_command(usbDevice_t* dev, 
+                  int cmd, 
+                  int bytes_send, 
+                  int bytes_recv,
+                  uint8_t* buf_send, 
+                  uint8_t* buf_recv);
 char* linkm_error_msg(int errCode);
 
 // utility
