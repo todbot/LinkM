@@ -52,6 +52,7 @@
 #include <util/delay.h>     // for _delay_ms() 
 #include <string.h>
 
+#include <avr/eeprom.h>
 #include <avr/pgmspace.h>   // required by usbdrv.h 
 #include "usbdrv.h"
 #include "oddebug.h"        // This is also an example for using debug macros 
@@ -61,7 +62,10 @@
 
 #include "linkm-lib.h"
 
-#define ENABLE_PLAYTICKER
+#define ENABLE_PLAYTICKER 1
+
+// uncomment to enable debugging to serial port
+#define DEBUG   1
 
 // these aren't used anywhere, just here to note them
 #define PIN_LED_STATUS         PORTB4
@@ -73,8 +77,8 @@
 #define PIN_USB_DPLUS          PORTD2
 #define PIN_USB_DMINUS         PORTD3
 
-// uncomment to enable debugging to serial port
-#define DEBUG   1
+#define LINKM_VERSION_MAJOR    0x13
+#define LINKM_VERSION_MINOR    0x37
 
 /* ------------------------------------------------------------------------- */
 /* ----------------------------- USB interface ----------------------------- */
@@ -129,12 +133,8 @@ static int numWrites;
 static uint8_t msgbuf[REPORT_COUNT];
 static uint8_t outmsgbuf[REPORT_COUNT];
 
-uint8_t playing;       // boolean
-static volatile uint32_t tick;         // tick tock clock
-uint8_t script_id;     // script id to play
-uint16_t script_len;   // number of script lines in script
-uint16_t script_tick;  // number of ticks between script lines
-uint16_t script_pos;   // current position in the script
+static volatile uint16_t tick;         // tick tock clock
+static volatile uint16_t timertick;         // tick tock clock
 
 #ifdef DEBUG
 // setup serial routines to become stdio
@@ -142,6 +142,23 @@ extern int uart_putchar(char c, FILE *stream);
 extern int uart_getchar(FILE *stream);
 FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 #endif
+
+typedef struct _params_t {
+    uint8_t  playing;      // turn on or off playing
+    uint8_t  script_id;    // script id to play
+    uint16_t script_tick;  // number of ticks between script lines
+    uint16_t script_len;   // number of script lines in script
+    uint16_t start_pos;    // start position in the script
+    // FIXME: also need fadespeed.  & direction.  & time adjust?
+} params_t;
+
+params_t params;
+uint16_t script_pos;
+params_t ee_params EEMEM = {
+    1, 5, 5, 2, 0,
+};
+
+
 
 /* ------------------------------------------------------------------------- */
 void statusLedToggle(void)
@@ -373,17 +390,51 @@ void handleMessage(void)
         // no arguments, just a single return byte
         outmsgbuf[2] = statusLedGet();
     }
-    // set play statemachine
+    // set play statemachine params
     // params:
-    //   mbufp[4] == 
-    // outmsgbuf
+    //   mbufp[4] == playing on/off
+    //   mbufp[5] == script_id
+    //   mbufp[6] == ticks between steps
+    //   mbufp[7] == length of script
+    // returns:
+    //  none
     else if( cmd == LINKM_CMD_PLAYSET ) { 
-        playing     = mbufp[4];  // turn on or off playing
-        script_id   = mbufp[5];  // which script to play, usually 0
-        script_tick = mbufp[6];  // time in ticks between script lines
-        script_len  = mbufp[7];  // len of script, usually 48 for script 0
+        params.playing     = mbufp[4];  // turn on or off playing
+        params.script_id   = mbufp[5];  // which script to play, usually 0
+        params.script_tick = mbufp[6];  // time in ticks between script lines
+        params.script_len  = mbufp[7];  // len of script, usually 48 for script 0
         script_pos  = 0;
         //script_pos  = mbufp[8];  // starting position, usually 0
+    }
+    // trigger LinkM to save current params to EEPROM
+    // params:
+    //   none
+    // returns:
+    //   none
+    else if( cmd == LINKM_CMD_EESAVE ) {
+        statusLedToggle();
+        eeprom_write_block( &params, &ee_params, sizeof(params_t) ); 
+    }
+    // trigger LinkM to load its saved EEPROM params into RAM
+    // params:
+    //   none
+    // returns:
+    //   none
+    else if( cmd == LINKM_CMD_EELOAD ) {
+        statusLedToggle();
+        eeprom_read_block( &params, &ee_params, sizeof(params_t) );
+    }
+    // get linkm version
+    // params:
+    //   none
+    // returns:
+    //   outmsgbuf[0] == transaction counter
+    //   outmsgbuf[1] == response code
+    //   outmsgbuf[2] == major linkm version
+    //   outmsgbuf[3] == minor linkm version
+    else if( cmd == LINKM_CMD_VERSIONGET ) {
+        outmsgbuf[2] = LINKM_VERSION_MAJOR;
+        outmsgbuf[3] = LINKM_VERSION_MINOR;
     }
     // cmd xxxx == 
 }
@@ -396,7 +447,6 @@ uchar   usbFunctionRead(uchar *data, uchar len)
     if(len > bytesRemaining)
         len = bytesRemaining;
     
-    //statusLedToggle();
     memcpy( data, outmsgbuf + currentAddress, len);
     numWrites = 0;
     currentAddress += len;
@@ -454,13 +504,18 @@ usbMsgLen_t usbFunctionSetup(uchar data[8])
 
 // -------------------------------------------------------------------------
 
-//
-//
-//
-
-ISR(TIMER1_OVF_vect)
+/**
+ *
+ */
+int blinkmStop(uint8_t addr ) 
 {
-    tick++;   // FIXME: need to make sure this happens every 33.33ms
+    if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
+        i2c_stop();
+        return 1;
+    }
+    i2c_write( 'o' );
+    i2c_stop();   // done!
+    return 0;
 }
 
 /**
@@ -487,21 +542,31 @@ int blinkmPlayScript(uint8_t addr, uint8_t id, uint8_t reps, uint8_t pos)
  */
 void playTicker(void)
 {
-    if( !playing ) return;
-    //printf("st:%d t:%d\n",script_tick,tick);
-    if( tick > script_tick ) {
-        printf("tick!");
+    if( !params.playing ) return;
+    if( tick >= params.script_tick ) {
+        //printf("tick!");
         tick = 0;
-        blinkmPlayScript( 0, script_id, 0, script_pos );
+        blinkmPlayScript( 0, params.script_id, 0, script_pos );
         statusLedToggle();
         script_pos++;
-        if( script_pos == script_len ) {  // loop
+        if( script_pos == params.script_len ) {  // loop
             script_pos = 0;
         }
     }
-
 }
 
+//
+//
+//
+
+ISR(TIMER1_OVF_vect)
+{
+    timertick++; 
+    if( timertick == 6 ) {
+        timertick = 0;
+        tick++;
+    }
+}
 // ------------------------------------------------------------------------- 
 
 int main(void)
@@ -511,7 +576,7 @@ int main(void)
     wdt_enable(WDTO_1S);
     // Even if you don't use the watchdog, turn it off here. On newer devices,
     // the status of the watchdog (on/off, period) is PRESERVED OVER RESET!
-    DBG1(0x00, 0, 0);       // debug output: main starts
+    //DBG1(0x00, 0, 0);       // debug output: main starts
     // RESET status: all port bits are inputs without pull-up.
     // That's the way we need D+ and D-. Therefore we don't need any
     // additional hardware initialization.
@@ -520,10 +585,10 @@ int main(void)
 
     statusLedSet( 0 );      // turn off LED to start
     
-    for( j=0; j<10; j++ ) {
+    for( j=0; j<8; j++ ) {
         statusLedToggle();  // then toggle LED
         wdt_reset();
-        for( i=0; i<10; i++) { // wait for power to stabilize & blink status
+        for( i=0; i<5; i++) { // wait for power to stabilize & blink status
             _delay_ms(10);
         }
     }
@@ -561,20 +626,26 @@ int main(void)
     }
     usbDeviceConnect();
 
-#ifdef ENABLE_PLAYTICKER
+#if ENABLE_PLAYTICKER == 1
     // set up periodic timer for state machine
-    TCCR1B |= _BV( CS10 );   // FIXME: this is likely wrong
+    TCCR1B |= _BV( CS10 );         // 12e6/1/65536 == 183.1  then, / 6 = 30.517
     TIFR1  |= _BV( TOV1 );         // clear interrupt flag
     TIMSK1 |= _BV( TOIE1 );        // enable overflow interrupt
 #endif
 
     sei();
-    DBG1(0x01, 0, 0);       // debug output: main loop starts 
+
+    blinkmStop( 0 );  // turn them all off  FIXME: maybe make this a param?
+
+    // load params from EEPROM
+    eeprom_read_block( &params, &ee_params, sizeof(params_t) );
+    
+    //DBG1(0x01, 0, 0);       // debug output: main loop starts 
     for(;;){                // main event loop 
-        DBG1(0x02, 0, 0);     // debug output: main loop iterates 
+        //DBG1(0x02, 0, 0);     // debug output: main loop iterates 
         wdt_reset();
         usbPoll();
-#ifdef ENABLE_PLAYTICKER
+#if ENABLE_PLAYTICKER == 1
         playTicker();
 #endif
     }
