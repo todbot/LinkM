@@ -46,7 +46,8 @@ enum {
     CMD_LINKM_I2CSCAN,
     CMD_LINKM_I2CENABLE,
     CMD_LINKM_I2CINIT,
-    CMD_LINKM_PLAYSET,
+    CMD_LINKM_PLAYERSET,
+    CMD_LINKM_PLAYERGET,
     CMD_BLINKM_CMD,
     CMD_BLINKM_OFF,
     CMD_BLINKM_PLAY,
@@ -164,7 +165,8 @@ int main(int argc, char **argv)
         {"random",     required_argument, &cmd,   CMD_BLINKM_RANDOM },
         {"setaddr",    required_argument, &cmd,   CMD_BLINKM_SETADDR },
         {"getversion", no_argument,       &cmd,   CMD_BLINKM_GETVERSION },
-        {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYSET },
+        {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYERSET },
+        {"playget",    no_argument,       &cmd,   CMD_LINKM_PLAYERGET },
         {NULL,         0,                 0,      0}
     };
 
@@ -174,7 +176,7 @@ int main(int argc, char **argv)
         switch (opt) {
         case 0:             // deal with long opts that have no short opts
             switch(cmd) { 
-            case CMD_LINKM_PLAYSET:
+            case CMD_LINKM_PLAYERSET:
             case CMD_LINKM_WRITE:
             case CMD_LINKM_CMD:
             case CMD_BLINKM_CMD:
@@ -219,7 +221,7 @@ int main(int argc, char **argv)
     
     if( cmd == CMD_LINKM_VERSIONGET ) {
         printf("linkm version: ");
-        err = linkm_command(dev, LINKM_CMD_VERSIONGET, 1, 2, NULL, recvbuf);
+        err = linkm_command(dev, LINKM_CMD_VERSIONGET, 0, 2, NULL, recvbuf);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
@@ -227,11 +229,21 @@ int main(int argc, char **argv)
             hexdump("", recvbuf, 2);
         }
     }
-    else if( cmd == CMD_LINKM_PLAYSET ) {   // control LinkM's state machine
+    else if( cmd == CMD_LINKM_PLAYERSET ) {   // control LinkM's state machine
         printf("linkm play set:\n");
-        err = linkm_command(dev, LINKM_CMD_PLAYSET, 4,0, cmdbuf, NULL);
+        err = linkm_command(dev, LINKM_CMD_PLAYERSET, 7,0, cmdbuf, NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
+        }
+    }
+    else if( cmd == CMD_LINKM_PLAYERGET ) {   // read LinkM's state machine
+        printf("linkm play get:\n");
+        err = linkm_command(dev, LINKM_CMD_PLAYERGET, 0,7, NULL, recvbuf);
+        if( err ) {
+            fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
+        }
+        else {  // success
+            hexdump("", recvbuf, 7);
         }
     }
     else if( cmd == CMD_LINKM_EESAVE ) {   // tell linkm to save params to eeprom
@@ -287,7 +299,7 @@ int main(int argc, char **argv)
                     }
                 }
             }
-        }
+        } // for
     }
     else if( cmd == CMD_BLINKM_CMD ) {   // send arbitrary blinkm command
         printf("addr %d: sending cmd:%c,0x%02x,0x%02x,0x%02x\n",addr,
