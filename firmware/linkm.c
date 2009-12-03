@@ -62,10 +62,10 @@
 
 #include "linkm-lib.h"
 
-#define ENABLE_PLAYTICKER 1
-
 // uncomment to enable debugging to serial port
 #define DEBUG   1
+
+#define ENABLE_PLAYTICKER 1
 
 // these aren't used anywhere, just here to note them
 #define PIN_LED_STATUS         PORTB4
@@ -146,21 +146,26 @@ FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 typedef struct _params_t {
     uint8_t  playing;      // turn on or off playing
     uint8_t  script_id;    // script id to play
-    uint16_t script_tick;  // number of ticks between script lines
-    uint16_t script_len;   // number of script lines in script
-    uint16_t start_pos;    // start position in the script
-    // FIXME: also need fadespeed.  & direction.  & time adjust?
+    uint8_t  script_tick;  // number of ticks between script lines
+    uint8_t  script_len;   // number of script lines in script
+    uint8_t  start_pos;    // start position in the script  FIXME: not impl yet
+    uint8_t  fadespeed;    //
+    uint8_t  dir;          // play direction FIXME: not impl yet
 } params_t;
 
 params_t params;
 uint16_t script_pos;
 params_t ee_params EEMEM = {
-    1, 5, 5, 2, 0,
+    1,5,5,2, 0,100,0
 };
 
+int blinkmStop(uint8_t addr );
+int blinkmSetRGB(uint8_t addr, uint8_t r, uint8_t g, uint8_t b );
+int blinkmSetFadespeed(uint8_t addr, uint8_t fadespeed);
+int blinkmPlayScript(uint8_t addr, uint8_t id, uint8_t reps, uint8_t pos);
 
 
-/* ------------------------------------------------------------------------- */
+// ------------------------------------------------------------------------- 
 void statusLedToggle(void)
 {
     PORTB ^= (1<< PIN_LED_STATUS);  // toggles LED
@@ -395,16 +400,28 @@ void handleMessage(void)
     //   mbufp[4] == playing on/off
     //   mbufp[5] == script_id
     //   mbufp[6] == ticks between steps
-    //   mbufp[7] == length of script
+    //   mbufp[7] == length of script   and so on
     // returns:
     //  none
-    else if( cmd == LINKM_CMD_PLAYSET ) { 
-        params.playing     = mbufp[4];  // turn on or off playing
-        params.script_id   = mbufp[5];  // which script to play, usually 0
-        params.script_tick = mbufp[6];  // time in ticks between script lines
-        params.script_len  = mbufp[7];  // len of script, usually 48 for script 0
-        script_pos  = 0;
-        //script_pos  = mbufp[8];  // starting position, usually 0
+    else if( cmd == LINKM_CMD_PLAYERSET ) { 
+        memcpy( &params, mbufp+4, sizeof(params_t));
+        script_pos = params.start_pos;
+        if( params.fadespeed != 0 ) {
+            blinkmSetFadespeed(0, params.fadespeed);            
+        }
+    }
+    // get player statemachine params
+    // params:
+    //   none
+    // returns:
+    //   outmsgbuf[0] == transaction counter
+    //   outmsgbuf[1] == response code
+    //   outmsgbuf[2] == playing 
+    //   outmsgbuf[3] == script_id
+    //   outmsgbuf[4] == script_tick 
+    //   outmsgbuf[5] == script_len  nad so on
+    else if( cmd == LINKM_CMD_PLAYERGET ) { 
+        memcpy( outmsgbuf+2, &params, sizeof(params_t));
     }
     // trigger LinkM to save current params to EEPROM
     // params:
@@ -476,7 +493,9 @@ uchar   usbFunctionWrite(uchar *data, uchar len)
 }
 
 // ------------------------------------------------------------------------- 
-
+/**
+ *
+ */
 usbMsgLen_t usbFunctionSetup(uchar data[8])
 {
     usbRequest_t    *rq = (void *)data;
@@ -504,9 +523,7 @@ usbMsgLen_t usbFunctionSetup(uchar data[8])
 
 // -------------------------------------------------------------------------
 
-/**
- *
- */
+// 
 int blinkmStop(uint8_t addr ) 
 {
     if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
@@ -518,10 +535,38 @@ int blinkmStop(uint8_t addr )
     return 0;
 }
 
-/**
- * Send I2C play script command to blinkm
- * returns zero on success, non-zero on fail
- */
+//
+int blinkmSetRGB(uint8_t addr, uint8_t r, uint8_t g, uint8_t b )
+{
+    if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
+        i2c_stop();
+        return 1;
+    }
+    i2c_write( 'n' );  // turn off now
+    i2c_write( r );
+    i2c_write( g );
+    i2c_write( b );
+    i2c_stop();   // done!
+    return 0;
+}
+
+//
+int blinkmSetFadespeed(uint8_t addr, uint8_t fadespeed)
+{
+    if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
+        i2c_stop();
+        return 1;
+    }
+    i2c_write( 'f' );
+    i2c_write( fadespeed );
+    i2c_stop();   // done!
+    return 0;
+}
+
+//
+// Send I2C play script command to blinkm
+// returns zero on success, non-zero on fail
+//
 int blinkmPlayScript(uint8_t addr, uint8_t id, uint8_t reps, uint8_t pos)
 {
     if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c transaction
@@ -536,10 +581,10 @@ int blinkmPlayScript(uint8_t addr, uint8_t id, uint8_t reps, uint8_t pos)
     return 0;
 }
 
-/**
- * Stand-alone play state machine
- * Drives BlinkMs to play back their scripts in sync
- */
+//
+// Stand-alone play state machine
+// Drives BlinkMs to play back their scripts in sync
+//
 void playTicker(void)
 {
     if( !params.playing ) return;
@@ -556,9 +601,9 @@ void playTicker(void)
 }
 
 //
+// called periodically as a timer
+// should update 'tick' at 30.517 Hz
 //
-//
-
 ISR(TIMER1_OVF_vect)
 {
     timertick++; 
@@ -567,6 +612,7 @@ ISR(TIMER1_OVF_vect)
         tick++;
     }
 }
+
 // ------------------------------------------------------------------------- 
 
 int main(void)
@@ -579,18 +625,32 @@ int main(void)
     //DBG1(0x00, 0, 0);       // debug output: main starts
     // RESET status: all port bits are inputs without pull-up.
     // That's the way we need D+ and D-. Therefore we don't need any
-    // additional hardware initialization.
+    // additional hardware initialization. (for USB)
     
-    DDRB |= (1<< PIN_LED_STATUS) | (1<< PIN_I2C_ENABLE); // make pins outputs 
+    // make pins outputs 
+    DDRB |= (1<< PIN_LED_STATUS) | (1<< PIN_I2C_ENABLE); 
+    // enable pullups on SDA & SCL
+    PORTC |= _BV(PIN_I2C_SDA) | _BV(PIN_I2C_SCL);
 
     statusLedSet( 0 );      // turn off LED to start
-    
-    for( j=0; j<8; j++ ) {
+
+    i2c_init();             // init I2C interface
+    i2cEnable(1);           // enable i2c buffer chip
+
+    for( j=0; j<4; j++ ) {
         statusLedToggle();  // then toggle LED
         wdt_reset();
-        for( i=0; i<5; i++) { // wait for power to stabilize & blink status
+        for( i=0; i<2; i++) { // wait for power to stabilize & blink status
             _delay_ms(10);
         }
+    }
+
+    // load params from EEPROM
+    eeprom_read_block( &params, &ee_params, sizeof(params_t) );
+    blinkmStop( 0 );         // stop all scripts  FIXME: maybe make this a param?
+    blinkmSetRGB(0, 0,0,0 ); // turn all off
+    if( params.fadespeed != 0 ) {
+        blinkmSetFadespeed(0, params.fadespeed);            
     }
 
 #ifdef DEBUG
@@ -599,14 +659,8 @@ int main(void)
     puts("linkm dongle test");
 #endif
 
-    // enable pullups on SDA & SCL
-    PORTC |= _BV(PIN_I2C_SDA) | _BV(PIN_I2C_SCL);
-
-    i2c_init();                      // init I2C interface
-
-    i2cEnable(1);                    // enable i2c buffer chip
-
     // debug: insert some known data into the outbuffer
+    /*
     outmsgbuf[8]  = 0xde;
     outmsgbuf[9]  = 0xad;
     outmsgbuf[10] = 0xbe;
@@ -614,8 +668,9 @@ int main(void)
     for( int i=0; i<4; i++ ) {
         outmsgbuf[12+i] = 0x60 + i;
     }
-
-    odDebugInit();
+    */
+    
+    //odDebugInit();
     usbInit();
     usbDeviceDisconnect();  
     // enforce re-enumeration, do this while interrupts are disabled!
@@ -634,11 +689,6 @@ int main(void)
 #endif
 
     sei();
-
-    blinkmStop( 0 );  // turn them all off  FIXME: maybe make this a param?
-
-    // load params from EEPROM
-    eeprom_read_block( &params, &ee_params, sizeof(params_t) );
     
     //DBG1(0x01, 0, 0);       // debug output: main loop starts 
     for(;;){                // main event loop 
