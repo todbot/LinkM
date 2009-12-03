@@ -36,6 +36,9 @@ static int debug = 0;
 // yes, this has a lot of duplication with the enum in linkm-lib.h
 enum { 
     CMD_NONE = 0,
+    CMD_LINKM_VERSIONGET,
+    CMD_LINKM_EESAVE,
+    CMD_LINKM_EELOAD,
     CMD_LINKM_READ,
     CMD_LINKM_WRITE,
     CMD_LINKM_CMD,
@@ -48,6 +51,7 @@ enum {
     CMD_BLINKM_OFF,
     CMD_BLINKM_PLAY,
     CMD_BLINKM_STOP,
+    CMD_BLINKM_FADESPEED,
     CMD_BLINKM_COLOR,
     CMD_BLINKM_UPLOAD,
     CMD_BLINKM_DOWNLOAD,
@@ -69,6 +73,7 @@ void usage(char *myName)
 "  --off             Stop script & turn off blinkm at address (or all) \n"
 "  --play <n>        Play light script N \n"
 "  --stop            Stop playing light script \n"
+"  --fadespeed <n>   Set BlinkM fadespeed\n"
 "  --getversion      Gets BlinkM version \n"
 "  --setaddr <newa>  Set address of blinkm at address 'addr' to 'newa' \n"
 "  --random <n>      Send N random colors to blinkm\n"
@@ -78,6 +83,7 @@ void usage(char *myName)
 "  --download <n>    Download light script n from blinkm (reqs addr & file) \n"
 "  --readinputs      Read inputs (on MaxM)\n"
 "  --linkmcmd        Send a raw linkm command  \n"
+"  --linkmversion    Get LinkM version \n"
 "  --statled <0|1>   Turn on or off status LED  \n"
 "  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params  \n"
 "and [options] are:\n"
@@ -139,6 +145,9 @@ int main(int argc, char **argv)
         {"linkmread",  no_argument,       &cmd,   CMD_LINKM_READ },
         {"linkmwrite", required_argument, &cmd,   CMD_LINKM_WRITE },
         {"linkmcmd",   required_argument, &cmd,   CMD_LINKM_CMD },
+        {"linkmversion",no_argument,      &cmd,   CMD_LINKM_VERSIONGET },
+        {"linkmeesave",no_argument,       &cmd,   CMD_LINKM_EESAVE },
+        {"linkmeeload",no_argument,       &cmd,   CMD_LINKM_EELOAD },
         {"statled",    required_argument, &cmd,   CMD_LINKM_STATLED },
         {"i2cscan",    no_argument,       &cmd,   CMD_LINKM_I2CSCAN },
         {"i2cenable",  required_argument, &cmd,   CMD_LINKM_I2CENABLE },
@@ -147,6 +156,7 @@ int main(int argc, char **argv)
         {"off",        no_argument,       &cmd,   CMD_BLINKM_OFF },
         {"stop",       no_argument,       &cmd,   CMD_BLINKM_STOP },
         {"play",       required_argument, &cmd,   CMD_BLINKM_PLAY },
+        {"fadespeed",  required_argument, &cmd,   CMD_BLINKM_FADESPEED },
         {"color",      required_argument, &cmd,   CMD_BLINKM_COLOR },
         {"upload",     required_argument, &cmd,   CMD_BLINKM_UPLOAD },
         {"download",   required_argument, &cmd,   CMD_BLINKM_DOWNLOAD },
@@ -175,6 +185,7 @@ int main(int argc, char **argv)
             case CMD_BLINKM_RANDOM:
             case CMD_BLINKM_SETADDR:
             case CMD_BLINKM_PLAY:
+            case CMD_BLINKM_FADESPEED:
                 arg = strtol(optarg,NULL,0);   // cmd w/ number arg
                 break;
             }
@@ -206,38 +217,14 @@ int main(int argc, char **argv)
         exit(1);
     }
     
-    // perform commanded action
-    if( cmd == CMD_LINKM_READ ) {  // low-level read linkm buffer
-        printf("linkm read:\n");
-        memset( buffer, 0, sizeof(buffer));
-        len = sizeof(buffer);
-        if((err = usbhidGetReport(dev, 0, (char*)buffer, &len)) != 0) {
-            fprintf(stderr, "error reading data: %s\n", linkm_error_msg(err));
-        } else {
-            hexdump("", buffer + 1, sizeof(buffer) - 1);
-        }
-    }
-    else if( cmd == CMD_LINKM_WRITE ) {  // low-level write linkm buffer
-        printf("linkm write:\n");
-        memset( buffer, 0, sizeof(buffer));
-        memcpy( buffer+1, cmdbuf, sizeof(cmdbuf) );
-        if(debug) hexdump("linkm write: ", buffer, 16); // print first bytes 
-        if((err = usbhidSetReport(dev, (char*)buffer, sizeof(buffer))) != 0) {
-            fprintf(stderr, "error writing data: %s\n", linkm_error_msg(err));
-        }
-    }
-    else if( cmd == CMD_LINKM_CMD ) {   // low-level linkm command
-        printf("linkm command:\n");
-        char cmdbyte  = cmdbuf[0];     // this is kind of dumb
-        char num_send = cmdbuf[1];
-        char num_recv = cmdbuf[2];
-        uint8_t* cmdbufp = cmdbuf + 3;  // move along nothing to see here
-        err = linkm_command(dev, cmdbyte, num_send,num_recv, cmdbufp,recvbuf);
+    if( cmd == CMD_LINKM_VERSIONGET ) {
+        printf("linkm version: ");
+        err = linkm_command(dev, LINKM_CMD_VERSIONGET, 1, 2, NULL, recvbuf);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
         else {  // success
-            if( num_recv ) hexdump("recv: ", recvbuf, 16);
+            hexdump("", recvbuf, 2);
         }
     }
     else if( cmd == CMD_LINKM_PLAYSET ) {   // control LinkM's state machine
@@ -245,7 +232,21 @@ int main(int argc, char **argv)
         err = linkm_command(dev, LINKM_CMD_PLAYSET, 4,0, cmdbuf, NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
-        }        
+        }
+    }
+    else if( cmd == CMD_LINKM_EESAVE ) {   // tell linkm to save params to eeprom
+        printf("linkm eeprom  save:\n");
+        err = linkm_command(dev, LINKM_CMD_EESAVE, 0,0, NULL, NULL);
+        if( err ) {
+            fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
+        }
+    }
+    else if( cmd == CMD_LINKM_EELOAD ) {   // tell linkm to load params to eeprom
+        printf("linkm eeprom load:\n");
+        err = linkm_command(dev, LINKM_CMD_EELOAD, 0,0, NULL, NULL);
+        if( err ) {
+            fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
+        }
     }
     else if( cmd == CMD_LINKM_STATLED ) {    // control LinkM's status LED 
         err = linkm_command(dev, LINKM_CMD_STATLED, 1,0,  (uint8_t*)&arg,NULL);
@@ -373,7 +374,7 @@ int main(int argc, char **argv)
             fprintf(stderr,"error on play: %s\n",linkm_error_msg(err));
     }
     else if( cmd == CMD_BLINKM_STOP  ) {
-        printf("addr %d: stopping scriptn", addr);
+        printf("addr %d: stopping script\n", addr);
         cmdbuf[0] = addr; 
         cmdbuf[1] = 'o';  // stop script
         if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,0, cmdbuf, NULL))) 
@@ -389,6 +390,14 @@ int main(int argc, char **argv)
         cmdbuf[2] = cmdbuf[3] = cmdbuf[4] = 0x00;   // to zeros
         if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL))) 
             fprintf(stderr,"error on blinkmoff cmd: %s\n",linkm_error_msg(err));
+    }
+    else if( cmd == CMD_BLINKM_FADESPEED  ) {
+        printf("addr %d: setting fadespeed to %d\n", addr,arg);
+        cmdbuf[0] = addr; 
+        cmdbuf[1] = 'f';  // play script
+        cmdbuf[2] = arg;
+        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 3,0, cmdbuf, NULL))) 
+            fprintf(stderr,"error on play: %s\n",linkm_error_msg(err));
     }
     else if( cmd == CMD_BLINKM_DOWNLOAD ) { 
         if( addr == 0 ) {
@@ -413,7 +422,6 @@ int main(int argc, char **argv)
             }
             pos++;
         }
-        
     }
     else if( cmd == CMD_BLINKM_UPLOAD ) {
         printf("unsupported right now\n");
@@ -431,6 +439,41 @@ int main(int argc, char **argv)
         }
         else { 
             hexdump("inputs: ", recvbuf, 5);
+        }
+    }
+    // low-level linkm cmd
+    else if( cmd == CMD_LINKM_CMD ) {   // low-level linkm command
+        printf("linkm command:\n");
+        char cmdbyte  = cmdbuf[0];     // this is kind of dumb
+        char num_send = cmdbuf[1];
+        char num_recv = cmdbuf[2];
+        uint8_t* cmdbufp = cmdbuf + 3;  // move along nothing to see here
+        err = linkm_command(dev, cmdbyte, num_send,num_recv, cmdbufp,recvbuf);
+        if( err ) {
+            fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
+        }
+        else {  // success
+            if( num_recv ) hexdump("recv: ", recvbuf, 16);
+        }
+    }
+    // low-level read
+    else if( cmd == CMD_LINKM_READ ) {  // low-level read linkm buffer
+        printf("linkm read:\n");
+        memset( buffer, 0, sizeof(buffer));
+        len = sizeof(buffer);
+        if((err = usbhidGetReport(dev, 0, (char*)buffer, &len)) != 0) {
+            fprintf(stderr, "error reading data: %s\n", linkm_error_msg(err));
+        } else {
+            hexdump("", buffer + 1, sizeof(buffer) - 1);
+        }
+    } // low-level write
+    else if( cmd == CMD_LINKM_WRITE ) {  // low-level write linkm buffer
+        printf("linkm write:\n");
+        memset( buffer, 0, sizeof(buffer));
+        memcpy( buffer+1, cmdbuf, sizeof(cmdbuf) );
+        if(debug) hexdump("linkm write: ", buffer, 16); // print first bytes 
+        if((err = usbhidSetReport(dev, (char*)buffer, sizeof(buffer))) != 0) {
+            fprintf(stderr, "error writing data: %s\n", linkm_error_msg(err));
         }
     }
 
