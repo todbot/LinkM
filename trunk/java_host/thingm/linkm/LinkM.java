@@ -42,9 +42,14 @@ public class LinkM
   static final int LINKM_CMD_I2CSCAN = 4; // i2c bus scan (2 args: start,end)
   static final int LINKM_CMD_I2CCONN = 5; // i2c connect/disc (1 args: 1/0)
   static final int LINKM_CMD_I2CINIT = 6; // i2c init         (0 args: )
-  //
-  static final int LINKM_CMD_STATLED   = 100;  // status LED set   (1 args: 1/0)
-  static final int LINKM_CMD_STATLEDGET= 101;  // status LED get   (0 args)
+  // linkm commands
+  static final int LINKM_CMD_VERSIONGET= 100;  // version get       (0 args)
+  static final int LINKM_CMD_STATLEDSET= 101;  // status LED set    (1 args: 1/0)
+  static final int LINKM_CMD_STATLEDGET= 102;  // status LED get    (0 args)
+  static final int LINKM_CMD_PLAYERSET = 103;  // set params        (7 args)
+  static final int LINKM_CMD_PLAYERGET = 104;  // get params        (0 args)
+  static final int LINKM_CMD_EESAVE    = 105;  // save params to EE (0 args)
+  static final int LINKM_CMD_EELOAD    = 106;  // load params fr EE (0 args)
 
 
   //---------------------------------------------------------------------------
@@ -243,21 +248,13 @@ public class LinkM
       else if( cmd.equals("i2cscan") ) { 
         //if( addr == 0 ) addr = 1; // don't scan general call / broadcast addr
         println("I2C scan from addresses "+1+" - "+113);
-        ArrayList addrlist = new ArrayList();;
-        for( int i=0; i<7; i++ ) {
-          addr = i*16 + 1;
-          byte[] addrs = linkm.i2cScan(addr,addr+16);
-          if( addrs != null ) {
-            for( int j=0; j<addrs.length; j++ ) 
-              addrlist.add( new Integer(addrs[j]) );
-          }
-        }
-        if( addrlist.size() != 0 ) {
-          for( int i=0; i< addrlist.size(); i++) {
-            println("device found at addr: "+ (Integer)addrlist.get(i) );
-          }
-        } else { 
+        byte[] addrs = linkm.i2cScan(1,113);
+        if( addrs.length == 0 ) {
           println("no devices found");
+        } else { 
+          for( int i=0; i< addrs.length; i++) {
+            println("device found at addr: "+ addrs[i] );
+          }
         }
       }
       else if( cmd.equals("i2cenable") ) { 
@@ -370,7 +367,7 @@ public class LinkM
   /**
    * Do a transaction with the LinkM dongle
    * length of both byte arrays determines amount of data sent or received
-   * @param buf_send is byte array of command to send
+   * @param buf_send is byte array of command to send, may be null
    * @param buf_recv is byte array of any receive data, may be null
    * @throws linkm_command response code, 0 == success, non-zero == fail
    */
@@ -417,20 +414,86 @@ public class LinkM
   }
 
   /**
+   * Set the playticker / playset parameters 
+   *
+   * @param playing     on/off state of playTicker
+   * @param script_id   the script id to play (usually 0)
+   * @param script_tick the number of ticks between lines in the script
+   * @param script_len  the length of the script in script lines
+   * @param start_pos   starting position of script (usually 0)
+   */
+  public void setPlayset( boolean playing, int script_id, int script_tick, 
+                          int script_len, int start_pos, int fadespeed,
+                          int dir ) 
+    throws IOException {
+    byte[] cmdbuf = { (byte)(playing?1:0), (byte)script_id, (byte)script_tick,
+                      (byte)script_len, (byte)start_pos, (byte)script_len,
+                      (byte)dir };
+    command( LINKM_CMD_PLAYERSET, cmdbuf, null );
+  }
+  
+  /**
+   * Get playticker parameters
+   */
+  public byte[] getPlayset() throws IOException {
+    byte[] recvbuf = new byte[ 7 ];
+    command( LINKM_CMD_PLAYERGET, null, recvbuf );
+    return recvbuf;
+  }
+
+  /**
+   * Save the playticker parameters from RAM to EEPROM
+   */
+  public void eeParamSave() throws IOException {
+    command( LINKM_CMD_EESAVE, null, null );
+  }
+  /**
+   * Load the playticker parameters from EEPROM to RAM
+   */
+  public void eeParamLoad() throws IOException {    
+    command( LINKM_CMD_EELOAD, null, null );
+  }
+
+
+  /**
    * Set the state of LinkM's status LED 
    */
   public void statusLED(int val) 
     throws IOException {
     byte[] cmdbuf = { (byte)val };
-    command( LINKM_CMD_STATLED, cmdbuf, null);
+    command( LINKM_CMD_STATLEDSET, cmdbuf, null);
   }
   
   /**
+   * FIXME: currently ignores start_addr and end_addr
+   * @param
+   */
+  public byte[] i2cScan(int start_addr, int end_addr)
+    throws IOException {
+    ArrayList<Integer> addrlist = new ArrayList<Integer>();
+    for( int i=0; i<7; i++ ) {
+      int addr = i*16 + 1;
+      byte[] addrs = i2cScan16(addr,addr+16);
+      if( addrs != null ) {
+        for( int j=0; j<addrs.length; j++ ) {
+          addrlist.add( new Integer(addrs[j]) );
+        }
+      }
+    }
+    byte addrs[] = new byte[addrlist.size()];
+    for( int i=0; i<addrs.length; i++) {
+      addrs[i] = addrlist.get(i).byteValue();
+    }    
+    return addrs;
+  }
+
+  /**
    * Scan the I2C bus
+   * FIXME: only works for spans up to 16 addrs
    * @param start_addr start address of scan
    * @param end_addr end address of scan
    */
-  public byte[] i2cScan(int start_addr, int end_addr)
+  public byte[] i2cScan16(int start_addr, int end_addr)
     throws IOException { 
     byte[] cmdbuf = { (byte)start_addr, (byte)end_addr };
     byte[] recvbuf = new byte[ (end_addr-start_addr) ];  // FIXME:
