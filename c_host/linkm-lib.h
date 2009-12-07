@@ -32,7 +32,7 @@ enum {
 
     // linkm board commands
     LINKM_CMD_VERSIONGET = 100,  // return linkm version
-    LINKM_CMD_STATLED,           // status LED set   (1 args: 1/0)
+    LINKM_CMD_STATLEDSET,        // status LED set   (1 args: 1/0)
     LINKM_CMD_STATLEDGET,        // status LED get   (0 args)
     LINKM_CMD_PLAYERSET,         // set params of player state machine
     LINKM_CMD_PLAYERGET,         // get params of  player state machine

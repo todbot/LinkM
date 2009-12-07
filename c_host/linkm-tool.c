@@ -260,19 +260,19 @@ int main(int argc, char **argv)
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
     }
-    else if( cmd == CMD_LINKM_STATLED ) {    // control LinkM's status LED 
-        err = linkm_command(dev, LINKM_CMD_STATLED, 1,0,  (uint8_t*)&arg,NULL);
+    else if( cmd == CMD_LINKM_STATLEDSET ) {    // control LinkM's status LED 
+        err = linkm_command(dev, LINKM_CMD_STATLEDSET, 1,0, (uint8_t*)&arg,NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
     }
-    else if( cmd == CMD_LINKM_I2CENABLE ) {    // control LinkM's I2C enable
+    else if( cmd == CMD_LINKM_I2CENABLE ) {    // enable/disable i2c buffer
         err = linkm_command(dev, LINKM_CMD_I2CCONN, 1,0,  (uint8_t*)&arg,NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
     }
-    else if( cmd == CMD_LINKM_I2CINIT ) {    // restart LinkM's I2C software
+    else if( cmd == CMD_LINKM_I2CINIT ) {     // restart LinkM's I2C software
         err = linkm_command(dev, LINKM_CMD_I2CINIT, 0,0,  NULL,NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
