@@ -70,7 +70,7 @@ JFileChooser fc;
 int numSlices = 48;  
 int numTracks = 8;    // number of different blinkms
 
-int blinkmBaseAddr = 10;
+int blinkmStartAddr = 10;
 
 // default blinkm addresses used, can change by clicking on the addresses in UI
 //int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
@@ -81,12 +81,17 @@ int mainHeight = 630;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
 
-// maps duration in seconds to duration in BlinkM ticks (durTicks) and fadespeed
+// maps loop duration in seconds to per-slice duration and fadespeed,
+// both in BlinkM ticks (1/30th of a second, 33.33 msecs)
+// 48 slices in a loop, thus each slice is "(duration/48)" secs long
+// e.g. 100 sec duration =>  2.0833 secs/slice
+// FIXME: something is wrong here.  is tick res really 1/30th sec?
+// fadespeed should be chosen so color hits middle of slice
 public static class Timing  {
-   public int duration;
-   public byte durTicks;
-   public byte fadeSpeed;
-   public Timing(int d,byte t,byte f) { duration=d; durTicks=t; fadeSpeed=f; }
+  public int duration;      // seconds for entire loop
+  public byte durTicks;     // ticks (1/30th of a second)
+  public byte fadeSpeed;    // ticks
+  public Timing(int d,byte t,byte f) { duration=d; durTicks=t; fadeSpeed=f; }
 }
 
 // the supported track durations
@@ -95,6 +100,7 @@ public static Timing[] timings = new Timing [] {
     new Timing(  30, (byte) 18, (byte)  25 ),
     new Timing( 100, (byte) 25, (byte)   5 ),
     new Timing( 300, (byte) 75, (byte)   2 ),
+    new Timing( 600, (byte)150, (byte)   1 ),
  };
 
 int durationCurrent = timings[0].duration;
@@ -177,7 +183,7 @@ void setupGUI() {
   mainpane.setLayout(layout);
 
   ChannelsTop chtop = new ChannelsTop();
-  multitrack        = new MultiTrackView( numTracks, numSlices, mainWidth,135);
+  multitrack        = new MultiTrackView( numTracks, numSlices, mainWidth,300);
 
   TimelineTop ttop  = new TimelineTop();
   trackview         = new TrackView( multitrack, mainWidth, 100 );
@@ -203,8 +209,8 @@ void setupGUI() {
   mainpane.add( chtop );
   mainpane.add( multitrack );
 
-  mainpane.add( ttop );
-  mainpane.add( trackview );
+  //mainpane.add( ttop );
+  //mainpane.add( trackview );
 
   mainpane.add( controlsPanel );
 
@@ -237,7 +243,9 @@ JPanel makeColorChooserPanel() {
   JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
   
   colorChooser = new JColorChooser();
-  colorChooser.setBackground(cBgLightGray);
+  //colorChooser.setBackground(cBgLightGray);
+  colorChooser.setBackground(Color.black);
+  colorChooser.setForeground(Color.black);
 
   colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
       public void stateChanged(ChangeEvent e) {
@@ -247,8 +255,9 @@ JPanel makeColorChooserPanel() {
     });
 
   colorChooser.setPreviewPanel( new JPanel() ); // we have our custom preview
-  colorChooser.setBackground(cBgLightGray);
+  //  colorChooser.setBackground(cBgLightGray);
   colorChooserPanel.add( colorChooser );
+  colorChooserPanel.setBackground(Color.black);
   colorChooser.setColor( cEmpty );
   return colorChooserPanel;
 }
@@ -297,6 +306,48 @@ void setupMainframe() {
                  scrnSize.height/2 - mf.getHeight()/2);
   mf.setVisible(true);
   
+  setupMenus(f);
+}
+
+void setupMenus(Frame f) {
+  MenuBar menubar = new MenuBar();
+
+  ActionListener menual = new ActionListener() { 
+      void actionPerformed(ActionEvent e) {
+        String cmd = e.getActionCommand();
+        println("action listener: "+cmd);
+      }
+    };
+  
+  //create the top level button
+  Menu fileMenu = new Menu("File");
+  //create the top level button
+  Menu editMenu = new Menu("Edit");
+
+ //create all the Menu Items and add the menuListener to check their state.
+  MenuItem item1 = new MenuItem("Load Scripts File");
+  MenuItem item2 = new MenuItem("Save Scripts File");
+  MenuItem item3 = new MenuItem("Load One Script");
+  MenuItem item4 = new MenuItem("Save One Script");
+  MenuItem item5 = new MenuItem("Black");
+  item1.addActionListener(menual);
+  item2.addActionListener(menual);
+  item3.addActionListener(menual);
+  item4.addActionListener(menual);
+  item5.addActionListener(menual);
+
+ fileMenu.add(item1);
+ fileMenu.add(item2);
+ fileMenu.add(item3);
+ fileMenu.add(item4);
+
+ editMenu.add(item5);
+
+ menubar.add(fileMenu);
+ menubar.add(editMenu);
+
+ //add the menu to the frame!
+ f.setMenuBar(menubar);
 }
 
 
@@ -307,7 +358,7 @@ void setupMainframe() {
  * Open up the LinkM and set it up if it hasn't been
  * Sets and uses the global variable 'connected'
  */
-boolean connect() {
+public boolean connect() {
   l.debug("connect");
   try { 
     linkm.open();
@@ -318,11 +369,18 @@ boolean connect() {
       multitrack.disableAllTracks();   // enable tracks for blinkms found
       for( int i=0; i<cnt; i++) {
         byte a = addrs[i];
-        if( a >= blinkmBaseAddr && a < blinkmBaseAddr + numTracks ) {
-          multitrack.toggleTrackEnable( a - blinkmBaseAddr);
+        if( a >= blinkmStartAddr && a < blinkmStartAddr + numTracks ) {
+          multitrack.toggleTrackEnable( a - blinkmStartAddr);
         }
       }
+      
       // FIXME: should dialog popup saying blinkms found but not in right addr?
+      if( addrs[0] > blinkmStartAddr ) { // FIXME: hack
+        int trknum = (addrs[0] - blinkmStartAddr);  // select 1st used trk
+        multitrack.currTrack = trknum;
+        multitrack.selectSlice( trknum, 0, true );
+        multitrack.repaint();
+      }
     }
     else {
       println("no blinkm found!");  // FIXME: pop up dialog?
@@ -332,18 +390,37 @@ boolean connect() {
     println("connect:no linkm?  "+ioe);
     return false;
   }
-  multitrack.repaint();
+  
 
   connected = true;
   return true; // connect successful
 }
 
+/**
+ * Verifies connetion to LinkM and at least one BlinkM
+ * Also clears out any I2C bus errors that may be present
+ */
+public boolean verifyConnection() {
+  try { 
+    // FIXME: what to do here
+    // 0. do i2c bus reset ?
+    // 1. verify linkm connection          (need new cmd?)
+    // 2. verify connection to 1st blinkm  (get version?)
+    // 3. verify all blinkms?
+    linkm.getVersion(0);
+  } catch( IOException ioe ) {
+  }
+  return true;
+}
+
 
 /**
- * Sends a single color to a single BlinkM
+ * Sends a single color to a single BlinkM, using the "Fade to RGB" function
  * Used during live playback and making blinkm match preview
+ * @param blinkmAddr  i2c address of a blinkm
+ * @param c color to send
  */
-boolean sendBlinkMColor( int blinkmAddr, Color c ) {
+public boolean sendBlinkMColor( int blinkmAddr, Color c ) {
   l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
   if( !connected ) return true;
   try { 
@@ -358,6 +435,7 @@ boolean sendBlinkMColor( int blinkmAddr, Color c ) {
 
 /**
  * Prepare blinkm for playing preview scripts
+ * @param loopduration duration of loop in milli
  */
 public void prepareForPreview(int loopduration) {
   byte fadespeed = getFadeSpeed(loopduration);
@@ -382,22 +460,26 @@ public boolean doDownload() {
   BlinkMScriptLine scriptLine;
   Color c;
   int blinkmAddr;
-    for( int j=0; j< numTracks; j++ ) {
-      blinkmAddr = multitrack.tracks[j].blinkmaddr;
-      try { 
-        script = linkm.readScript( blinkmAddr, 0, true );  // read all
-        for( int i=0; i< script.length(); i++) {
-          scriptLine = script.get(i);
-          // FIXME: maybe move this into BlinkMScriptLine
-          if( scriptLine.cmd == 'c' ) {  // only pay attention to color cmds
-            c = new Color( scriptLine.arg1,scriptLine.arg2,scriptLine.arg3 );
-            multitrack.tracks[j].slices[i] = c;
-          }
+  for( int j=0; j< numTracks; j++ ) {
+    boolean active = multitrack.tracks[j].active;
+    if( !active ) continue;
+    blinkmAddr = multitrack.tracks[j].blinkmaddr;
+    try { 
+      script = linkm.readScript( blinkmAddr, 0, true );  // read all
+      int len = (script.length() < numSlices) ? script.length() : numSlices;
+      for( int i=0; i< len; i++) {
+        scriptLine = script.get(i);
+        // FIXME: maybe move this into BlinkMScriptLine
+        if( scriptLine.cmd == 'c' ) {  // only pay attention to color cmds
+          c = new Color( scriptLine.arg1,scriptLine.arg2,scriptLine.arg3 );
+          multitrack.tracks[j].slices[i] = c;
         }
-      } catch( IOException ioe ) {
-        println("doDownload: on track #"+j+",addr:"+blinkmAddr+"  "+ioe);
       }
+      multitrack.repaint();
+    } catch( IOException ioe ) {
+      println("doDownload: on track #"+j+",addr:"+blinkmAddr+"  "+ioe);
     }
+  }
   return true;
 }
 
@@ -418,6 +500,7 @@ public boolean doUpload() {
   int blinkmAddr;
   try { 
     for( int j=0; j<numTracks; j++ ) {
+      if( ! multitrack.tracks[j].active ) continue;  // skip disabled tracks
       blinkmAddr = multitrack.tracks[j].blinkmaddr; // get track i2c addr
       for( int i=0; i<numSlices; i++) {
         c =  multitrack.tracks[j].slices[i];         
@@ -450,15 +533,43 @@ public boolean doUpload() {
   return rc;
 }
 
+// hmmm
+public boolean doAddressChange() {
+  int newaddr = multitrack.getCurrTrack().blinkmaddr;
+  Object[] options = {"Do nothing",
+                      "Readdress BlinkM to addres 10"  };
+  String question = 
+    "Would you like to readdress your BlinkM"+
+    "from address 9 to address "+ newaddr +"?";
+  int n = JOptionPane.showOptionDialog(mf, question, 
+                                       "BlinkM Readdressing",
+                                       JOptionPane.YES_NO_OPTION,
+                                       JOptionPane.QUESTION_MESSAGE,
+                                       null,
+                                       options, options[1] );
+  if( n == 1 ) { 
+    try { 
+      linkm.setAddress( 0x09, newaddr );
+    } catch( IOException ioe ) {
+      JOptionPane.showMessageDialog(mf,
+                                    "Could not set BlinkM addres.\n"+ioe,
+                                    "BlinkM Readdress failure",
+                                    JOptionPane.WARNING_MESSAGE);
+
+    }
+  }
+  return true;
+  
+}
 
 
 // ----------------------------------------------------------------------------
 
 /**
- *
+ * Load current track from a file
  */
 void loadTrack() { 
-  loadTrack(multitrack.currTrack);
+  loadTrack( multitrack.currTrack );
 }
 
 /**
@@ -495,6 +606,9 @@ void loadTrack(int tracknum) {
   }
 }
 
+/**
+ * Load all tracks from a file
+ */
 void loadAllTracks() {
   int returnVal = fc.showOpenDialog(mf);  // this does most of the work
   if (returnVal != JFileChooser.APPROVE_OPTION) {
@@ -534,13 +648,13 @@ void loadAllTracks() {
 }
 
 /**
- *
+ * Save the current track to a file
  */
- void saveTrack() {
+void saveTrack() {
   saveTrack( multitrack.currTrack );
 }
 /**
- * 
+ * Save a track to a file
  */
 void saveTrack(int tracknum) {
   int returnVal = fc.showSaveDialog(mf);  // this does most of the work

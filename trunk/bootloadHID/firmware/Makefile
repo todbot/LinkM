@@ -67,7 +67,7 @@ FUSEUNLOCK = 0x3F
 ###############################################################################
 
 #AVRDUDE = avrdude -c stk500v2 -P avrdoper -p $(DEVICE)
-AVRDUDE = avrdude -c avrispmkii -P usb -p $(DEVICE)
+AVRDUDE = avrdude -c avrispmkii -P usb -p $(DEVICE) -F
 
 LDFLAGS += -Wl,--section-start=.text=$(BOOTLOADER_ADDRESS)
 

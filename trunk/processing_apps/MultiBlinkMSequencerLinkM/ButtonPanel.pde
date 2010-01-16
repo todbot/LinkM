@@ -7,6 +7,7 @@ public class ButtonPanel extends JPanel {
 
   JButton uploadBtn, downloadBtn;
   JButton playBtn;
+  JButton chgAddrBtn;
   private ImageIcon iconPlay;
   private ImageIcon iconPlayHov;
   private ImageIcon iconStop;
@@ -81,6 +82,16 @@ public class ButtonPanel extends JPanel {
       }
       );
 
+    JButton chgAddrBtn = new JButton("Change BlinkM Address");
+    chgAddrBtn.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent ae) {
+          l.debug("change addr");
+          doAddressChange();
+        }    
+      }
+      );
+
+
     JPanel updnPanel = new JPanel();
     updnPanel.setBackground(cBgDarkGray);
     updnPanel.add(downloadBtn);
@@ -92,6 +103,7 @@ public class ButtonPanel extends JPanel {
     minibuttonPanel.setBackground(cBgDarkGray);
     minibuttonPanel.setPreferredSize(new Dimension(aWidth, 50)); //FIXME
 
+    minibuttonPanel.add( chgAddrBtn);
     minibuttonPanel.add( Box.createHorizontalGlue() );
     minibuttonPanel.add(helpBtn);
     minibuttonPanel.add(aboutBtn);

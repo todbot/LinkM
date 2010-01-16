@@ -32,8 +32,9 @@ public class MultiTrackView
   private int w,h;                           // dimensions of me
   private int sx = 52;                      // aka "trackX", offs from left edge
   private int previewWidth = 30;           
-  private int sliceWidth = 15;
-  private int trackHeight = 15;                // height of each track 
+  private int sliceWidth = 20;
+  //private int trackHeight = 15;                // height of each track 
+  private int trackHeight = 20;                // height of each track 
   private int trackWidth;
   private int previewX;
   private Color playHeadC = new Color(255, 0, 0);
@@ -76,7 +77,7 @@ public class MultiTrackView
     previewColors = new Color[numTracks];
     for( int j=0; j<numTracks; j++ ) {
       tracks[j] = new Track( numSlices, cEmpty );
-      tracks[j].blinkmaddr = blinkmBaseAddr +j;  // set default addrs
+      tracks[j].blinkmaddr = blinkmStartAddr +j;  // set default addrs
       previewColors[j] = cEmpty;
     }
 
@@ -162,7 +163,8 @@ public class MultiTrackView
     int ty = scrubHeight + (currTrack*trackHeight) ;
     //g.setColor( new Color( 200,140,140));
     g.setStroke( new BasicStroke(1.0f));
-    g.setColor( cMuteOrange );
+    //g.setColor( cMuteOrange );
+    g.setColor( cBgLightGray );
     //g.drawRect( tx,ty, trackWidth, trackHeight+1 );
     g.drawRect( tx,ty, w-1, trackHeight+1 );
   }
@@ -358,6 +360,17 @@ public class MultiTrackView
     }
   }
 
+  public void disableAllTracks() {
+    for( int i=0; i< tracks.length; i++) {
+      tracks[i].active = false;
+    }
+    allOff();
+  }
+
+  public void toggleTrackEnable(int track) {
+    tracks[track].active = !tracks[track].active;
+  }
+
   /** 
    * select all the slices in a given column
    * @param slicenum time slice index
@@ -366,6 +379,11 @@ public class MultiTrackView
   public void selectSlice( int slicenum, boolean state ) { 
     for( int i=0; i< numTracks; i++ ) 
       tracks[i].selects[slicenum] = state;
+    repaint();
+  }
+  
+  public void selectSlice( int tracknum, int slicenum, boolean state ) {
+    tracks[tracknum].selects[slicenum] = state;
     repaint();
   }
 
@@ -579,14 +597,6 @@ public class MultiTrackView
 
   // ------------------------------------------------------------------------
 
-  public void disableAllTracks() {
-    for( int i=0; i< tracks.length; i++) 
-      tracks[i].active = false;
-  }
-
-  public void toggleTrackEnable(int track) {
-    tracks[track].active = !tracks[track].active;
-  }
 
   //
   public void doTrackDialog(int track) {

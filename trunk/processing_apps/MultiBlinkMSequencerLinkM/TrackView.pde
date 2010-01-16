@@ -12,7 +12,6 @@ public class TrackView
 
 
   private MultiTrackView mtv;
-  //private Track currTrack;
 
   private Color playHeadC = new Color(255, 0, 0);
   private float playHeadCurr;
@@ -46,7 +45,7 @@ public class TrackView
     Graphics2D g = (Graphics2D) gOG;
     super.paintComponent(g); 
 
-    mtv.drawTrack( g, mtv.currTrack,  
+    mtv.drawTrack( g, mtv.currTrack,
                    mtv.sx, scrubHeight-1, w, h-scrubHeight-2  ); // Hmmmm
 
     mtv.drawPlayHead(g, playHeadCurr);  // draws on me, not on mtv
@@ -56,7 +55,7 @@ public class TrackView
   }
 
   /**
-   *
+   * Draws the preview block on the right
    */
   void drawPreview(Graphics2D g ) {
     
@@ -141,15 +140,15 @@ public class TrackView
     Point mp = e.getPoint();
     int clickCnt = e.getClickCount();
 
-    if( clickCnt > 1 ) { 
+    if( clickCnt > 1 ) {            
       for( int i=0;i<mtv.numSlices;i++) {
-        if( mtv.isSliceHit( mp.x, i ) ) {
+        if( mtv.isSliceHit( mp.x, i ) ) {   // double-click sends color 
           Color c = mtv.getCurrTrack().slices[i];
-          colorChooser.setColor(c);
+          colorChooser.setColor(c);         // back to color chooser
         }
       }
     }
-        
+
     playheadClicked = false;
   }    
   

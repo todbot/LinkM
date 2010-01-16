@@ -11,9 +11,13 @@
 #include <stdint.h>
 #include "hiddata.h"
 
-
-#define IDENT_VENDOR_NUM        0x16c0
-#define IDENT_PRODUCT_NUM       1503
+// NOTE: these values much be the same as those in 
+//       "linkm/firmware/usbconfig.h"           and 
+//       "linkm/bootloadHID/firmware/usbconfig.h"
+//#define IDENT_VENDOR_NUM        0x16C0
+//#define IDENT_PRODUCT_NUM       0x05DF
+#define IDENT_VENDOR_NUM        0x20A0
+#define IDENT_PRODUCT_NUM       0x4110
 #define IDENT_VENDOR_STRING     "ThingM"
 #define IDENT_PRODUCT_STRING    "LinkM"
 
@@ -21,23 +25,24 @@
 
 // Command byte values for linkm_command()
 enum { 
-    LINKM_CMD_NONE = 0,       // no command, do not use
+    LINKM_CMD_NONE     = 0,      // no command, do not use
     // I2C commands
-    LINKM_CMD_I2CTRANS,          // i2c read & write (N args: addr + other)
-    LINKM_CMD_I2CWRITE,          // i2c write to dev (N args: addr + other)
-    LINKM_CMD_I2CREAD,           // i2c read         (1 args: addr)
-    LINKM_CMD_I2CSCAN,           // i2c bus scan     (2 args: start,end)
-    LINKM_CMD_I2CCONN,           // i2c connect/disc (1 args: 1/0)
-    LINKM_CMD_I2CINIT,           // i2c init         (0 args: )
+    LINKM_CMD_I2CTRANS = 1,      // i2c read & write (N args: addr + other)
+    LINKM_CMD_I2CWRITE = 2,      // i2c write to dev (N args: addr + other)
+    LINKM_CMD_I2CREAD  = 3,      // i2c read         (1 args: addr)
+    LINKM_CMD_I2CSCAN  = 4,      // i2c bus scan     (2 args: start,end)
+    LINKM_CMD_I2CCONN  = 5,      // i2c connect/disc (1 args: 1/0)
+    LINKM_CMD_I2CINIT  = 6,      // i2c init         (0 args: )
 
     // linkm board commands
     LINKM_CMD_VERSIONGET = 100,  // return linkm version
-    LINKM_CMD_STATLEDSET,        // status LED set   (1 args: 1/0)
-    LINKM_CMD_STATLEDGET,        // status LED get   (0 args)
-    LINKM_CMD_PLAYERSET,         // set params of player state machine
-    LINKM_CMD_PLAYERGET,         // get params of  player state machine
-    LINKM_CMD_EESAVE,            // save linkm state to EEPROM
-    LINKM_CMD_EELOAD,            // load linkm state from EEPROM
+    LINKM_CMD_STATLEDSET = 101,  // status LED set   (1 args: 1/0)
+    LINKM_CMD_STATLEDGET = 102,  // status LED get   (0 args)
+    LINKM_CMD_PLAYSET    = 103,  // set params of player state machine
+    LINKM_CMD_PLAYGET    = 104,  // get params of  player state machine
+    LINKM_CMD_EESAVE     = 105,  // save linkm state to EEPROM
+    LINKM_CMD_EELOAD     = 106,  // load linkm state from EEPROM
+    LINKM_CMD_GOBOOTLOAD = 107,  // trigger bootload
 };
 
 // Return values for linkm_command()
@@ -65,7 +70,7 @@ int linkm_command(usbDevice_t* dev,
 char* linkm_error_msg(int errCode);
 
 // utility
-void hexdump(char* intro, uint8_t* buffer, int len);
+void hexdump(const char* intro, uint8_t* buffer, int len);
 int  hexread(uint8_t* buffer, char* string, int buflen);
 
 

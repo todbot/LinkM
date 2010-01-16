@@ -42,14 +42,16 @@ enum {
     CMD_LINKM_READ,
     CMD_LINKM_WRITE,
     CMD_LINKM_CMD,
-    CMD_LINKM_STATLED,
+    CMD_LINKM_STATLEDSET,
     CMD_LINKM_I2CSCAN,
     CMD_LINKM_I2CENABLE,
     CMD_LINKM_I2CINIT,
-    CMD_LINKM_PLAYERSET,
-    CMD_LINKM_PLAYERGET,
+    CMD_LINKM_PLAYSET,
+    CMD_LINKM_PLAYGET,
+    CMD_LINKM_GOBOOTLOAD,
     CMD_BLINKM_CMD,
     CMD_BLINKM_OFF,
+    CMD_BLINKM_ON,
     CMD_BLINKM_PLAY,
     CMD_BLINKM_STOP,
     CMD_BLINKM_FADESPEED,
@@ -72,6 +74,7 @@ void usage(char *myName)
 "where <cmd> is one of:\n"
 "  --cmd <blinkmcmd> Send a blinkm command  \n"
 "  --off             Stop script & turn off blinkm at address (or all) \n"
+"  --on              Play startup script at address (or all) \n"
 "  --play <n>        Play light script N \n"
 "  --stop            Stop playing light script \n"
 "  --fadespeed <n>   Set BlinkM fadespeed\n"
@@ -86,7 +89,9 @@ void usage(char *myName)
 "  --linkmcmd        Send a raw linkm command  \n"
 "  --linkmversion    Get LinkM version \n"
 "  --statled <0|1>   Turn on or off status LED  \n"
-"  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params  \n"
+"  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params \n"
+"  --linkmeesave     Save playerset and other parms for later \n"
+"  --linkmeeload     Load playerset and other parms \n"
 "and [options] are:\n"
 "  -h, --help                   Print this help message\n"
 "  -a addr, --addr=i2caddr      I2C address for command (default 0)\n"
@@ -97,7 +102,8 @@ void usage(char *myName)
 "  linkm-tool --off                            # stop & turn off all blinkms\n"
 "  linkm-tool -a 9 --cmd \"'c',0xff,0x00,0xff\"  # fade to magenta \n"
 "  linkm-tool -a 9 --download 5                  # download script #5\n" 
-"  linkm-tool --playset \"1,0,4,48\"    # set linkm to play script0,spd4,len48\n"
+"  linkm-tool --playset \"1,0,4,48\"   # set linkm to play script0,spd4,len48\n"
+"  linkm-tool --playset \"1,0,4,48,0,20,0\" # with pos0,fade20,dir0\n"
 "\n", myName
            );
     exit(1);
@@ -114,7 +120,7 @@ int main(int argc, char **argv)
 
     // this needs to be a global int for getopt_long
     static int cmd  = CMD_NONE;
-    int8_t arg  = 0;
+    int16_t arg  = 0;
     char addr = 0;
     //long color  = 0;
     //int num = 1;
@@ -149,12 +155,13 @@ int main(int argc, char **argv)
         {"linkmversion",no_argument,      &cmd,   CMD_LINKM_VERSIONGET },
         {"linkmeesave",no_argument,       &cmd,   CMD_LINKM_EESAVE },
         {"linkmeeload",no_argument,       &cmd,   CMD_LINKM_EELOAD },
-        {"statled",    required_argument, &cmd,   CMD_LINKM_STATLED },
+        {"statled",    required_argument, &cmd,   CMD_LINKM_STATLEDSET },
         {"i2cscan",    no_argument,       &cmd,   CMD_LINKM_I2CSCAN },
         {"i2cenable",  required_argument, &cmd,   CMD_LINKM_I2CENABLE },
         {"i2cinit",    no_argument,       &cmd,   CMD_LINKM_I2CINIT },
         {"cmd",        required_argument, &cmd,   CMD_BLINKM_CMD },
         {"off",        no_argument,       &cmd,   CMD_BLINKM_OFF },
+        {"on",         no_argument,       &cmd,   CMD_BLINKM_ON },
         {"stop",       no_argument,       &cmd,   CMD_BLINKM_STOP },
         {"play",       required_argument, &cmd,   CMD_BLINKM_PLAY },
         {"fadespeed",  required_argument, &cmd,   CMD_BLINKM_FADESPEED },
@@ -165,8 +172,9 @@ int main(int argc, char **argv)
         {"random",     required_argument, &cmd,   CMD_BLINKM_RANDOM },
         {"setaddr",    required_argument, &cmd,   CMD_BLINKM_SETADDR },
         {"getversion", no_argument,       &cmd,   CMD_BLINKM_GETVERSION },
-        {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYERSET },
-        {"playget",    no_argument,       &cmd,   CMD_LINKM_PLAYERGET },
+        {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYSET },
+        {"playget",    no_argument,       &cmd,   CMD_LINKM_PLAYGET },
+        {"gobootload", no_argument,       &cmd,   CMD_LINKM_GOBOOTLOAD },
         {NULL,         0,                 0,      0}
     };
 
@@ -176,13 +184,13 @@ int main(int argc, char **argv)
         switch (opt) {
         case 0:             // deal with long opts that have no short opts
             switch(cmd) { 
-            case CMD_LINKM_PLAYERSET:
+            case CMD_LINKM_PLAYSET:
             case CMD_LINKM_WRITE:
             case CMD_LINKM_CMD:
             case CMD_BLINKM_CMD:
                 hexread(cmdbuf, optarg, sizeof(cmdbuf));  // cmd w/ hexlist arg
                 break;
-            case CMD_LINKM_STATLED:
+            case CMD_LINKM_STATLEDSET:
             case CMD_LINKM_I2CENABLE:
             case CMD_BLINKM_RANDOM:
             case CMD_BLINKM_SETADDR:
@@ -219,7 +227,15 @@ int main(int argc, char **argv)
         exit(1);
     }
     
-    if( cmd == CMD_LINKM_VERSIONGET ) {
+    if( cmd == CMD_LINKM_GOBOOTLOAD ) {
+        printf("linkm switching to bootloader:\n");
+        err = linkm_command(dev, LINKM_CMD_GOBOOTLOAD, 0, 0, NULL, NULL);
+        if( err ) {
+            fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
+        }
+        printf("linkm is now in bootloader mode\n");
+    }
+    else if( cmd == CMD_LINKM_VERSIONGET ) {
         printf("linkm version: ");
         err = linkm_command(dev, LINKM_CMD_VERSIONGET, 0, 2, NULL, recvbuf);
         if( err ) {
@@ -229,16 +245,17 @@ int main(int argc, char **argv)
             hexdump("", recvbuf, 2);
         }
     }
-    else if( cmd == CMD_LINKM_PLAYERSET ) {   // control LinkM's state machine
-        printf("linkm play set:\n");
-        err = linkm_command(dev, LINKM_CMD_PLAYERSET, 7,0, cmdbuf, NULL);
+    else if( cmd == CMD_LINKM_PLAYSET ) {   // control LinkM's state machine
+        printf("linkm play set: ");
+        err = linkm_command(dev, LINKM_CMD_PLAYSET, 7,0, cmdbuf, NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
+        printf("done");
     }
-    else if( cmd == CMD_LINKM_PLAYERGET ) {   // read LinkM's state machine
-        printf("linkm play get:\n");
-        err = linkm_command(dev, LINKM_CMD_PLAYERGET, 0,7, NULL, recvbuf);
+    else if( cmd == CMD_LINKM_PLAYGET ) {   // read LinkM's state machine
+        printf("linkm play get: ");
+        err = linkm_command(dev, LINKM_CMD_PLAYGET, 0,7, NULL, recvbuf);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
@@ -403,10 +420,20 @@ int main(int argc, char **argv)
         if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL))) 
             fprintf(stderr,"error on blinkmoff cmd: %s\n",linkm_error_msg(err));
     }
+    else if( cmd == CMD_BLINKM_ON  ) {
+        printf("addr %d: turning on\n", addr);
+        cmdbuf[0] = addr; 
+        cmdbuf[1] = 'p';  // play script
+        cmdbuf[2] = 0;
+        cmdbuf[3] = 0;
+        cmdbuf[4] = 0;
+        if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL))) 
+            fprintf(stderr,"error on play: %s\n",linkm_error_msg(err));
+    }
     else if( cmd == CMD_BLINKM_FADESPEED  ) {
         printf("addr %d: setting fadespeed to %d\n", addr,arg);
         cmdbuf[0] = addr; 
-        cmdbuf[1] = 'f';  // play script
+        cmdbuf[1] = 'f';  // set fadespeed
         cmdbuf[2] = arg;
         if( (err = linkm_command(dev, LINKM_CMD_I2CTRANS, 3,0, cmdbuf, NULL))) 
             fprintf(stderr,"error on play: %s\n",linkm_error_msg(err));
@@ -440,7 +467,7 @@ int main(int argc, char **argv)
     }
     else if( cmd == CMD_BLINKM_READINPUTS ) {
         if( addr == 0 ) {
-            printf("Must specify non-zero address for download\n");
+            printf("Must specify non-zero address for readinputs\n");
             goto shutdown;
         }
         cmdbuf[0] = addr;
