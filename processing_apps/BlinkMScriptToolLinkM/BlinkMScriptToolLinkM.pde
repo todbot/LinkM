@@ -189,6 +189,7 @@ void sendToBlinkM() {
   editArea.setText( str );
     
   print("sending!...");
+  long st = System.currentTimeMillis();
   try { 
     linkm.writeScript( bladdr, scriptToSend );
     linkm.setStartupParamsDefault(bladdr);
@@ -203,7 +204,8 @@ void sendToBlinkM() {
   } catch( IOException ioe ) {
     println("no linkm?\n"+ioe);
   }
-  println("done");
+  long et = System.currentTimeMillis();
+  println("done (elapsed "+(et-st)+" millis)");
 
 }
 

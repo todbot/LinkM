@@ -135,11 +135,11 @@ char* linkm_error_msg(int errCode)
 /**
  * Print out a buffer as a hex string, with an optional intro string
  */
-void hexdump(char* intro, uint8_t *buffer, int len)
+void hexdump(const char* intro, uint8_t *buffer, int len)
 {
     int     i;
     FILE    *fp = stdout;
-    if( intro!=NULL ) fprintf(fp, intro);
+    if( intro!=NULL ) fprintf(fp, intro,NULL);
     for(i = 0; i < len; i++) {
         fprintf(fp, ((i%16)==0) ? ((i==0)?"":"\n"):" ");
         fprintf(fp, "0x%02x", buffer[i]);

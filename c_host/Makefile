@@ -17,8 +17,11 @@
 TARGET=linkm-tool
 
 # Use the following 3 lines on Unix and Mac OS X:
-USBFLAGS=   `libusb-config --cflags`
-USBLIBS=    `libusb-config --libs`
+#USBFLAGS=   `libusb-config --cflags`
+#USBLIBS=    `libusb-config --libs`
+
+USBFLAGS=   `libusb-legacy-config --cflags`
+USBLIBS=    /opt/local/lib/libusb-legacy/libusb.a -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
 EXE_SUFFIX=
 
 # Use the following 3 lines on Windows and comment out the 3 above:
@@ -27,16 +30,21 @@ EXE_SUFFIX=
 #EXE_SUFFIX= .exe
 
 CC=				gcc
-CFLAGS=			-O -Wall -std=gnu99  $(USBFLAGS) 
-LIBS=			$(USBLIBS)
+ARCHS=          -arch i386 -arch x86_64 
+CFLAGS=			$(ARCHS) -O -Wall -std=gnu99  $(USBFLAGS) 
+LIBS=			$(ARCHS) $(USBLIBS) 
+#CFLAGS=		-arch i386 -arch ppc -O -Wall -std=gnu99  $(USBFLAGS) 
+#LIBS=			-arch i386 -arch ppc $(USBLIBS)
+#FIXME: figure out 'arch' better
 
-OBJ=		$(TARGET).o linkm-lib.o hiddata.o
+OBJ=		$(TARGET).o linkm-lib.o hiddata.o 
+
 PROGRAM=	$(TARGET)$(EXE_SUFFIX)
 
 all: $(PROGRAM)
 
 $(PROGRAM): $(OBJ)
-	$(CC) -o $(PROGRAM) $(OBJ) $(LIBS)
+	$(CC) -o $(PROGRAM) $(OBJ) $(LIBS) 
 
 strip: $(PROGRAM)
 	strip $(PROGRAM)

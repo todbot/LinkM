@@ -30,10 +30,14 @@ public class LinkM
   
   static public final int maxScriptLength = 49;
 
-  static public int debug = 0;
+  static public final int writePauseMillis = 15;
+
+  static public int debug = 1;
 
   // Command byte values for linkm_command()
+  //
   // !!! NOTE: THIS MUST MATCH enum in linkm-lib.h !!!
+  //
   static final int LINKM_CMD_NONE    = 0; // no command, do not use
   // I2C commands
   static final int LINKM_CMD_I2CTRANS= 1; // i2c read/wri (N args: addr + other)
@@ -67,6 +71,7 @@ public class LinkM
 "where <cmd> is one of:\n" +
 "  --cmd <blinkmcmd> Send a blinkm command  \n" +
 "  --off             Turn off blinkm at specified address (or all) \n" +
+"  --on              Play startup script at address (or all) \n" +
 "  --play <n>        Play light script N \n" +
 "  --stop            Stop playing light script \n" +
 "  --getversion      Gets BlinkM version \n" +
@@ -140,6 +145,9 @@ public class LinkM
       else if( a.equals("--off") ) { 
         addr = parseHexDecInt( getArg(args,++ac,"") );
         cmd = "off";
+      }
+      else if( a.equals("--on") ) { 
+        cmd = "on";
       }
       else if( a.equals("--play")) { 
         arg = parseHexDecInt( getArg(args,++ac,"") );  // script num to play
@@ -265,6 +273,10 @@ public class LinkM
         println("Turning BlinkMs off at addr "+addr);
         linkm.off( addr );
       }
+      else if( cmd.equals("on") ) {
+        println("Turning BlinkMs on at addr "+addr);
+        linkm.playScript( addr, 0, 0,0 );
+      }
       else if( cmd.equals("statled") ) {
         println("Setting LinkM status LED to "+arg);
         linkm.statusLED( (int)arg );
@@ -293,7 +305,7 @@ public class LinkM
         println("Getting version at addr "+addr);
         byte[] ver = linkm.getVersion( addr );
         if( ver != null ) { 
-          println("version "+ver[0]+","+ver[1]);
+          println("version: "+(char)ver[0]+","+(char)ver[1]);
         } else {
           println("error, getversion returned null");
         }
@@ -311,10 +323,6 @@ public class LinkM
         linkm.setScriptLengthRepeats( addr, (int)arg, 0 ); //  0 reps = inf
       }
       else if( cmd.equals("factoryreset") ) {        
-        if( addr == 0 ) { 
-          println("Address 0 is not allowed. Set address with --addr=<addr>");
-          return;
-        }
         println("Setting BlinkM to factory settings for addr "+addr);
         linkm.doFactoryReset(addr);
       }
@@ -796,7 +804,7 @@ public class LinkM
     cmdbuf[8] = (byte)line.arg3;    // cmd arg3
     
     commandi2c( cmdbuf, null);
-    pause(10); // enforce at least 4.5msec delay between EEPROM writes
+    pause( writePauseMillis ); // enforce at >4.5msec delay between EEPROM writes
   }
 
   /**

@@ -12,18 +12,20 @@ USBLIBS =  -L$(LIBUSBA_DIR) `libusb-config --libs`
 EXE_SUFFIX=
 
 # for Mac OS X
+#JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
 JAVAINCLUDE = -I $(JAVAINCLUDEDIR)
 
 # for Windows
-JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_14\\"
-JAVANATINC = -I${JAVA_HOME}\include -I${JAVA_HOME}\include\win32
+#JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_14\\"
+#JAVANATINC = -I${JAVA_HOME}\include -I${JAVA_HOME}\include\win32
 
 # for Linux
+# ???
 
 INCLUDES = -I . -I../c_host $(JAVAINCLUDE) $(JAVANATINC) 
-CFLAGS = -g -O2 -D_BSD_SOURCE -bundle  -std=gnu99 $(USBFLAGS) $(INCLUDES)
+CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -std=gnu99 $(USBFLAGS) $(INCLUDES)
 #CFLAGS = -g -O2 -D_BSD_SOURCE -bundle  -arch i386 -arch ppc -std=gnu99 $(USBFLAGS) $(INCLUDES)
 LDFLAGS =  -Wl,-search_paths_first -framework JavaVM -framework IOKit -framework CoreFoundation $(USBLIBS) 
 

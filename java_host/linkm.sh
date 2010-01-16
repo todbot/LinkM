@@ -5,7 +5,7 @@
 
 # but normally
 if [ -e linkm.jar ]; then
-    java -jar linkm.jar $*
+    java -d32 -jar linkm.jar $*
 else 
     echo "cannot run. make the jar with 'make jar' please"
 fi

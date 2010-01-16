@@ -18,10 +18,9 @@
 //#define IDENT_VENDOR_STRING     "obdev.at"
 //#define IDENT_PRODUCT_NUM       1503
 //#define IDENT_PRODUCT_STRING    "HIDBoot"
-
-#define IDENT_VENDOR_NUM        0x16c0
+#define IDENT_VENDOR_NUM        0x20A0
+#define IDENT_PRODUCT_NUM       0x4110
 #define IDENT_VENDOR_STRING     "ThingM"
-#define IDENT_PRODUCT_NUM       1503
 #define IDENT_PRODUCT_STRING    "LinkMBoot"
 
 /* ------------------------------------------------------------------------- */

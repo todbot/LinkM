@@ -63,7 +63,7 @@
 #include "linkm-lib.h"
 
 // uncomment to enable debugging to serial port
-#define DEBUG   1
+#define DEBUG   0
 
 #define ENABLE_PLAYTICKER 1
 
@@ -79,6 +79,12 @@
 
 #define LINKM_VERSION_MAJOR    0x13
 #define LINKM_VERSION_MINOR    0x37
+
+#if DEUBG > 0
+#define printdebug(s)
+#else
+#define printdebug(s) puts(s)
+#endif
 
 /* ------------------------------------------------------------------------- */
 /* ----------------------------- USB interface ----------------------------- */
@@ -136,7 +142,7 @@ static uint8_t outmsgbuf[REPORT_COUNT];
 static volatile uint16_t tick;         // tick tock clock
 static volatile uint16_t timertick;         // tick tock clock
 
-#ifdef DEBUG
+#if DEBUG > 0
 // setup serial routines to become stdio
 extern int uart_putchar(char c, FILE *stream);
 extern int uart_getchar(FILE *stream);
@@ -153,17 +159,32 @@ typedef struct _params_t {
     uint8_t  dir;          // play direction FIXME: not impl yet
 } params_t;
 
-params_t params;
-uint16_t script_pos;
+params_t params;           // local RAM copy of playTicker params
+uint16_t script_pos;       // position for playTicker
+
+
+// magic value read on reset: 0x55 = run bootloader , other = boot normally
+#define GOBOOTLOAD_MAGICVAL 0x55
+uint8_t bootmode EEMEM = 0; 
 params_t ee_params EEMEM = {
-    1,5,5,2, 0,100,0
+    0,   // playing
+    0,   // script_id
+    0,   // script_tick
+    0,   // script_len
+    0,   // start_pos
+    100, // fadespeed
+    0,   // dir
 };
+//params_t ee_params EEMEM = {
+//    1,5,5,2, 0,100,0
+//};
 
 int blinkmStop(uint8_t addr );
 int blinkmSetRGB(uint8_t addr, uint8_t r, uint8_t g, uint8_t b );
 int blinkmSetFadespeed(uint8_t addr, uint8_t fadespeed);
 int blinkmPlayScript(uint8_t addr, uint8_t id, uint8_t reps, uint8_t pos);
 
+void(* softReset) (void) = 0;  //declare reset function @ address 0
 
 // ------------------------------------------------------------------------- 
 void statusLedToggle(void)
@@ -205,7 +226,7 @@ void handleMessage(void)
     uint8_t num_sent = mbufp[2];      // byte 2: number of bytes sent
     uint8_t num_recv = mbufp[3];      // byte 3: number of bytes to return back
 
-#ifdef DEBUG
+#if DEBUG > 0
     printf("cmd:%d, sent:%d, recv:%d\n",cmd,num_sent,num_recv);
 #endif
 
@@ -224,26 +245,26 @@ void handleMessage(void)
     if( cmd == LINKM_CMD_I2CTRANS ) {
         uint8_t addr      = mbufp[4];  // byte 4: i2c addr or command
 
-        printf("A.");
+        printdebug("A.");
         if( addr >= 0x80 ) {   // invalid valid I2C address
             outmsgbuf[1] = LINKM_ERR_BADARGS;
             return;
         }
 
-        printf("B.");
+        printdebug("B.");
         if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c trans
-            printf("!");
+            printdebug("!");
             outmsgbuf[1] = LINKM_ERR_I2C;
             i2c_stop();
             return;
         }
-        printf("C.");
+        printdebug("C.");
         // start succeeded, so send data
         for( uint8_t i=0; i<num_sent-1; i++) {
             i2c_write( mbufp[5+i] );   // byte 5-N: i2c command to send
         }
 
-        printf("D.");
+        printdebug("D.");
         if( num_recv != 0 ) {
             statusLedSet(1);
             if( i2c_rep_start( (addr<<1) | I2C_READ ) == 1 ) { // start i2c
@@ -262,7 +283,7 @@ void handleMessage(void)
             }
             statusLedSet(0);
         }
-        printf("Z.\n");
+        printdebug("Z.\n");
         i2c_stop();  // done!
     }
     // i2c write
@@ -380,7 +401,7 @@ void handleMessage(void)
     // returns:
     //   outmsgbuf[0] == transaction counter
     //   outmsgbuf[1] == response code
-    else if( cmd == LINKM_CMD_STATLED ) {
+    else if( cmd == LINKM_CMD_STATLEDSET ) {
         uint8_t led = mbufp[4];        // byte 4: on/off boolean
         statusLedSet( led );
     }
@@ -403,7 +424,7 @@ void handleMessage(void)
     //   mbufp[7] == length of script   and so on
     // returns:
     //  none
-    else if( cmd == LINKM_CMD_PLAYERSET ) { 
+    else if( cmd == LINKM_CMD_PLAYSET ) { 
         memcpy( &params, mbufp+4, sizeof(params_t));
         script_pos = params.start_pos;
         if( params.fadespeed != 0 ) {
@@ -420,7 +441,7 @@ void handleMessage(void)
     //   outmsgbuf[3] == script_id
     //   outmsgbuf[4] == script_tick 
     //   outmsgbuf[5] == script_len  nad so on
-    else if( cmd == LINKM_CMD_PLAYERGET ) { 
+    else if( cmd == LINKM_CMD_PLAYGET ) { 
         memcpy( outmsgbuf+2, &params, sizeof(params_t));
     }
     // trigger LinkM to save current params to EEPROM
@@ -452,6 +473,11 @@ void handleMessage(void)
     else if( cmd == LINKM_CMD_VERSIONGET ) {
         outmsgbuf[2] = LINKM_VERSION_MAJOR;
         outmsgbuf[3] = LINKM_VERSION_MINOR;
+    }
+    // reset into bootloader
+    else if( cmd == LINKM_CMD_GOBOOTLOAD ) { 
+        statusLedToggle();
+        eeprom_write_byte( &bootmode, GOBOOTLOAD_MAGICVAL );
     }
     // cmd xxxx == 
 }
@@ -653,7 +679,7 @@ int main(void)
         blinkmSetFadespeed(0, params.fadespeed);            
     }
 
-#ifdef DEBUG
+#if DEBUG > 0
     uart_init();                // initialize UART hardware
     stdout = stdin = &uart_str; // setup stdio = RS232 port
     puts("linkm dongle test");
