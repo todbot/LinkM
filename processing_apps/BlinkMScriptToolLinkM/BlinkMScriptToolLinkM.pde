@@ -55,6 +55,7 @@ JFileChooser fc;
 //JButton disconnectButton;
 JTextArea editArea;  // contains the raw text of the script
 JTextField posText;
+JLabel statusText;
 
 int mainWidth = 740;
 int mainHeight = 480;
@@ -85,6 +86,10 @@ void draw() {
     super.frame.toBack();
     stf.toFront();
   }
+}
+
+void status(String s) { 
+    statusText.setText(s);
 }
 
 // this class is bound to the GUI buttons below
@@ -126,15 +131,16 @@ boolean connectIfNeeded() {
       linkm.i2cEnable(true);
       byte[] addrs = linkm.i2cScan(1,17);  // FIXME: not a full scan
       int cnt = addrs.length;
-      println("found "+cnt+" blinkms");
+      status("found "+cnt+" blinkms");
       if( cnt>0 ) {
         bladdr = addrs[0];
       }
       else {
-        println("no blinkm found!");  // FIXME: pop up dialog?
+        status("no blinkm found!");  // FIXME: pop up dialog?
       }
     } catch(IOException ioe) {
       println("connect:no linkm?\n"+ioe);
+      status("no linkm found");
       return false;
     }
   }
@@ -148,7 +154,7 @@ void stopScript() {
   try { 
     linkm.stopScript(bladdr);
   } catch(IOException ioe) {
-    println("no linkm");
+    status("no linkm");
   }
 }
 
@@ -159,12 +165,13 @@ void playScript() {
   String s = posText.getText().trim();
   try { pos = Integer.parseInt(s);} catch(Exception nfe){}
   if( pos < 0 ) pos = 0;
-  println("playing at position "+pos);
+  status("playing at position "+pos);
   //if( !connectIfNeeded() ) return;
   try { 
     linkm.playScript(bladdr, 0,0,pos);
   } catch(IOException ioe) { 
     println("no linkm?\n"+ioe);
+    status("no linkm?");
   }
 }
 
@@ -174,13 +181,13 @@ void sendToBlinkM() {
   //String str = linkm.scriptLinesToString(rawlines);
   String str = editArea.getText();
   BlinkMScript script = linkm.parseScript(str);
-  println("script:\n"+script.toString(true));
+  status("script:\n"+script.toString(true));
   BlinkMScript scriptToSend = script.trimComments();
-  println("scriptToSend:\n"+scriptToSend.toString(true));
+  status("scriptToSend:\n"+scriptToSend.toString(true));
   int len = scriptToSend.length();
 
   if(debug) 
-      println("size:"+script.length()+", no comment size:"+len); //+"\n"+str );
+      status("size:"+script.length()+", no comment size:"+len); //+"\n"+str );
 
   if( !connectIfNeeded() ) return;
   
@@ -188,7 +195,7 @@ void sendToBlinkM() {
   str = "// Uploaded to BlinkM on "+(new Date())+"\n" + str;
   editArea.setText( str );
     
-  print("sending!...");
+  status("sending!...");
   long st = System.currentTimeMillis();
   try { 
     linkm.writeScript( bladdr, scriptToSend );
@@ -203,9 +210,12 @@ void sendToBlinkM() {
 
   } catch( IOException ioe ) {
     println("no linkm?\n"+ioe);
+    status("no linkm?");
+    return;
   }
   long et = System.currentTimeMillis();
-  println("done (elapsed "+(et-st)+" millis)");
+  status("done");
+  println("send elapsed "+(et-st)+" millis)");
 
 }
 
@@ -218,13 +228,15 @@ void receiveFromBlinkM() {
     str = linkm.readScriptToString( bladdr, 0, false);
   } catch(IOException ioe) {
     println("no linkm?\n"+ioe);
+    status("no linkm?");
+    return;
   }
   if( str != null ) {
     str = "// Downloaded from BlinkM on "+(new Date())+"\n" + str;
     editArea.setText(str); // copy it all to the edit textarea
     editArea.setCaretPosition(0);
   }
-  println("done!");
+  status("done!");
 }
 
 // Load a text file containing a light script and turn it into BlinkMScriptLines
@@ -232,7 +244,7 @@ void receiveFromBlinkM() {
 void loadFile() {
   int returnVal = fc.showOpenDialog(stf);  // this does most of the work
   if (returnVal != JFileChooser.APPROVE_OPTION) {
-    println("Open command cancelled by user.");
+    //status("Load cancelled by user.");
     return;
   }
   File file = fc.getSelectedFile();
@@ -240,7 +252,7 @@ void loadFile() {
     String[] lines = LinkM.loadFile( file );
     BlinkMScript script = LinkM.parseScript( lines );
     if( script == null ) {
-      System.err.println("bad format in file");
+      status("bad format in file");
       return;
     }
     
@@ -272,7 +284,7 @@ void loadFile() {
 void saveFile() {
   int returnVal = fc.showSaveDialog(stf);  // this does most of the work
   if( returnVal != JFileChooser.APPROVE_OPTION) {
-    println("Save command cacelled by user.");
+    status("Save command cacelled by user.");
     return;
   }
   File file = fc.getSelectedFile();
@@ -319,7 +331,7 @@ class InputWatcher implements Runnable {
         }
       }
       inputText.setText(s);
-      println(s);
+      status(s);
     }
     inputDialog.hide();
   }
@@ -330,7 +342,7 @@ class InputWatcher implements Runnable {
 // where I can dynamically update the line of text
 void showInputs() {
   if( !connectIfNeeded() ) return;
-  println("watching inputs!...");
+  status("watching inputs!...");
   inputDialog = new JDialog(stf, "Inputs", false);
   inputDialog.addWindowListener( new WindowAdapter() {
       public void windowClosing(WindowEvent e) {
@@ -438,21 +450,31 @@ public class ScriptToolFrame extends JFrame {
   public void createGUI() {
     this.setLayout( new BorderLayout() );
     JPanel editPanel = new JPanel(new BorderLayout());
+    JPanel bottPanel = new JPanel();
     JPanel ctrlPanel = new JPanel();    // contains all controls
     JPanel filePanel = new JPanel();    // contains load/save file
     JPanel blinkmPanel  = new JPanel(); // contains all blinkm ctrls
+    bottPanel.setLayout( new BoxLayout(bottPanel,BoxLayout.Y_AXIS) );
     ctrlPanel.setLayout( new BoxLayout(ctrlPanel,BoxLayout.X_AXIS) );
     filePanel.setLayout( new BoxLayout(filePanel,BoxLayout.X_AXIS) );
     blinkmPanel.setLayout( new BoxLayout(blinkmPanel,BoxLayout.X_AXIS) );
+    
+    statusText = new JLabel("Welcome To BlinkMScriptTool");
+    JPanel statusPanel = new JPanel();
+    statusPanel.setLayout( new BoxLayout(statusPanel,BoxLayout.X_AXIS) );
+    statusPanel.add( statusText );
+    statusPanel.add( Box.createGlue() );
 
     ctrlPanel.add(filePanel);
     ctrlPanel.add(blinkmPanel);
 
-    this.getContentPane().add( editPanel, BorderLayout.CENTER);
-    this.getContentPane().add( ctrlPanel, BorderLayout.SOUTH);
+    bottPanel.add(ctrlPanel);
+    bottPanel.add(statusPanel);
+
+    this.getContentPane().add( editPanel,   BorderLayout.NORTH);
+    this.getContentPane().add( bottPanel,   BorderLayout.SOUTH);
 
     ctrlPanel.setBorder(new EmptyBorder(5,5,5,5));
-    //ctrlPanel.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
     filePanel.setBorder( new CompoundBorder
                          (BorderFactory.createTitledBorder("file"),
@@ -461,10 +483,10 @@ public class ScriptToolFrame extends JFrame {
                            (BorderFactory.createTitledBorder("blinkm"),
                             new EmptyBorder(5,5,5,5)));
 
-    editArea = new JTextArea(strToParse);
+    editArea = new JTextArea(strToParse,24,80);
     editArea.setFont( monoFont );
     editArea.setLineWrap(false);
-    JScrollPane scrollPane = new JScrollPane(editArea);
+    JScrollPane scrollPane = new JScrollPane(editArea, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
     editPanel.add( scrollPane, BorderLayout.CENTER);
   
     MyActionListener mal = new MyActionListener();
@@ -475,7 +497,8 @@ public class ScriptToolFrame extends JFrame {
     JButton sendButton = addButton("Send",    "sendBlinkM", mal, blinkmPanel); 
     JButton recvButton = addButton("Receive", "recvBlinkM", mal, blinkmPanel); 
 
-    blinkmPanel.add(Box.createRigidArea(new Dimension(5,5)));;
+    blinkmPanel.add(Box.createHorizontalStrut(15));
+
     //disconnectButton  = addButton("disconnect","disconnect", mal,blinkmPanel);
     //disconnectButton.setEnabled(false);
     //blinkmPanel.add(Box.createRigidArea(new Dimension(5,5)));;
@@ -483,8 +506,9 @@ public class ScriptToolFrame extends JFrame {
     JButton stopButton = addButton("Stop", "stopScript", mal, blinkmPanel);
     JButton playButton = addButton("Play", "playScript", mal, blinkmPanel);
     
+    blinkmPanel.add(Box.createHorizontalStrut(125));
     JLabel posLabel = new JLabel("<html>play <br>pos:</html>", JLabel.RIGHT);
-    posText = new JTextField("0");
+    posText = new JTextField("0",3);
     posLabel.setFont(monoFontSm);
     posText.setFont(monoFontSm);
     blinkmPanel.add(posLabel);
