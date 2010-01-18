@@ -1,0 +1,7 @@
+Fuse settings for "linkmv1_atmega88.hex"  -- 20100115, Tod E. Kurt, ThingM.com
+----------------------------------------
+FUSE_L = 0xFF
+FUSE_H = 0xDD
+FUSE_E = 0x00
+FUSE_LOCK = 0x0F
+
