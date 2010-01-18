@@ -16,10 +16,18 @@ MCU  = atmega88
 F_CPU   = 12000000	# in Hz
 #F_CPU   = 16000000	# in Hz
 
-#for atmega88
-FUSE_L=0xdf
-FUSE_H=0xde
-FUSE_E=0x00
+# for atmega88  (from arduino diecimila)
+FUSE_L = 0xFF
+FUSE_H = 0xDD
+FUSE_E = 0x00
+FUSE_LOCK = 0x0F
+FUSE_UNLOCK = 0x3F
+
+#for atmega88 (no!)
+#FUSE_L=0xdf
+#FUSE_H=0xde
+#FUSE_E=0x00
+
 # for atmega8
 #FUSE_L=0xdf # see below for fuse values for particular devices
 #FUSE_H=0xdd 
@@ -79,6 +87,15 @@ fuse:
 	@[ "$(FUSE_H)" != "" -a "$(FUSE_L)" != "" ] || \
 		{ echo "*** Edit Makefile and choose values for FUSE_L and FUSE_H!"; exit 1; }
 	$(AVRDUDE) -U hfuse:w:$(FUSE_H):m -U lfuse:w:$(FUSE_L):m -U efuse:w:$(FUSE_E):m
+lock:
+	$(AVRDUDE) -U lock:w:$(FUSE_LOCK):m
+unlock:
+	$(AVRDUDE) -U lock:w:$(FUSE_UNLOCK):m
+
+readfuse: getfuse
+getfuse:
+	$(AVRDUDE) -U hfuse:r:hfuse.txt:h -U lfuse:r:lfuse.txt:h -U efuse:r:efuse.txt:h 
+
 
 # rule for uploading firmware:
 flash: $(TARGET).hex
