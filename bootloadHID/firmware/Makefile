@@ -21,12 +21,7 @@ BOOTLOADER_ADDRESS = 1800
 F_CPU = 12000000
 #F_CPU = 16000000
 
-# for atmega88  (from fusecalc)
-#FUSEL = 0xdf
-#FUSEH = 0xd5
-#FUSEE = 0xf8
-
-
+# from arduino 
 #diecimila.bootloader.low_fuses=0xff
 #diecimila.bootloader.high_fuses=0xdd
 #diecimila.bootloader.extended_fuses=0x00
@@ -35,16 +30,16 @@ F_CPU = 12000000
 #diecimila.bootloader.unlock_bits=0x3F
 #diecimila.bootloader.lock_bits=0x0F
 
-# for atmega88  (from arduino duemilinov)
-FUSEL = 0xFF
-FUSEH = 0xDD
-FUSEE = 0x00
-FUSELOCK = 0x0F
-FUSEUNLOCK = 0x3F
+# for atmega88  (from arduino diecimila)
+FUSE_L = 0xFF
+FUSE_H = 0xDD
+FUSE_E = 0x00
+FUSE_LOCK = 0x0F
+FUSE_UNLOCK = 0x3F
 
 # for atmega8
-#FUSEL = 0xdf
-#FUSEH = 0xc0
+#FUSE_L = 0xdf
+#FUSE_H = 0xc0
 ##FUSEL = 0x9f
 
 # Fuse low byte:
@@ -102,16 +97,16 @@ readflash:
 	$(AVRDUDE) -U flash:r:read.hex:i
 
 fuse:
-	$(AVRDUDE) -U hfuse:w:$(FUSEH):m -U lfuse:w:$(FUSEL):m -U efuse:w:$(FUSEE):m
+	$(AVRDUDE) -U hfuse:w:$(FUSE_H):m -U lfuse:w:$(FUSE_L):m -U efuse:w:$(FUSE_E):m
 
 lock:
-#	$(AVRDUDE) -U lock:w:0x2f:m
-	$(AVRDUDE) -U lock:w:$(FUSELOCK):m
+	$(AVRDUDE) -U lock:w:$(FUSE_LOCK):m
 unlock:
-	$(AVRDUDE) -U lock:w:$(FUSEUNLOCK):m
+	$(AVRDUDE) -U lock:w:$(FUSE_UNLOCK):m
 
-read_fuses:
-	$(AVRDUDE) --rd_fuses
+readfuse: getfuse
+getfuse:
+	$(AVRDUDE) -U hfuse:r:hfuse.txt:h -U lfuse:r:lfuse.txt:h -U efuse:r:efuse.txt:h 
 
 clean:
 	rm -f main.hex main.bin *.o usbdrv/*.o main.s usbdrv/oddebug.s usbdrv/usbdrv.s

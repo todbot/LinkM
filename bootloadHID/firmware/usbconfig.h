@@ -272,4 +272,7 @@ tuningOverflow:
 /* #define USB_INTR_PENDING        GIFR */
 /* #define USB_INTR_PENDING_BIT    INTF0 */
 
+// needed because avr-libc screwed up iom88p.h and iom168p.h
+#define USB_INTR_VECTOR            INT0_vect
+
 #endif /* __usbconfig_h_included__ */
