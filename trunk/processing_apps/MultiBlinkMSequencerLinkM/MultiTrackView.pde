@@ -33,7 +33,7 @@ public class MultiTrackView
   private int spacerHalf = spacerWidth/2;
   private int w,h;                           // dimensions of me
   private int sx = 52;                   // aka "trackX", offset from left edge
-  private int previewWidth = 20;           
+  private int previewWidth = 19;           
   private int sliceWidth = 16;
   private int trackHeight = 20;              // height of each track 
   private int trackWidth;
@@ -70,7 +70,7 @@ public class MultiTrackView
     previewX =  sx + trackWidth + 10;
 
     this.font = silkfont;  // global in main class
-    previewAlpha = loadImage("alpha_channel.png");
+    previewAlpha = loadImage("radial-gradient.png");//"alpha_channel.png");
 
     // initialize the tracks
     tracks = new Track[numTracks];
@@ -252,7 +252,7 @@ public class MultiTrackView
       int ty =  spacerWidth + scrubHeight + (i*trackHeight);
       g.setColor( previewColors[i] );
       g.fillRect( previewX , ty, previewWidth-1 , trackHeight-spacerWidth);
-      image(previewAlpha, previewX,ty);
+      g.drawImage(previewAlpha.getImage(), previewX,ty,null);
     }
   }
   

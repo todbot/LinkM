@@ -64,11 +64,12 @@ Font silkfont;
 JDialog mf;  // the main holder of the app
 JColorChooser colorChooser;
 MultiTrackView multitrack;
-//TrackView trackview;
 ButtonPanel buttonPanel;
 JPanel connectPanel;
 JFileChooser fc;
 JLabel statusLabel;
+JLabel currChanIdLabel;
+JLabel currChanLabel;
 
 // number of slices in the timeline == number of script lines written to BlinkM
 int numSlices = 48;  
@@ -168,7 +169,7 @@ void draw() {
     mf.toFront();                   // bring ours forward  
   }
   long millis = System.currentTimeMillis();
-  if( frameCount > 30 && !connected && ((millis-lastConnectCheck) > 5000) ) {
+  if( frameCount > 10 && !connected && ((millis-lastConnectCheck) > 5000) ) {
     connect();
     lastConnectCheck = millis;
   }
@@ -209,9 +210,6 @@ void setupGUI() {
 
   ChannelsTop chtop = new ChannelsTop();
   multitrack        = new MultiTrackView( numTracks, numSlices, mainWidth,300);
-
-  //TimelineTop ttop  = new TimelineTop();
-  //trackview         = new TrackView( multitrack, mainWidth, 100 );
 
   // controlsPanel contains colorpicker and all buttons
   JPanel controlsPanel = makeControlsPanel();
@@ -347,6 +345,15 @@ void setupMenus(Frame f) {
       void actionPerformed(ActionEvent e) {
         String cmd = e.getActionCommand();
         println("action listener: "+cmd);
+        if( cmd.equals("Load All Scripts") ) {
+          loadAllTracks();
+        } else if( cmd.equals("Save All Scripts") ) { 
+          saveAllTracks();
+        } else if( cmd.equals("Load One Script") ) {
+          loadTrack();
+        } else if( cmd.equals("Save One Script") ) {
+          saveTrack();
+        }
       }
     };
   
@@ -356,23 +363,24 @@ void setupMenus(Frame f) {
   Menu editMenu = new Menu("Edit");
   
   //create all the Menu Items and add the menuListener to check their state.
-  MenuItem item1 = new MenuItem("Load Scripts File");
-  MenuItem item2 = new MenuItem("Save Scripts File");
-  MenuItem item3 = new MenuItem("Load One Script");
-  MenuItem item4 = new MenuItem("Save One Script");
-  MenuItem item5 = new MenuItem("Black");
-  item1.addActionListener(menual);
-  item2.addActionListener(menual);
-  item3.addActionListener(menual);
-  item4.addActionListener(menual);
-  item5.addActionListener(menual);
+  MenuItem itemf1 = new MenuItem("Load All Scripts");
+  MenuItem itemf2 = new MenuItem("Save All Scripts");
+  MenuItem itemf3 = new MenuItem("Load One Script");
+  MenuItem itemf4 = new MenuItem("Save One Script");
+
+  MenuItem iteme1 = new MenuItem("Black");
+  itemf1.addActionListener(menual);
+  itemf2.addActionListener(menual);
+  itemf3.addActionListener(menual);
+  itemf4.addActionListener(menual);
+  iteme1.addActionListener(menual);
   
-  fileMenu.add(item1);
-  fileMenu.add(item2);
-  fileMenu.add(item3);
-  fileMenu.add(item4);
+  fileMenu.add(itemf1);
+  fileMenu.add(itemf2);
+  fileMenu.add(itemf3);
+  fileMenu.add(itemf4);
   
-  editMenu.add(item5);
+  editMenu.add(iteme1);
   
   menubar.add(fileMenu);
   menubar.add(editMenu);
@@ -421,6 +429,7 @@ public boolean connect() {
     }
   } catch(IOException ioe) {
     println("connect: no linkm?  "+ioe);
+    /*
     Object[] options = {"Try again", "Run Disconnected"};
     int n = JOptionPane.showOptionDialog(mf,
                                          "No LinkM found.\n"+
@@ -433,6 +442,14 @@ public boolean connect() {
                                          options,
                                          options[1]);
     if( n != 0 ) disconnectedMode = true;
+    */
+    JOptionPane.showMessageDialog(mf,
+                                  "No LinkM found.\n"+
+                                  "Plug LinkM in at any time and "+
+                                  "it will auto-connect.",
+                                  "LinkM Not Found",
+                                  JOptionPane.WARNING_MESSAGE);
+    disconnectedMode = true;
     return false;
   }
 
