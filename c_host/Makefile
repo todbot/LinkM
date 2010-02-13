@@ -14,28 +14,33 @@
 # Please read the definitions below and edit them as appropriate for your
 # system:
 
+# this almost works for os x, but bleagh
+#USBLIBS  = `libusb-legacy-config --libs | perl -nle '/L(.+?)\s+(.+)/; print "\x$1/libusb.a \$2"'`
+
 TARGET=linkm-tool
 
-# Use the following 3 lines on Unix and Mac OS X:
-#USBFLAGS=   `libusb-config --cflags`
-#USBLIBS=    `libusb-config --libs`
-
-USBFLAGS=   `libusb-legacy-config --cflags`
-USBLIBS=    /opt/local/lib/libusb-legacy/libusb.a -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
+# Mac OS X: "sudo port install libusb-legacy" using MacPorts
+# Use the following 5 lines Mac OS X (and almost unix):
+USBFLAGS =   `libusb-legacy-config --cflags`
+#USBLIBS  =   `libusb-legacy-config --libs`
+USBLIBS  =    /opt/local/lib/libusb-legacy/libusb.a
+USBLIBS +=    -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
+OS_CFLAGS= -arch i386 -arch x86_64 
+OS_LIBS= $(OS_CFLAGS)
 EXE_SUFFIX=
 
 # Use the following 3 lines on Windows and comment out the 3 above:
 #USBFLAGS=
 #USBLIBS=    -lhid -lusb -lsetupapi
+#OS_CFLAGS=
+#OS_LIBS=
 #EXE_SUFFIX= .exe
 
 CC=				gcc
-ARCHS=          -arch i386 -arch x86_64 
-CFLAGS=			$(ARCHS) -O -Wall -std=gnu99  $(USBFLAGS) 
-LIBS=			$(ARCHS) $(USBLIBS) 
-#CFLAGS=		-arch i386 -arch ppc -O -Wall -std=gnu99  $(USBFLAGS) 
-#LIBS=			-arch i386 -arch ppc $(USBLIBS)
-#FIXME: figure out 'arch' better
+ARCHS=          
+CFLAGS=			$(OS_CFLAGS) -O -Wall -std=gnu99  $(USBFLAGS) 
+LIBS=			$(OS_LIBS) $(USBLIBS) 
+
 
 OBJ=		$(TARGET).o linkm-lib.o hiddata.o 
 
@@ -54,3 +59,7 @@ clean:
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o
+
+# shows shared lib usage on Mac OS X
+otool:
+	otool -L $(TARGET)
