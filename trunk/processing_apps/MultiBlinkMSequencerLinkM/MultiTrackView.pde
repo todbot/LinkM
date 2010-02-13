@@ -13,6 +13,8 @@
 public class MultiTrackView
   extends JPanel implements MouseListener, MouseMotionListener {
 
+  PImage previewAlpha;  // oi
+
   Track[] tracks;
   Color[] previewColors;
   int previewFadespeed = 25;
@@ -30,11 +32,10 @@ public class MultiTrackView
   private int spacerWidth = 2;              // width between cells
   private int spacerHalf = spacerWidth/2;
   private int w,h;                           // dimensions of me
-  private int sx = 52;                      // aka "trackX", offs from left edge
-  private int previewWidth = 30;           
-  private int sliceWidth = 20;
-  //private int trackHeight = 15;                // height of each track 
-  private int trackHeight = 20;                // height of each track 
+  private int sx = 52;                   // aka "trackX", offset from left edge
+  private int previewWidth = 20;           
+  private int sliceWidth = 16;
+  private int trackHeight = 20;              // height of each track 
   private int trackWidth;
   private int previewX;
   private Color playHeadC = new Color(255, 0, 0);
@@ -47,7 +48,7 @@ public class MultiTrackView
 
   private long startTime = 0;             // debug, start time of play
 
-  TrackView tv;
+  //TrackView tv;
 
   /**
    * @param numTracks  number of tracks in this multitrack
@@ -65,12 +66,11 @@ public class MultiTrackView
     addMouseListener(this);
     addMouseMotionListener(this);
 
-    //trackWidth = w - sx - previewWidth ;
-    //previewX =  w - previewWidth - 10;
     trackWidth = numSlices * sliceWidth;
     previewX =  sx + trackWidth + 10;
 
     this.font = silkfont;  // global in main class
+    previewAlpha = loadImage("alpha_channel.png");
 
     // initialize the tracks
     tracks = new Track[numTracks];
@@ -89,9 +89,11 @@ public class MultiTrackView
     reset();
   }
 
+  /*
   public void addTrackView( TrackView tview ) {
     tv = tview;
   }
+  */
 
   /**
    * @Override
@@ -105,7 +107,6 @@ public class MultiTrackView
     g.setColor( cBgDarkGray );
     g.fillRect( 0,0, getWidth(), getHeight() );
 
-
     g.setFont(font);
 
     drawTracks(g);
@@ -114,7 +115,7 @@ public class MultiTrackView
 
     drawPreview(g);
 
-    drawTrackMarker(g);
+    //drawTrackMarker(g);
 
     drawPlayHead(g, playHeadCurr);   // it goes on top, so it gets painted last
    
@@ -135,7 +136,11 @@ public class MultiTrackView
 
   void drawTrack(Graphics2D g, int tracknum, int x,int y, int w, int h ) {
     //l.debug("drawTrack: i:"+tracknum+",x:"+x+",y:"+y+",w:"+w+",h:"+h);
+    //    g.setColor( cBgDarkGray );
     g.setColor( cBgDarkGray );
+    if( tracknum == currTrack ) {
+      g.setColor( Color.black );
+    }
     g.fillRect( x, y, w, h);
     Track track = tracks[tracknum];
 
@@ -143,13 +148,15 @@ public class MultiTrackView
     for( int i=0; i<numSlices; i++) {
       Color c = track.slices[i];
       g.setColor( c );
-      g.fillRect( x+1, y+1, sliceWidth-2, h-2 );
+      g.fillRect( x+2, y+2, sliceWidth-4, h-4 );
+
       boolean sel = track.selects[i];
       if( track.selects[i] ) { // if selected 
         g.setStroke( new BasicStroke(1.1f) );
         g.setColor(cHighLight);
         g.drawRect(x, y, sliceWidth-1, h-1 );
       }
+
       x += sliceWidth; // go to next slice
     }
   }
@@ -192,9 +199,9 @@ public class MultiTrackView
           g.fillRect( 26, ty+1+tnum*trackHeight, 19,th-1 ); // addr butt insides
           g.setColor( cBlack );
           int offs = 26;
-          offs = ( blinkmAddr < 100 ) ? offs += 6 : offs;
-          offs = ( blinkmAddr < 10 )  ? offs += 5 : offs;
-          g.drawString( ""+blinkmAddr, offs, ty+9+tnum*trackHeight);// addr text
+          offs = ( blinkmAddr < 100 ) ? offs += 3 : offs;
+          offs = ( blinkmAddr < 10 )  ? offs += 2 : offs;
+          g.drawString( ""+blinkmAddr, offs, ty+12+tnum*trackHeight);//addr text
         }
       }
     }
@@ -222,7 +229,6 @@ public class MultiTrackView
     p.addPoint((int)playHeadCurr - 5, 5);
     p.addPoint((int)playHeadCurr - 5, 0);    
     g.fillPolygon(p);
-
   }
   
   /**
@@ -235,7 +241,7 @@ public class MultiTrackView
       int rt = ct.getRed();
       int gt = ct.getGreen();
       int bt = ct.getBlue();
-      int rn = c.getRed();  // 'n' for now
+      int rn = c.getRed();     // 'rn' for 'red now'
       int gn = c.getGreen();
       int bn = c.getBlue();
       rn = color_slide( rn,rt, previewFadespeed);
@@ -246,10 +252,13 @@ public class MultiTrackView
       int ty =  spacerWidth + scrubHeight + (i*trackHeight);
       g.setColor( previewColors[i] );
       g.fillRect( previewX , ty, previewWidth-1 , trackHeight-spacerWidth);
+      image(previewAlpha, previewX,ty);
     }
   }
   
-
+  /**
+   * emulate blinkm firmware color fading
+   */
   int color_slide(int curr, int dest, int step) {
     int diff = curr - dest;
     if(diff < 0)  diff = -diff;
@@ -308,7 +317,7 @@ public class MultiTrackView
       previewFadespeed = 1000;
     }
 
-    if( tv!=null) tv.tick(millisSinceLastTick);
+    //if( tv!=null) tv.tick(millisSinceLastTick);
   }
 
   /**
@@ -318,7 +327,7 @@ public class MultiTrackView
     l.debug("starting to play for dur: " + durationCurrent);
     playing = true;
     startTime = System.currentTimeMillis();
-    if( tv!=null) tv.play();
+    //if( tv!=null) tv.play();
   }
 
   /**
@@ -328,7 +337,7 @@ public class MultiTrackView
     l.debug("stop"); 
     playing = false;
     l.debug("elapsedTime:"+(System.currentTimeMillis() - startTime));
-    if( tv!=null) tv.stop();
+    //if( tv!=null) tv.stop();
   }
 
   /**
@@ -338,23 +347,23 @@ public class MultiTrackView
     stop();
     playHeadCurr = sx;
     repaint();
-    if( tv!=null) tv.reset();
+    //if( tv!=null) tv.reset();
   }
 
   /**
    * Set all timeslices to be inactive
    * FIXME: hack
    */
-  public void allOff() {
+  public void deselectAllTracks() {
     // reset timeslice selections
     for( int i=0; i<numTracks; i++) { 
-      allOffTrack( i );
+      deselectTrack( i );
     }
   }
   /**
    * Sets all timeslices for a particular track to be not selected
    */
-  public void allOffTrack( int trackindex ) {
+  public void deselectTrack( int trackindex ) {
     for( int i=0; i<numSlices; i++) {
       tracks[ trackindex ].selects[i] = false;
     }
@@ -364,11 +373,30 @@ public class MultiTrackView
     for( int i=0; i< tracks.length; i++) {
       tracks[i].active = false;
     }
-    allOff();
+    deselectAllTracks();
   }
 
   public void toggleTrackEnable(int track) {
     tracks[track].active = !tracks[track].active;
+  }
+
+  public void changeTrack(int newtracknum) {
+    if( newtracknum < 0 ) newtracknum = 0;
+    if( newtracknum == numTracks ) newtracknum = numTracks - 1;
+    if( newtracknum != currTrack ) {
+      copySelects(newtracknum, currTrack);
+      deselectTrack(currTrack);
+      currTrack = newtracknum;
+      repaint();
+    }
+  }
+
+  public void nextTrack() {
+    changeTrack( currTrack + 1 );
+  }
+
+  public void prevTrack() {
+    changeTrack( currTrack - 1 );
   }
 
   /** 
@@ -385,6 +413,34 @@ public class MultiTrackView
   public void selectSlice( int tracknum, int slicenum, boolean state ) {
     tracks[tracknum].selects[slicenum] = state;
     repaint();
+  }
+
+  public void nextSlice() {
+    int slicenum=-1;
+    for( int i=0; i<numSlices; i++) {
+      if( tracks[currTrack].selects[i] == true ) { 
+        slicenum = i;
+      }
+    }
+    if( slicenum>=0 ) {
+      selectSlice(currTrack, slicenum,false);
+      int nextslice = (slicenum==numSlices-1)?numSlices-1:slicenum+1;
+      selectSlice(currTrack, nextslice,true);
+    }
+  }
+
+  public void prevSlice() {
+    int slicenum=-1;
+    for( int i=0; i<numSlices; i++) {
+      if( tracks[currTrack].selects[i] == true ) { 
+        slicenum = i;
+      }
+    }
+    if( slicenum>0 ) {
+      selectSlice(currTrack, slicenum,false);
+      int nextslice = (slicenum==0) ? 0 : slicenum-1;
+      selectSlice(currTrack, nextslice,true);
+    }              
   }
 
   public void toggleSlice( int slicenum ) { 
@@ -490,10 +546,10 @@ public class MultiTrackView
    */
   public boolean isPlayheadClicked(Point mp) {
     Polygon p = new Polygon();  // creating bounding box for playhead
-    p.addPoint((int)playHeadCurr - 3, 0);
-    p.addPoint((int)playHeadCurr + 3, 0);
-    p.addPoint((int)playHeadCurr + 3, getHeight());
-    p.addPoint((int)playHeadCurr - 3, getHeight());
+    p.addPoint((int)playHeadCurr - 5, 0);
+    p.addPoint((int)playHeadCurr + 5, 0);
+    p.addPoint((int)playHeadCurr + 5, getHeight());
+    p.addPoint((int)playHeadCurr - 5, getHeight());
 
     return p.contains(mp);  // check if mouseclick on playhead
   }
@@ -507,9 +563,10 @@ public class MultiTrackView
   }
 
   public void mousePressed(MouseEvent e) {
-    l.debug("MultiTrack.mousePressed: "+e.getPoint());
+    //l.debug("MultiTrackView.mousePressed: "+e.getPoint());
     Point mp = e.getPoint();
     mouseClickedPt = mp;
+    requestFocus();
 
     // playhead hits handled fully in mouseDragged
     // record location of hit in mouseClickedPt and go on
@@ -530,8 +587,8 @@ public class MultiTrackView
       else if( intrack && (mp.x >= 26 && mp.x <= 26+20 ) ) // addr button
         doTrackDialog(j);
       else if( intrack ) {                         // just track selection
-        copySelects(j, currTrack);
-        allOffTrack( currTrack );
+        //copySelects(j, currTrack);
+        deselectTrack( currTrack );
         currTrack = j;  
       }
     }
@@ -544,6 +601,19 @@ public class MultiTrackView
     int clickCnt = e.getClickCount();
 
     playheadClicked = false;
+
+    boolean intrack = 
+      (mouseClickedPt.y > currTrack*trackHeight + scrubHeight) && 
+      (mouseClickedPt.y < (currTrack+1)*trackHeight + scrubHeight) ;
+
+    if( intrack ) {
+      for( int i=0; i<numSlices; i++) {
+        if( isSliceHit( mouseReleasedPt.x, i) ) {
+          selectSlice(currTrack, i,true);
+        }
+      }
+    }
+
     /*
     // snap playhead to closest time slice
     for( int j=0; j<numTracks; j++ ) {
@@ -577,18 +647,21 @@ public class MultiTrackView
         playHeadCurr = sx;
       else if (playHeadCurr > trackWidth)
         playHeadCurr = trackWidth;
-      if( tv!=null ) tv.playHeadCurr = playHeadCurr;
+      //if( tv!=null ) tv.playHeadCurr = playHeadCurr;
     } 
     else {
-      /*
-      // make multiple selection of timeslices on mousedrag
-      int x = e.getPoint().x;
-      for( int i=0; i<numSlices; i++) {
-        if( isSliceHitRanged( x, mouseClickedPt.x, i) ) {
-          selectSlice(i,true);
+      boolean intrack = 
+        (mouseClickedPt.y > currTrack*trackHeight + scrubHeight) && 
+        (mouseClickedPt.y < (currTrack+1)*trackHeight + scrubHeight) ;
+      if( intrack ) {
+        // make multiple selection of timeslices on mousedrag
+        int x = e.getPoint().x;
+        for( int i=0; i<numSlices; i++) {
+          if( isSliceHitRanged( x, mouseClickedPt.x, i) ) {
+            selectSlice(currTrack, i,true);
+          }
         }
-      }
-      */
+      } // intrack
     }
 
     repaint();
@@ -624,4 +697,5 @@ public class MultiTrackView
     }    
   }
 
+ 
 }

@@ -24,12 +24,12 @@ public class TimelineTop extends JPanel {
 
         
     add( Box.createRigidArea(new Dimension(25,0) ) );
-
+    /*
     ImageIcon tlText = new Util().createImageIcon("blinkm_text_timeline.gif",
                                                   "TIMELINE");
     JLabel tlLabel = new JLabel(tlText);
     this.add(tlLabel); //, BorderLayout.WEST);
-        
+    */  
     add( Box.createRigidArea(new Dimension(50,0) ) );
 
     // add loop label
@@ -81,6 +81,7 @@ public class TimelineTop extends JPanel {
 
     add( Box.createRigidArea(new Dimension(5,0) ) );
 
+    /*
     JButton loadOneBtn = new Util().makeButton("blinkm_butn_loadall_on.gif", 
                                                "blinkm_butn_loadall_hov.gif", 
                                                "LoadOne", cBgLightGray);    
@@ -126,7 +127,7 @@ public class TimelineTop extends JPanel {
         }
       }
       );
-
+    */
   }
     
 }
