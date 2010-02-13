@@ -5,9 +5,11 @@
  */
 public class ButtonPanel extends JPanel {
 
-  JButton uploadBtn, downloadBtn;
   JButton playBtn;
-  JButton chgAddrBtn;
+  JButton downloadBtn, uploadBtn;
+  JButton openBtn, saveBtn;
+  JComboBox durChoice;
+
   private ImageIcon iconPlay;
   private ImageIcon iconPlayHov;
   private ImageIcon iconStop;
@@ -16,121 +18,164 @@ public class ButtonPanel extends JPanel {
   /**
    *
    */
-  public ButtonPanel(int aWidth, int aHeight) {
-    //BoxLayout layout =  new BoxLayout( this, BoxLayout.Y_AXIS);
-    //layout.
-    //this.setLayout( layout );
-    
-    //this.setBorder(BorderFactory.createCompoundBorder(  // debug
-    // BorderFactory.createLineBorder(Color.red),this.getBorder()));
-    
-    this.setPreferredSize(new Dimension(aWidth,aHeight));
-    this.setBackground(cBgDarkGray);
-    
+  public ButtonPanel() { //int aWidth, int aHeight) {
+    //setPreferredSize(new Dimension(aWidth,aHeight));
+    //setMaximumSize(new Dimension(aWidth,aHeight));
+
+    setBorder(BorderFactory.createCompoundBorder(  // debug
+    BorderFactory.createLineBorder(Color.red),this.getBorder()));
+
     // add play button
     makePlayButton();
-    //pb.b.setAlignmentX(Component.CENTER_ALIGNMENT);
-    
+
+    // add download button
+    downloadBtn = new Util().makeButton("blinkm_butn_download_normal.gif",
+                                        "blinkm_butn_download_hover.gif",
+                                        "Download from BlinkMs", cBgDarkGray);
+    downloadBtn.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent ae) {
+          doDownload();
+        }
+      });
+
     // add upload button
-    uploadBtn = new Util().makeButton("blinkm_butn_upload_on_2.png",
-                                      "blinkm_butn_upload_hov_2.png",
-                                      "Upload to BlinkM", cBgDarkGray);
-    //burnBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // action listener for burn button
+    uploadBtn = new Util().makeButton("blinkm_butn_upload_normal.gif",
+                                      "blinkm_butn_upload_hover.gif",
+                                      "Upload to BlinkMs", cBgDarkGray);
     uploadBtn.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
           new BurnDialog(mf, uploadBtn);
         }
       });
-    downloadBtn = new Util().makeButton("blinkm_butn_download_on_2.png",
-                                        "blinkm_butn_download_hov_2.png",
-                                        "Download from BlinkM", cBgDarkGray);
-    //burnBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-    // action listener for burn button
-    downloadBtn.addActionListener(new ActionListener() {
+    
+    // add open button
+    openBtn = new Util().makeButton("blinkm_butn_open_normal.gif",
+                                    "blinkm_butn_open_hover.gif",
+                                    "Open Sequences File", cBgDarkGray);
+    openBtn.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
-          doDownload();
-          //new BurnDialog(mf,burnBtn);
+            loadAllTracks();
         }
       });
     
-    ImageIcon connImg = new Util().createImageIcon("blinkm_separator_horiz_larg.gif", 
-                                                   "separator horizontal");
-    //connImg.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // add save button
+    saveBtn = new Util().makeButton("blinkm_butn_save_normal.gif",
+                                    "blinkm_butn_save_hover.gif",
+                                    "Save Sequences File", cBgDarkGray);
+    saveBtn.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent ae) {
+            saveAllTracks();
+        }
+      });
     
-    // add Help button
-    JButton helpBtn = new Util().makeButton("blinkm_butn_help_on.gif", 
-                                            "blinkm_butn_help_hov.gif", 
-                                            "Help", cBgDarkGray);
-    //helpBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-    helpBtn.addActionListener(new ActionListener() {
-        public void actionPerformed(ActionEvent ae) {
-          l.debug("help...");
-          p.link("http://thingm.com/products/blinkm/help", "_blank"); 
-        }    
-      }
-      );
-    // add About button
-    JButton aboutBtn = new Util().makeButton("blinkm_butn_about_on.gif", 
-                                             "blinkm_butn_about_hov.gif", 
-                                             "About", cBgDarkGray);
-    aboutBtn.addActionListener(new ActionListener() {
-        public void actionPerformed(ActionEvent ae) {
-          l.debug("help...");
-          p.link("http://thingm.com/products/blinkm", "_blank"); 
-        }    
-      }
-      );
 
-    JButton chgAddrBtn = new JButton("Change BlinkM Address");
-    chgAddrBtn.addActionListener(new ActionListener() {
-        public void actionPerformed(ActionEvent ae) {
-          l.debug("change addr");
-          doAddressChange();
-        }    
-      }
-      );
+    JPanel loopPanel = makeLoopControlsPanel();
 
+    JPanel playBtnPanel = new JPanel();
+    playBtnPanel.setBackground(cBgDarkGray);
+    playBtnPanel.add( playBtn);
 
-    JPanel updnPanel = new JPanel();
+    JPanel updnPanel = new JPanel(); // new FlowLayout(FlowLayout.LEFT,0,0) );
     updnPanel.setBackground(cBgDarkGray);
     updnPanel.add(downloadBtn);
     updnPanel.add(uploadBtn);
+    //updnPanel.setBorder(BorderFactory.createCompoundBorder(  // debug
+    //BorderFactory.createLineBorder(Color.red),updnPanel.getBorder()));
 
-    JPanel minibuttonPanel = new JPanel();
-    BoxLayout minibuttonLayout= new BoxLayout(minibuttonPanel,BoxLayout.X_AXIS);
-    minibuttonPanel.setLayout(minibuttonLayout);
-    minibuttonPanel.setBackground(cBgDarkGray);
-    minibuttonPanel.setPreferredSize(new Dimension(aWidth, 50)); //FIXME
-
-    minibuttonPanel.add( chgAddrBtn);
-    minibuttonPanel.add( Box.createHorizontalGlue() );
-    minibuttonPanel.add(helpBtn);
-    minibuttonPanel.add(aboutBtn);
-    minibuttonPanel.add(Box.createRigidArea(new Dimension(10,0)));
+    JPanel opensavePanel = new JPanel();
+    opensavePanel.setBackground(cBgDarkGray);
+    opensavePanel.add(openBtn);
+    opensavePanel.add(saveBtn);
 
 
-    this.add(playBtn);  // why did i do this?
+    this.setBackground(cBgDarkGray);
+    this.setLayout( new BoxLayout(this, BoxLayout.Y_AXIS));
+    this.add(loopPanel);
+    this.add(Box.createVerticalStrut(5));
+    this.add(playBtnPanel); 
+    this.add(Box.createVerticalStrut(5));
     this.add(updnPanel);
-    this.add(Box.createRigidArea(new Dimension(0,5)));
-    this.add(new JLabel(connImg));      // add separator
-    this.add(Box.createRigidArea(new Dimension(0,5)));
-    this.add(minibuttonPanel);
+    this.add(Box.createVerticalStrut(5));
+    this.add(opensavePanel);
+
   }
-  
+
+  /**
+   *
+   */
+  public JPanel makeLoopControlsPanel() {
+    // add Loop Check Box
+    //ImageIcon loopCheckIcn= new Util().createImageIcon("blinkm_text_loop.gif",
+    //                                                    "Loop");
+    //JLabel loopCheckLabel = new JLabel(loopCheckIcn);
+    JLabel loopCheckLabel = new JLabel("LOOP");
+    loopCheckLabel.setForeground(cBgMidGray);
+
+    JCheckBox loopCheckbox = new JCheckBox("", true);
+    loopCheckbox.setBackground(cBgMidGray);
+    ActionListener actionListener = new ActionListener() {
+        public void actionPerformed(ActionEvent actionEvent) {
+          AbstractButton abButton = (AbstractButton) actionEvent.getSource();
+          boolean looping = abButton.getModel().isSelected();
+          multitrack.looping = looping;
+        }
+      };
+    loopCheckbox.addActionListener(actionListener);
+    
+    // add Loop speed label
+    //ImageIcon loopIcn=new Util().createImageIcon("blinkm_text_loop_speed.gif",
+    //                                               "Loop Speed");
+    JLabel loopLabel = new JLabel("LOOP SPEED");
+    loopLabel.setForeground(cBgMidGray);
+
+    durChoice = new JComboBox();
+    for( int i=0; i< timings.length; i++ ) {
+        durChoice.addItem( timings[i].duration+ " seconds");  
+    }
+
+    // action listener for duration choice pull down
+    durChoice.setBackground(cBgMidGray);
+    //durChoice.setForeground(cBgMidGray);
+    durChoice.setMaximumSize( durChoice.getPreferredSize() ); 
+    durChoice.addItemListener(new ItemListener() {
+        public void itemStateChanged(ItemEvent ie) {
+          int indx = durChoice.getSelectedIndex();  // FIXME
+          durationCurrent = timings[indx].duration;
+          prepareForPreview(durationCurrent);
+        }        
+      }
+      );
+    
+    JPanel loopPanel = new JPanel();
+    loopPanel.setLayout(new BoxLayout( loopPanel, BoxLayout.X_AXIS) );
+    loopPanel.setBackground(cBgDarkGray);
+    loopPanel.add(Box.createHorizontalGlue());
+    loopPanel.add(loopCheckLabel);
+    loopPanel.add(Box.createHorizontalStrut(5));
+    loopPanel.add(loopCheckbox);
+    loopPanel.add(Box.createHorizontalStrut(10));
+    loopPanel.add(loopLabel);
+    loopPanel.add(Box.createHorizontalStrut(5));
+    loopPanel.add(durChoice);
+    loopPanel.add(Box.createHorizontalStrut(25));
+
+    return loopPanel;
+  }
+
 
   /**
    *
    */
   public void makePlayButton() { 
     
-    iconPlay    = new Util().createImageIcon("blinkm_butn_play_on_2.png", 
+    iconPlay    = new Util().createImageIcon("blinkm_butn_play_normal.gif", 
                                              "Play"); 
-    iconPlayHov = new Util().createImageIcon("blinkm_butn_play_hov_2.png", 
+    iconPlayHov = new Util().createImageIcon("blinkm_butn_play_hover.gif", 
                                              "Play"); 
-    iconStop    = new Util().createImageIcon("blinkm_butn_stop_on_2.png", 
+    // FIXME FIXME FIXME: need blinkm_butn_stop_{normal,hover}.gif
+    iconStop    = new Util().createImageIcon("blinkm_butn_play_normal.gif",  
                                              "Stop"); 
-    iconStopHov = new Util().createImageIcon("blinkm_butn_stop_hov_2.png", 
+    iconStopHov = new Util().createImageIcon("blinkm_butn_play_normal.gif", 
                                              "Stop"); 
     playBtn = new JButton();
     playBtn.setOpaque(true);
@@ -155,7 +200,7 @@ public class ButtonPanel extends JPanel {
           l.debug("Playing: " + multitrack.playing);
           setPlayIcon();
 
-          multitrack.allOff();  // hmmm.
+          multitrack.deselectAllTracks();  // hmmm.
 
         }
       });

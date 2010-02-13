@@ -25,7 +25,7 @@ public class ChannelsTop extends JPanel {
         
     add(Box.createHorizontalGlue());  // boing
 
-        
+    /*        
     buttonLegend = new JLabel();
     add(buttonLegend);
 
@@ -38,7 +38,7 @@ public class ChannelsTop extends JPanel {
                                          "blinkm_butn_saveall_hov.gif", 
                                          "SaveAll", cBgLightGray);
     add(saveAllBtn);
-        
+      
     add( Box.createRigidArea(new Dimension(15,0) ) );
 
 
@@ -75,7 +75,7 @@ public class ChannelsTop extends JPanel {
         }    
       }
       );
-
+    */
   }
     
 }

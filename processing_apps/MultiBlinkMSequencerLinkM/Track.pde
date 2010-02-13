@@ -5,6 +5,7 @@
  */
 public class Track {
 
+  String label;
   int numSlices;
 
   Color[] slices;
