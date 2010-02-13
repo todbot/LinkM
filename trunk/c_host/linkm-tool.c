@@ -72,36 +72,41 @@ void usage(char *myName)
 "Usage: \n"
 "  %s <cmd> [options]\n"
 "where <cmd> is one of:\n"
-"  --cmd <blinkmcmd> Send a blinkm command  \n"
-"  --off             Stop script & turn off blinkm at address (or all) \n"
-"  --on              Play startup script at address (or all) \n"
-"  --play <n>        Play light script N \n"
-"  --stop            Stop playing light script \n"
-"  --fadespeed <n>   Set BlinkM fadespeed\n"
-"  --getversion      Gets BlinkM version \n"
-"  --setaddr <newa>  Set address of blinkm at address 'addr' to 'newa' \n"
-"  --random <n>      Send N random colors to blinkm\n"
-"  --i2cscan         Scan I2c bus for devices  \n"
-"  --i2enable <0|1>  Enable or disable the I2C bus (for connecting devices) \n"
-"  --upload          Upload a light script to blinkm (reqs addr & file) \n"
-"  --download <n>    Download light script n from blinkm (reqs addr & file) \n"
-"  --readinputs      Read inputs (on MaxM)\n"
-"  --linkmcmd        Send a raw linkm command  \n"
-"  --linkmversion    Get LinkM version \n"
-"  --statled <0|1>   Turn on or off status LED  \n"
+"  --cmd <blinkmcmd>  Send a blinkm command  \n"
+"  --off              Stop script & turn off blinkm at address (or all) \n"
+"  --on               Play startup script at address (or all) \n"
+"  --play <n>         Play light script N \n"
+"  --stop             Stop playing light script \n"
+"  --color 'rr,gg,bb' Fade to color rr,gg,bb\n"
+"  --fadespeed <n>    Set BlinkM fadespeed\n"
+"  --getversion       Gets BlinkM version \n"
+"  --setaddr <newa>   Set address of blinkm at address 'addr' to 'newa' \n"
+"  --random <n>       Send N random colors to blinkm\n"
+"  --i2cscan          Scan I2c bus for devices  \n"
+"  --i2enable <0|1>   Enable or disable the I2C bus (for connecting devices) \n"
+"  --upload           Upload a light script to blinkm (reqs addr & file) \n"
+"  --download <n>     Download light script n from blinkm (reqs addr & file) \n"
+"  --readinputs       Read inputs (on MaxM)\n"
+"  --linkmcmd         Send a raw linkm command  \n"
+"  --linkmversion     Get LinkM version \n"
+"  --statled <0|1>    Turn on or off status LED  \n"
 "  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params \n"
-"  --linkmeesave     Save playerset and other parms for later \n"
-"  --linkmeeload     Load playerset and other parms \n"
+"  --linkmeesave      Save playerset and other parms for later \n"
+"  --linkmeeload      Load playerset and other parms \n"
+"  --gobootload       Set LinkM so next insertion it comes up in bootloaer\n"
+"\n"
 "and [options] are:\n"
 "  -h, --help                   Print this help message\n"
 "  -a addr, --addr=i2caddr      I2C address for command (default 0)\n"
 "  -f file, --afile=file        Read or save to this file\n"
 "  -m ms,   --miilis=millis     Set millisecs betwen actions (default 100)\n"
 "  -v, --verbose                verbose debugging msgs\n"
+"\n"
 "Examples:\n"
 "  linkm-tool --off                            # stop & turn off all blinkms\n"
-"  linkm-tool -a 9 --cmd \"'c',0xff,0x00,0xff\"  # fade to magenta \n"
-"  linkm-tool -a 9 --download 5                  # download script #5\n" 
+"  linkm-tool --color '0xff,0xff,0x00'         # fade to yellow \n"
+"  linkm-tool -a 9 --cmd \"'c',0xff,0x00,0xff\"  # fade to purple \n"
+"  linkm-tool -a 9 --download 5                # download script #5\n" 
 "  linkm-tool --playset \"1,0,4,48\"   # set linkm to play script0,spd4,len48\n"
 "  linkm-tool --playset \"1,0,4,48,0,20,0\" # with pos0,fade20,dir0\n"
 "\n", myName
@@ -188,6 +193,7 @@ int main(int argc, char **argv)
             case CMD_LINKM_WRITE:
             case CMD_LINKM_CMD:
             case CMD_BLINKM_CMD:
+            case CMD_BLINKM_COLOR:
                 hexread(cmdbuf, optarg, sizeof(cmdbuf));  // cmd w/ hexlist arg
                 break;
             case CMD_LINKM_STATLEDSET:
@@ -270,7 +276,7 @@ int main(int argc, char **argv)
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
     }
-    else if( cmd == CMD_LINKM_EELOAD ) {   // tell linkm to load params to eeprom
+    else if( cmd == CMD_LINKM_EELOAD ) {  // tell linkm to load params to eeprom
         printf("linkm eeprom load:\n");
         err = linkm_command(dev, LINKM_CMD_EELOAD, 0,0, NULL, NULL);
         if( err ) {
@@ -278,7 +284,7 @@ int main(int argc, char **argv)
         }
     }
     else if( cmd == CMD_LINKM_STATLEDSET ) {    // control LinkM's status LED 
-        err = linkm_command(dev, LINKM_CMD_STATLEDSET, 1,0, (uint8_t*)&arg,NULL);
+        err = linkm_command(dev, LINKM_CMD_STATLEDSET, 1,0,(uint8_t*)&arg,NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
@@ -302,7 +308,7 @@ int main(int argc, char **argv)
         for( int i=0; i < 7; i++ ) { 
             saddr = i*16 + 1;
             cmdbuf[0] = saddr;    // start address: 01
-            cmdbuf[1] = saddr+16; // end address:   16  // FIXME: allow arbitrary
+            cmdbuf[1] = saddr+16; // end address:   16 // FIXME: allow arbitrary
             err = linkm_command(dev, LINKM_CMD_I2CSCAN, 2, 16, cmdbuf, recvbuf);
             if( err ) {
                 fprintf(stderr,"error on i2c scan: %s\n",linkm_error_msg(err));
@@ -359,8 +365,10 @@ int main(int argc, char **argv)
             fprintf(stderr,"error on setatt cmd: %s\n",linkm_error_msg(err));
         }
     }
-    /*
     else if( cmd == CMD_BLINKM_COLOR ) {
+        uint8_t r = cmdbuf[0];     // this is kind of dumb
+        uint8_t g = cmdbuf[1];
+        uint8_t b = cmdbuf[2];
         printf("addr %d: fading to color %02x%02x%02x\n",addr,r,g,b);
         cmdbuf[0] = addr;
         cmdbuf[1] = 'c';
@@ -372,7 +380,6 @@ int main(int argc, char **argv)
             fprintf(stderr,"error on color cmd: %s\n",linkm_error_msg(err));
         }
     }
-    */
     else if( cmd == CMD_BLINKM_RANDOM  ) {
         printf("addr %d: %d random every %d millis\n", addr,arg,millis);
         for( int j=0; j< arg; j++ ) {
