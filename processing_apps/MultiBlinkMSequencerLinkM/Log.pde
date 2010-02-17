@@ -14,15 +14,15 @@ class Log {
   }  
 
   public void debug(Object o) {
-    println("DEBUG:  " + o.toString());
+    println("DEBUG: " + o.toString());
   }
 
   public void info(Object o) {
-    println("INFO:   " + o.toString());
+    println("INFO:  " + o.toString());
   }
 
   public void warn(Object o) {
-    println("WARN:   " + o.toString());
+    println("WARN:  " + o.toString());
   }
 
   // shortcut call to error() method

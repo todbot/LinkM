@@ -19,11 +19,11 @@ public class MultiTrackView
   Color[] previewColors;
   int previewFadespeed = 25;
 
-  int numTracks;
-  int numSlices;
+  //int numTracks;
+  //int numSlices;
 
-  int currTrack;
-  int currSlice;  // only valid on playback
+  int currTrack;                            // currently selected track
+  int currSlice;                            // only valid on playback
 
   boolean playing = false;                  //    
   boolean looping = true;                   // loop or single-shot
@@ -31,12 +31,12 @@ public class MultiTrackView
   private int scrubHeight = 12;             // height of scrubber area
   private int spacerWidth = 2;              // width between cells
   private int spacerHalf = spacerWidth/2;
-  private int w,h;                           // dimensions of me
-  private int sx = 52;                   // aka "trackX", offset from left edge
-  private int previewWidth = 19;           
-  private int sliceWidth = 16;
-  private int trackHeight = 20;              // height of each track 
-  private int trackWidth;
+  private int w,h;                          // dimensions of me
+  private int sx = 52;                    // aka "trackX", offset from left edge
+  private int previewWidth = 19;            // width of preview cells
+  private int sliceWidth   = 16;            // width of editable cells
+  private int trackHeight  = 20;            // height of each track 
+  private int trackWidth;                   // == numSlices * sliceWidth
   private int previewX;
   private Color playHeadC = new Color(255, 0, 0);
   private float playHeadCurr;
@@ -51,13 +51,10 @@ public class MultiTrackView
   //TrackView tv;
 
   /**
-   * @param numTracks  number of tracks in this multitrack
    * @param aWidth width of multitrack
    * @param aHeight height of multitrack
    */
-  public MultiTrackView(int numTracks, int numSlices,  int w,int h) {
-    this.numTracks = numTracks;
-    this.numSlices = numSlices;
+  public MultiTrackView(int w,int h) {
     this.w = w;           // overall width 
     this.h = h;
     this.setPreferredSize(new Dimension(this.w, this.h));
@@ -79,9 +76,11 @@ public class MultiTrackView
       tracks[j] = new Track( numSlices, cEmpty );
       tracks[j].blinkmaddr = blinkmStartAddr +j;  // set default addrs
       previewColors[j] = cEmpty;
+      tracks[j].label = "Channel "+(j+1)+" Label";
     }
 
-    currTrack = 0;
+    changeTrack(0);
+
     // give people a nudge on what to do
     tracks[ currTrack ].active = true;
     tracks[ currTrack ].selects[0] =  true;
@@ -127,7 +126,6 @@ public class MultiTrackView
   }
 
   void drawTracks(Graphics2D g, int x, int y, int w, int h) { 
-    //l.debug("drawTracks: x:"+x+",y:"+y+",w:"+w+",h:"+h);
     int ty = 1 + scrubHeight;
     for( int i=0; i<numTracks; i++ ) {
       drawTrack( g, i,  x, ty+i*trackHeight, w, h  );
@@ -135,8 +133,6 @@ public class MultiTrackView
   }
 
   void drawTrack(Graphics2D g, int tracknum, int x,int y, int w, int h ) {
-    //l.debug("drawTrack: i:"+tracknum+",x:"+x+",y:"+y+",w:"+w+",h:"+h);
-    //    g.setColor( cBgDarkGray );
     g.setColor( cBgDarkGray );
     if( tracknum == currTrack ) {
       g.setColor( Color.black );
@@ -163,14 +159,12 @@ public class MultiTrackView
 
   /**
    * Hilight the currently selected track
+   * hilite currTrack with marker
    */
   void drawTrackMarker(Graphics2D g) { 
-    // hilite currTrack with marker
     int tx = 0; // was sx
     int ty = scrubHeight + (currTrack*trackHeight) ;
-    //g.setColor( new Color( 200,140,140));
     g.setStroke( new BasicStroke(1.0f));
-    //g.setColor( cMuteOrange );
     g.setColor( cBgLightGray );
     //g.drawRect( tx,ty, trackWidth, trackHeight+1 );
     g.drawRect( tx,ty, w-1, trackHeight+1 );
@@ -231,12 +225,13 @@ public class MultiTrackView
     g.fillPolygon(p);
   }
   
-  /**
-   *
+  /** 
+   * FIXME: color sliding doesn't work
    */
   void drawPreview(Graphics2D g ) {
+    int csn = getCurrSliceNum();
     for( int i=0; i<numTracks; i++) { 
-      Color ct = tracks[i].slices[currSlice];
+      Color ct = tracks[i].slices[csn];
       Color c = previewColors[i];
       int rt = ct.getRed();
       int gt = ct.getGreen();
@@ -283,6 +278,10 @@ public class MultiTrackView
       int durtmp = (durationCurrent>5) ? durationCurrent+1 : durationCurrent;
       float step = trackWidth / (durtmp*1000.0/millisSinceLastTick);
       
+      int send_addrs[] = new int[numTracks];
+      Color send_colors[] = new Color[numTracks];
+      int send_count=0;
+
       previewFadespeed = getFadeSpeed(durationCurrent);
       int newSlice = getCurrSliceNum();
       if( newSlice != currSlice ) {
@@ -290,25 +289,32 @@ public class MultiTrackView
         for( int i=0; i<numTracks; i++ ) {
           Color c = tracks[i].slices[currSlice];
           if( tracks[i].active ) {
+            send_addrs[send_count] = tracks[i].blinkmaddr;
             if( c!=null && c != cEmpty ) { 
-              sendBlinkMColor( tracks[i].blinkmaddr, c );
+              send_colors[send_count] = c;
+              //sendBlinkMColor( tracks[i].blinkmaddr, c );
             } else if( c == cEmpty ) {
-              sendBlinkMColor( tracks[i].blinkmaddr, cBlack );
+              //sendBlinkMColor( tracks[i].blinkmaddr, cBlack );
+              send_colors[i] = cBlack;
             }
+            send_count++;
           }
         }
       }
-      
+      if( send_count > 0 ) {
+        sendBlinkMColors( send_addrs, send_colors, send_count );
+      }
+
       playHeadCurr += step;
       repaint();
 
       // FIXME: +2
       if( playHeadCurr >= sx + trackWidth +1) {   // check for end of timeline
-        reset();       // rest to beginning (and stop)
+        reset();         // rest to beginning (and stop)
         if( looping ) {  // if we loop
-          play();      // start again
+          play();        // start again
         } 
-        else {        // or no loop, so stop after one play
+        else {           // or no loop, so stop after one play
           buttonPanel.setToPlay();  // set play/stop button back to play
         }
       } //if loopend
@@ -327,7 +333,6 @@ public class MultiTrackView
     l.debug("starting to play for dur: " + durationCurrent);
     playing = true;
     startTime = System.currentTimeMillis();
-    //if( tv!=null) tv.play();
   }
 
   /**
@@ -337,7 +342,6 @@ public class MultiTrackView
     l.debug("stop"); 
     playing = false;
     l.debug("elapsedTime:"+(System.currentTimeMillis() - startTime));
-    //if( tv!=null) tv.stop();
   }
 
   /**
@@ -347,7 +351,6 @@ public class MultiTrackView
     stop();
     playHeadCurr = sx;
     repaint();
-    //if( tv!=null) tv.reset();
   }
 
   /**
@@ -381,12 +384,14 @@ public class MultiTrackView
   }
 
   public void changeTrack(int newtracknum) {
+    println("changeTrack "+newtracknum);
     if( newtracknum < 0 ) newtracknum = 0;
     if( newtracknum == numTracks ) newtracknum = numTracks - 1;
     if( newtracknum != currTrack ) {
       copySelects(newtracknum, currTrack);
       deselectTrack(currTrack);
       currTrack = newtracknum;
+      updateInfo();
       repaint();
     }
   }
@@ -589,11 +594,11 @@ public class MultiTrackView
       else if( intrack ) {                         // just track selection
         //copySelects(j, currTrack);
         deselectTrack( currTrack );
-        currTrack = j;  
+        changeTrack( j );
       }
     }
     
-    repaint();
+    //repaint();
   }
 
   public void mouseReleased(MouseEvent e) {
@@ -670,32 +675,6 @@ public class MultiTrackView
 
   // ------------------------------------------------------------------------
 
-
-  //
-  public void doTrackDialog(int track) {
-    int blinkmAddr = tracks[track].blinkmaddr;
-    String s = (String)
-      JOptionPane.showInputDialog(
-                                  this,
-                                  "Enter a new BlinkM address for this track",
-                                  "Set track address",
-                                  JOptionPane.PLAIN_MESSAGE,
-                                  null,
-                                  null,
-                                  ""+blinkmAddr);
-    
-    //If a string was returned, say so.
-    if ((s != null) && (s.length() > 0)) {
-      l.debug("s="+s);
-      try { 
-        blinkmAddr = Integer.parseInt(s);
-        if( blinkmAddr >=0 && blinkmAddr < 127 ) { // i2c limits
-          tracks[track].blinkmaddr = blinkmAddr;
-        }
-      } catch(Exception e) {}
-      
-    }    
-  }
 
  
 }
