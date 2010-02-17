@@ -27,9 +27,11 @@ public class ChannelsTop extends JPanel {
     add(chLabel);
     add(Box.createHorizontalStrut(10));
     add(currChanIdText);
+    add(Box.createHorizontalStrut(5));
     add(currChanIdLabel);
     add(Box.createHorizontalStrut(10));
     add(currChanLabelText);
+    add(Box.createHorizontalStrut(5));
     add(currChanLabel);
 
     add(Box.createHorizontalGlue());  // boing

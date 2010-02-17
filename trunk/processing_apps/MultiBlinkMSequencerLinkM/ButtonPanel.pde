@@ -21,9 +21,8 @@ public class ButtonPanel extends JPanel {
   public ButtonPanel() { //int aWidth, int aHeight) {
     //setPreferredSize(new Dimension(aWidth,aHeight));
     //setMaximumSize(new Dimension(aWidth,aHeight));
-
-    setBorder(BorderFactory.createCompoundBorder(  // debug
-    BorderFactory.createLineBorder(Color.red),this.getBorder()));
+    //setBorder(BorderFactory.createCompoundBorder(  // debug
+    //BorderFactory.createLineBorder(Color.red),this.getBorder()));
 
     // add play button
     makePlayButton();

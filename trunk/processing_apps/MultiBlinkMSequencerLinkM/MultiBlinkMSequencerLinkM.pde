@@ -53,7 +53,7 @@ Log l = new Log();
 LinkM linkm = new LinkM();  // linkm obj only used in this file
 
 boolean connected = false;   // FIXME: verify semantics correct on this
-boolean disconnectedMode = false;
+//boolean disconnectedMode = false;
 boolean blinkmConnected = false;
 long lastConnectCheck;
 
@@ -70,6 +70,8 @@ JFileChooser fc;
 JLabel statusLabel;
 JLabel currChanIdLabel;
 JLabel currChanLabel;
+
+SetChannelDialog setChannelDialog;
 
 // number of slices in the timeline == number of script lines written to BlinkM
 int numSlices = 48;  
@@ -125,7 +127,19 @@ Color cBriOrange   = new Color(0xFB,0xC0,0x80);      // bright yellow/orange
 Color cMuteOrange  = new Color(0xBC,0x83,0x45);
 
 Color cEmpty   = tlDarkGray;
+
+Color[] setChannelColors = new Color [] {
+  new Color( 0xff,0x00,0x00 ),
+  new Color( 0x00,0xff,0x00 ),
+  new Color( 0x00,0x00,0xff ),
+  new Color( 0xff,0xff,0x00 ),
+  new Color( 0xff,0x00,0xff ),
+  new Color( 0x00,0xff,0xff ),
+  new Color( 0x80,0xff,0xff ),
+  new Color( 0xff,0xff,0xff ),
+};
  
+
 /**
  * Processing's setup()
  */
@@ -169,8 +183,15 @@ void draw() {
     mf.toFront();                   // bring ours forward  
   }
   long millis = System.currentTimeMillis();
-  if( frameCount > 10 && !connected && ((millis-lastConnectCheck) > 5000) ) {
-    connect();
+  if( frameCount > 10 && !connected && ((millis-lastConnectCheck) > 2000) ) {
+    if( lastConnectCheck == 0 ) {
+      connect();
+    } 
+    else {
+      if( !multitrack.playing && checkForLinkM() ) {
+        connect();
+      }
+    }
     lastConnectCheck = millis;
   }
 
@@ -184,9 +205,7 @@ void draw() {
     else 
       setStatus("LinkM connected, no BlinkM found");
   } else {
-    if( disconnectedMode ) { 
-      setStatus( "Disconnected mode" );
-    }
+    setStatus( "Disconnected mode" );
   }
 }
 
@@ -195,6 +214,13 @@ void draw() {
  */
 void setStatus(String status) {
     statusLabel.setText( status );
+}
+
+void updateInfo() {
+  Track trk = multitrack.tracks[multitrack.currTrack];
+  currChanIdLabel.setText( String.valueOf(trk.blinkmaddr) );
+  currChanLabel.setText( trk.label );
+  repaint();
 }
 
 /**
@@ -209,7 +235,7 @@ void setupGUI() {
   mainpane.setLayout(layout);
 
   ChannelsTop chtop = new ChannelsTop();
-  multitrack        = new MultiTrackView( numTracks, numSlices, mainWidth,300);
+  multitrack        = new MultiTrackView( mainWidth,300 );
 
   // controlsPanel contains colorpicker and all buttons
   JPanel controlsPanel = makeControlsPanel();
@@ -241,6 +267,9 @@ void setupGUI() {
       }
     }
     );
+  
+  setChannelDialog = new SetChannelDialog(mf); // defaults to invisible
+  updateInfo();
 }
 
 /**
@@ -393,18 +422,43 @@ void setupMenus(Frame f) {
 // -----------------------------------------------------------------
 
 /**
+ * Used to periodically check for a connected LinkM (if we are disconnected)
+ */
+public boolean checkForLinkM() {  
+  l.debug("checkForLinkM");
+  if( connected ) {
+    try { 
+      linkm.getLinkMVersion();
+    } catch(IOException ioe) {
+      connected = false;
+      linkm.close();
+    }
+    return true;
+  }
+
+  try { 
+    linkm.open();
+  } catch( IOException ioe ) {
+    return false;
+  }
+  linkm.close();
+  return true;
+}
+
+/**
  * Open up the LinkM and set it up if it hasn't been
  * Sets and uses the global variable 'connected'
  */
 public boolean connect() {
   l.debug("connect");
-  if( disconnectedMode ) return true;
+  //if( disconnectedMode ) return true;
   try { 
     linkm.open();
     linkm.i2cEnable(true);
-    byte[] addrs = linkm.i2cScan(9,17);  // FIXME: not a full scan
+      byte[] addrs = linkm.i2cScan(9,17);  // FIXME: not a full scan
     int cnt = addrs.length;
     if( cnt>0 ) {
+      /*
       multitrack.disableAllTracks();   // enable tracks for blinkms found
       for( int i=0; i<cnt; i++) {
         byte a = addrs[i];
@@ -412,7 +466,7 @@ public boolean connect() {
           multitrack.toggleTrackEnable( a - blinkmStartAddr);
         }
       }
-      
+
       // FIXME: should dialog popup saying blinkms found but not in right addr?
       if( addrs[0] > blinkmStartAddr ) { // FIXME: hack
         int trknum = (addrs[0] - blinkmStartAddr);  // select 1st used trk
@@ -420,6 +474,7 @@ public boolean connect() {
         multitrack.selectSlice( trknum, 0, true );
         multitrack.repaint();
       }
+      */
       linkm.stopScript( 0 ); // stop all scripts
       blinkmConnected = true;
     }
@@ -449,10 +504,10 @@ public boolean connect() {
                                   "it will auto-connect.",
                                   "LinkM Not Found",
                                   JOptionPane.WARNING_MESSAGE);
-    disconnectedMode = true;
+    //disconnectedMode = true;
+    connected = false;
     return false;
   }
-
   connected = true;
   return true; // connect successful
 }
@@ -494,6 +549,22 @@ public boolean sendBlinkMColor( int blinkmAddr, Color c ) {
 
   return true;
 }
+
+/**
+ *
+ */
+public boolean sendBlinkMColors( int addrs[], Color colors[], int send_count ) {
+  l.debug("sendBlinkMColors");
+  if( !connected ) return true;
+  try { 
+    linkm.fadeToRGB( addrs, colors, send_count );
+  } catch( IOException ioe ) {
+    connected = false;
+    return false;
+  }
+  return true;
+}
+
 
 /**
  * Prepare blinkm for playing preview scripts
@@ -598,7 +669,9 @@ public boolean doUpload() {
   return rc;
 }
 
-// hmmm
+/**
+ * Do address change dialog -- this might be deprecated
+ */
 public boolean doAddressChange() {
   int newaddr = multitrack.getCurrTrack().blinkmaddr;
   Object[] options = {"Do nothing",
@@ -623,6 +696,16 @@ public boolean doAddressChange() {
     }
   }
   return true;
+}
+
+/**
+ *
+ */
+public void doTrackDialog(int track) {
+  multitrack.reset(); // stop preview script
+ 
+  setChannelDialog.setVisible(true);
+
 }
 
 
@@ -884,6 +967,35 @@ void bindKeys() {
       }
     });
 }
+
+
+
+/*
+--  OLD doTrackDialog --
+    int blinkmAddr = tracks[track].blinkmaddr;
+    String s = (String)
+      JOptionPane.showInputDialog(
+                                  this,
+                                  "Enter a new BlinkM address for this track",
+                                  "Set track address",
+                                  JOptionPane.PLAIN_MESSAGE,
+                                  null,
+                                  null,
+                                  ""+blinkmAddr);
+    
+    //If a string was returned, say so.
+    if ((s != null) && (s.length() > 0)) {
+      l.debug("s="+s);
+      try { 
+        blinkmAddr = Integer.parseInt(s);
+        if( blinkmAddr >=0 && blinkmAddr < 127 ) { // i2c limits
+          tracks[track].blinkmaddr = blinkmAddr;
+        }
+      } catch(Exception e) {}
+      
+    } 
+    */
+
 
 
 /**
