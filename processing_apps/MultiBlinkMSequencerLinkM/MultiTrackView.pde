@@ -18,9 +18,7 @@ public class MultiTrackView
   Track[] tracks;
   Color[] previewColors;
   int previewFadespeed = 25;
-
-  //int numTracks;
-  //int numSlices;
+  Track bufferTrack;  // for copy-paste ops
 
   int currTrack;                            // currently selected track
   int currSlice;                            // only valid on playback
@@ -32,7 +30,7 @@ public class MultiTrackView
   private int spacerWidth = 2;              // width between cells
   private int spacerHalf = spacerWidth/2;
   private int w,h;                          // dimensions of me
-  private int sx = 52;                    // aka "trackX", offset from left edge
+  private int sx = 57;                    // aka "trackX", offset from left edge
   private int previewWidth = 19;            // width of preview cells
   private int sliceWidth   = 16;            // width of editable cells
   private int trackHeight  = 20;            // height of each track 
@@ -68,6 +66,9 @@ public class MultiTrackView
 
     this.font = silkfont;  // global in main class
     previewAlpha = loadImage("radial-gradient.png");//"alpha_channel.png");
+
+    bufferTrack = new Track(numSlices, cEmpty);
+    bufferTrack.active = false; // say not full of copy
 
     // initialize the tracks
     tracks = new Track[numTracks];
@@ -181,18 +182,18 @@ public class MultiTrackView
     int th = trackHeight - 3;
     for( int tnum=0; tnum<numTracks; tnum++ ) {
       g.setColor( cBriOrange);
-      g.drawRect(  3,ty+tnum*trackHeight, 15,th );  // enable button outline 
-      g.drawRect( 25,ty+tnum*trackHeight, 20,th );  // addr button outline 
+      g.drawRect(  8,ty+tnum*trackHeight, 15,th );  // enable button outline 
+      g.drawRect( 30,ty+tnum*trackHeight, 20,th );  // addr button outline 
       
       if( tracks[tnum].active == true ) { 
         g.setColor( cMuteOrange );
-        g.fillRect(  4, ty+1+tnum*trackHeight, 14,th-1 ); // enable butt insides
+        g.fillRect(  9, ty+1+tnum*trackHeight, 14,th-1 ); // enable butt insides
         
         int blinkmAddr = tracks[tnum].blinkmaddr; // this track's i2c address
         if( blinkmAddr != -1 ) { // if it's been set to something meaningful
-          g.fillRect( 26, ty+1+tnum*trackHeight, 19,th-1 ); // addr butt insides
+          g.fillRect( 31, ty+1+tnum*trackHeight, 19,th-1 ); // addr butt insides
           g.setColor( cBlack );
-          int offs = 26;
+          int offs = 31;
           offs = ( blinkmAddr < 100 ) ? offs += 3 : offs;
           offs = ( blinkmAddr < 10 )  ? offs += 2 : offs;
           g.drawString( ""+blinkmAddr, offs, ty+12+tnum*trackHeight);//addr text
@@ -295,7 +296,7 @@ public class MultiTrackView
               //sendBlinkMColor( tracks[i].blinkmaddr, c );
             } else if( c == cEmpty ) {
               //sendBlinkMColor( tracks[i].blinkmaddr, cBlack );
-              send_colors[i] = cBlack;
+              send_colors[send_count] = cBlack;
             }
             send_count++;
           }
@@ -454,6 +455,9 @@ public class MultiTrackView
     repaint();
   }
 
+  /**
+   * used by the ColorChooserPanel
+   */
   public void setSelectedColor( Color c ) {
     boolean sentColor = false;
     //l.debug("setSelectedColor: "+c);
@@ -501,6 +505,30 @@ public class MultiTrackView
     return tracks[currTrack];
   }
  
+  /**
+   * Copy any selection from old track to new track
+   */
+  public void copySelects( int newtrackindex, int oldtrackindex ) {
+    for( int i=0; i<numSlices; i++) 
+      tracks[newtrackindex].selects[i] = tracks[oldtrackindex].selects[i];
+  }
+  
+  /** 
+   * Copy current selects to buffer
+   */
+  public void copyTrack() {
+    bufferTrack.copy( tracks[currTrack] );
+  }
+  public void pasteTrack() {
+    tracks[currTrack].copy( bufferTrack );
+  }
+  public void cutTrack() { 
+    copyTrack();
+    deleteTrack();
+  }
+  public void deleteTrack() {
+    tracks[currTrack].erase();
+  }
 
   // --------------------------------------------------------------------------
   
@@ -559,14 +587,9 @@ public class MultiTrackView
     return p.contains(mp);  // check if mouseclick on playhead
   }
   
-  /**
-   * Copy any selection from old track to new track
-   */
-  public void copySelects( int newtrackindex, int oldtrackindex ) {
-    for( int i=0; i<numSlices; i++) 
-      tracks[newtrackindex].selects[i] = tracks[oldtrackindex].selects[i];
-  }
-
+  
+  
+  //
   public void mousePressed(MouseEvent e) {
     //l.debug("MultiTrackView.mousePressed: "+e.getPoint());
     Point mp = e.getPoint();
@@ -593,8 +616,16 @@ public class MultiTrackView
         doTrackDialog(j);
       else if( intrack ) {                         // just track selection
         //copySelects(j, currTrack);
-        deselectTrack( currTrack );
-        changeTrack( j );
+        if( currTrack != j ) {  // only deselect & change track if different
+          deselectTrack( currTrack );
+          changeTrack( j );
+        }
+        for( int i=0; i<numSlices; i++) {
+          if( isSliceHit( mouseClickedPt.x, i) ) 
+            selectSlice(currTrack, i,true);
+          else if((e.getModifiers() & InputEvent.META_MASK) ==0) //meta not
+            selectSlice(currTrack, i,false);
+        }
       }
     }
     
@@ -612,11 +643,15 @@ public class MultiTrackView
       (mouseClickedPt.y < (currTrack+1)*trackHeight + scrubHeight) ;
 
     if( intrack ) {
+      /*
       for( int i=0; i<numSlices; i++) {
         if( isSliceHit( mouseReleasedPt.x, i) ) {
+          if((e.getModifiers() & InputEvent.META_MASK) == 0) // meta key notheld
+            deselectTrack( currTrack );
           selectSlice(currTrack, i,true);
         }
       }
+      */
     }
 
     /*

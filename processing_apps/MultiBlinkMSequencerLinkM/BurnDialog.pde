@@ -18,7 +18,7 @@ public class BurnDialog extends JDialog implements ActionListener {
 
   private JButton burnBtn;
 
-  public BurnDialog(Dialog owner, JButton aBurnBtn) {
+  public BurnDialog(JButton aBurnBtn) {
     //super(owner, "BlinkM Connect",true);  // modal
     super();
     burnBtn = aBurnBtn;
