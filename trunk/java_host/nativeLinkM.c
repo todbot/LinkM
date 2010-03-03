@@ -77,6 +77,7 @@ JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_command
     }
 
     err = linkm_command(dev, cmdbyte, num_send,num_recv, byte_send,byte_recv);
+
     if( err ) {
         (*env)->ExceptionDescribe(env);          // throw an exception.
         (*env)->ExceptionClear(env);
@@ -90,6 +91,38 @@ JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_command
         (*env)->ReleaseByteArrayElements(env, jb_recv, (jbyte*) byte_recv, 0);
 }
 
+JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_commandmany
+(JNIEnv *env, jobject obj, jint cmd, jint cmd_count, jint cmd_len, jbyteArray jb_send)
+{
+    int err=0,i;
+    uint8_t cmdbyte = (uint8_t) cmd;
+    int num_send=0;
+    uint8_t* byte_send = NULL;
+    uint8_t* byte_sendp;
+
+    if( jb_send != NULL ) {
+        num_send = (*env)->GetArrayLength(env, jb_send );
+        byte_send = (uint8_t*)(*env)->GetByteArrayElements(env, jb_send,0);
+    }
+    
+    //err = linkm_command(dev, cmdbyte, num_send,num_recv, byte_send,byte_recv);
+    for( i=0; i< cmd_count; i++) {
+        byte_sendp = byte_send + (cmd_count*i);
+        err += linkm_command(dev, cmdbyte, cmd_len,0, byte_sendp,0);
+        // FIXME: need delay here?
+    }
+
+    if( err ) {
+        (*env)->ExceptionDescribe(env);          // throw an exception.
+        (*env)->ExceptionClear(env);
+        jclass newExcCls = (*env)->FindClass(env,"java/io/IOException");
+        (*env)->ThrowNew(env, newExcCls, linkm_error_msg(err));
+    }
+    
+    if( jb_send != NULL )
+        (*env)->ReleaseByteArrayElements(env, jb_send, (jbyte*) byte_send, 0);
+
+}
 
 /*
  * Class:     LinkM
