@@ -21,8 +21,9 @@ public class ButtonPanel extends JPanel {
   public ButtonPanel() { //int aWidth, int aHeight) {
     //setPreferredSize(new Dimension(aWidth,aHeight));
     //setMaximumSize(new Dimension(aWidth,aHeight));
-    //setBorder(BorderFactory.createCompoundBorder(  // debug
-    //BorderFactory.createLineBorder(Color.red),this.getBorder()));
+
+    setBorder(BorderFactory.createCompoundBorder(  // debug
+    BorderFactory.createLineBorder(Color.red),this.getBorder()));
 
     // add play button
     makePlayButton();
@@ -43,7 +44,7 @@ public class ButtonPanel extends JPanel {
                                       "Upload to BlinkMs", cBgDarkGray);
     uploadBtn.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
-          new BurnDialog(mf, uploadBtn);
+          new BurnDialog(uploadBtn);
         }
       });
     
@@ -86,13 +87,16 @@ public class ButtonPanel extends JPanel {
     opensavePanel.add(openBtn);
     opensavePanel.add(saveBtn);
 
+    JPanel grayspacePanel = new JPanel();
+    grayspacePanel.setBackground(cBgMidGray);
+    //grayspacePanel.add(Box.createVerticalStrut(5)) );
 
     this.setBackground(cBgDarkGray);
     this.setLayout( new BoxLayout(this, BoxLayout.Y_AXIS));
     this.add(loopPanel);
     this.add(Box.createVerticalStrut(5));
     this.add(playBtnPanel); 
-    this.add(Box.createVerticalStrut(5));
+    this.add(grayspacePanel); //Box.createVerticalStrut(5));
     this.add(updnPanel);
     this.add(Box.createVerticalStrut(5));
     this.add(opensavePanel);

@@ -8,13 +8,9 @@ public class SetChannelDialog extends JDialog { //implements ActionListener {
   JButton[] colorSpots;
   JTextField[] channels;
   JTextField[] labels;
-  Color[] savedColors;
 
-  public SetChannelDialog(Dialog owner) {
-    //super(owner, "BlinkM Connect",true);  // modal
+  public SetChannelDialog() {
     super();
-
-    savedColors = new Color[numTracks];
 
     JPanel p;
     JPanel trackpanel = new JPanel();
@@ -22,6 +18,7 @@ public class SetChannelDialog extends JDialog { //implements ActionListener {
     trackpanel.setLayout( new BoxLayout( trackpanel, BoxLayout.Y_AXIS) );
 
     /*
+    // a dumb attempt at making table headers
     p = new JPanel();
     p.setBackground(cBgDarkGray);
     JButton fakebut = new JButton();
@@ -123,23 +120,10 @@ public class SetChannelDialog extends JDialog { //implements ActionListener {
     super.setVisible(v);
     if( v == true ) {
       l.debug("sending blinkm colors!");
-      //sendBlinkMColors( addrs, colors, numTracks)
+      //sendBlinkMColors( addrs, colors, numTracks)  // FIXME: do this
     } else { 
       l.debug("sending blinkm all off!");
     }
-    /*
-    if( v == true ) { 
-      for( int i=0; i<numTracks; i++) {
-        savedColors[i] = multitrack.tracks[i].slices[0];
-        multitrack.tracks[i].slices[0] = setChannelColors[i];
-      }
-    } 
-    else {
-      for( int i=0; i<numTracks; i++) {
-        multitrack.tracks[i].slices[0] = savedColors[i];
-      }
-    }
-    */
   }
 
 }

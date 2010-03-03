@@ -34,6 +34,33 @@ public class Track {
 
   }
 
+  /**
+   * 
+   */
+  public void copy(Track track) {
+    this.label      = track.label;
+    this.numSlices  = track.numSlices;
+    this.isLoop     = track.isLoop;
+    this.active     = track.active;
+    this.blinkmaddr = track.blinkmaddr;
+
+    for( int i=0; i<numSlices; i++ ) {
+      slices[i]  = track.slices[i];
+      selects[i] = track.selects[i];
+    }
+  }
+
+  /**
+   *
+   */
+  public void erase() {
+    this.active = false;
+    for( int i=0; i<numSlices; i++) {
+      this.slices[i] = cEmpty;
+      this.selects[i] = false;
+    }
+  }
+
 } 
 
 
