@@ -32,7 +32,9 @@ public class LinkM
 
   static public final int writePauseMillis = 15;
 
-  static public int debug = 1;
+  static public int pausemillis = 100;
+
+  static public int debug = 0;
 
   // Command byte values for linkm_command()
   //
@@ -103,7 +105,6 @@ public class LinkM
     }
     int addr = 0;
     int color = -1;
-    int millis = 100;
     String cmd = null;
     long arg = -1;
     String file = null;
@@ -125,7 +126,7 @@ public class LinkM
         debug++;
       }
       else if( a.equals("--millis") || a.equals("-m") ) {
-        millis = parseHexDecInt( getArg(args,++ac,"") );
+        pausemillis = parseHexDecInt( getArg(args,++ac,"") );
       }
       else if( a.equals("--statled") ) {
         arg = parseHexDecInt( getArg(args,++ac,"") );
@@ -338,13 +339,16 @@ public class LinkM
       } 
       else if( cmd.equals("random") ) { 
         Random rand = new Random();
+        long st = System.currentTimeMillis();
         for( int i=0; i< arg; i++ ) { 
           int r = rand.nextInt() & 0xFF;
           int g = rand.nextInt() & 0xFF;
           int b = rand.nextInt() & 0xFF;
           linkm.setRGB( addr, r,g,b );
-          linkm.pause(millis);
+          linkm.pause(pausemillis);
         }
+        long et = System.currentTimeMillis();
+        println("elapsed time: "+(et-st)+" millisecs");
       }
       
     } catch(IOException e) {
@@ -375,17 +379,31 @@ public class LinkM
   /**
    * Do a transaction with the LinkM dongle
    * length of both byte arrays determines amount of data sent or received
+   * @param cmd the linkm command code
    * @param buf_send is byte array of command to send, may be null
    * @param buf_recv is byte array of any receive data, may be null
    * @throws linkm_command response code, 0 == success, non-zero == fail
    */
   native void command(int cmd, byte[] buf_send, byte[] buf_recv)
     throws IOException;
-  
+
+  /**
+   * Send many I2C commands as fast as possible, with no readback
+   *
+   * @param cmd the linkm command code
+   * @param cmd_count number of commands in buf_send
+   * @param cmd_len length of each command
+   * @param buf_send is byte array of command to send, may be null
+   *
+   * @warning this may bork things
+   */
+  native void commandmany( int cmd, int cmd_count, int cmd_len, byte[] buf_send)
+    throws IOException;
+
   /**
    * Close LinkM dongle
    */
-  native void close();  
+  public native void close();  
  
   /**
    * Set debug level
@@ -464,6 +482,15 @@ public class LinkM
 
 
   /**
+   * Get LinkM firmware version
+   */
+  public byte[] getLinkMVersion() throws IOException {
+    byte[] recvbuf = new byte[ 2 ];
+    command( LINKM_CMD_VERSIONGET, null, recvbuf );
+    return recvbuf;
+  }
+
+  /**
    * Set the state of LinkM's status LED 
    */
   public void statusLED(int val) 
@@ -471,6 +498,7 @@ public class LinkM
     byte[] cmdbuf = { (byte)val };
     command( LINKM_CMD_STATLEDSET, cmdbuf, null);
   }
+
   
   /**
    * FIXME: currently ignores start_addr and end_addr
@@ -642,6 +670,26 @@ public class LinkM
   public void fadeToRGB(int addr, Color color) 
     throws IOException { 
     fadeToRGB( addr, color.getRed(), color.getGreen(), color.getBlue());
+  }
+
+  /**
+   * Fade many devices to RGB colors
+   * @param addrs list of i2c addresses
+   * @param colors list of colors
+   * @param count number of items in list
+   */
+  public void fadeToRGB( int addrs[], Color colors[], int count ) 
+    throws IOException { 
+    int cmdlen = 5;  // {addr,'c',r,g,b}
+    byte[] cmdbuf = new byte[ cmdlen * count ];
+    for( int i=0; i< count; i++ ) { 
+      cmdbuf[ (i*cmdlen)+0 ] = (byte)addrs[i];
+      cmdbuf[ (i*cmdlen)+1 ] = (byte)'c';
+      cmdbuf[ (i*cmdlen)+2 ] = (byte)colors[i].getRed();
+      cmdbuf[ (i*cmdlen)+3 ] = (byte)colors[i].getGreen();
+      cmdbuf[ (i*cmdlen)+4 ] = (byte)colors[i].getBlue();
+    }
+    commandmany( LINKM_CMD_I2CTRANS, count, cmdlen, cmdbuf);
   }
 
   /**
@@ -1043,15 +1091,15 @@ public class LinkM
       String l = lines[i];
       Matcher mb = pb.matcher( l );
       if( mb.find() ) {               // found open paren 
-        //debug("parseScripts: open paren at line "+i);
+        debug("parseScripts: open paren at line "+i);
         i++;  // skip to next line
         ib = i;  // save begining pos of script
         while( i < lines.length ) {
           l = lines[i];
-          //debug("line "+i+":'"+l+"'");
+          debug("parseScripts: line "+i+":'"+l+"'");
           Matcher me = pe.matcher( l ); // look for close paren
           if( me.find() ) { 
-            //debug("parseScripts: close paren at line "+i);
+            debug("parseScripts: close paren at line "+i);
             ie = i;  // save end
             String[] scriptlines = new String[ie-ib];
             System.arraycopy( lines, ib, scriptlines, 0, (ie-ib) );
@@ -1059,7 +1107,7 @@ public class LinkM
             //  debug("scriptlines["+k+"]: "+scriptlines[k]);
             BlinkMScript script = parseScript( scriptlines );
             scriptlist.add( script );
-            //debug("parseScripts: script added.");
+            debug("parseScripts: script added.");
             break;
           } 
           i++;
