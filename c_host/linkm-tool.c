@@ -26,6 +26,7 @@ recv: 0x32 0x63 0x8a 0x00 0x00 0x8f 0x84 0xf6 0xff 0xbf 0x04 0x00 0x00 0x00 0x58
 #include <unistd.h>    // for usleep()
 #include <ctype.h>     // for isalpha()
 #include <time.h>      // for time()
+#include <sys/time.h>
 
 #include "linkm-lib.h"
 
@@ -63,6 +64,9 @@ enum {
     CMD_BLINKM_GETVERSION,
     CMD_BLINKM_RANDOM,
 };
+
+uint32_t stampstart();
+uint32_t stampstop(uint32_t start);
 
 // ------------------------------------------------------------------------- 
 
@@ -382,6 +386,7 @@ int main(int argc, char **argv)
     }
     else if( cmd == CMD_BLINKM_RANDOM  ) {
         printf("addr %d: %d random every %d millis\n", addr,arg,millis);
+        uint32_t start = stampstart();
         for( int j=0; j< arg; j++ ) {
             uint8_t r = rand() % 255;    // random() not avail on MinGWindows
             uint8_t g = rand() % 255;
@@ -398,6 +403,7 @@ int main(int argc, char **argv)
             }
             usleep(millis * 1000 ); // sleep milliseconds
         }
+        stampstop(start);
     }
     else if( cmd == CMD_BLINKM_PLAY  ) {
         printf("addr %d: playing script #%d\n", addr,arg);
@@ -528,5 +534,50 @@ int main(int argc, char **argv)
     return 0;
 }
 
+// ------------------------------------------------------------------------
+
+uint32_t stampstart()
+{
+	struct timeval  tv;
+	struct timezone tz;
+	struct tm      *tm;
+	uint32_t         start;
+    
+	gettimeofday(&tv, &tz);
+	tm = localtime(&tv.tv_sec);
+ 
+	printf("TIMESTAMP-START\t  %d:%02d:%02d:%d (~%d ms)\n", tm->tm_hour,
+	       tm->tm_min, tm->tm_sec, tv.tv_usec,
+	       tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
+	       tm->tm_sec * 1000 + tv.tv_usec / 1000);
+    
+	start = tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
+		tm->tm_sec * 1000 + tv.tv_usec / 1000;
+    
+	return (start);
+}
+ 
+uint32_t stampstop(uint32_t start)
+{
+	struct timeval  tv;
+	struct timezone tz;
+	struct tm      *tm;
+	uint32_t         stop;
+ 
+	gettimeofday(&tv, &tz);
+	tm = localtime(&tv.tv_sec);
+ 
+	stop = tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
+		tm->tm_sec * 1000 + tv.tv_usec / 1000;
+ 
+	printf("TIMESTAMP-END\t  %d:%02d:%02d:%d (~%d ms) \n", tm->tm_hour,
+	       tm->tm_min, tm->tm_sec, tv.tv_usec,
+	       tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
+	       tm->tm_sec * 1000 + tv.tv_usec / 1000);
+ 
+	printf("ELAPSED\t  %d ms\n", stop - start);
+ 
+	return (stop);
+}
 
 
