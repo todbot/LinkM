@@ -1,7 +1,8 @@
-# linkm-tool -- 
-#  based off of obdev hid-data "hidtool"
+# Makefile for linkm-tool -- 
+#  
 #
 #
+# Based off of obdev hid-data "hidtool":
 # Name: Makefile
 # Project: hid-data example
 # Author: Christian Starkjohann
@@ -11,23 +12,35 @@
 # License: GNU GPL v2 (see License.txt), GNU GPL v3 or proprietary (CommercialLicense.txt)
 # This Revision: $Id: Makefile 692 2008-11-07 15:07:40Z cs $
 
-# Please read the definitions below and edit them as appropriate for your
-# system:
-
-# this almost works for os x, but bleagh
-#USBLIBS  = `libusb-legacy-config --libs | perl -nle '/L(.+?)\s+(.+)/; print "\x$1/libusb.a \$2"'`
 
 TARGET=linkm-tool
 
+# assume macosx for ease of my develoment
+ifndef OS
+	OS=macosx
+endif
+
+ifeq "$(OS)" "macosx"
 # Mac OS X: "sudo port install libusb-legacy" using MacPorts
-# Use the following 5 lines Mac OS X (and almost unix):
-USBFLAGS =   `libusb-legacy-config --cflags`
-#USBLIBS  =   `libusb-legacy-config --libs`
-USBLIBS  =    /opt/local/lib/libusb-legacy/libusb.a
-USBLIBS +=    -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
+USBFLAGS =  `libusb-legacy-config --cflags`
+USBLIBS  =  /opt/local/lib/libusb-legacy/libusb.a
+USBLIBS +=  -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
 OS_CFLAGS= -arch i386 -arch x86_64 
-OS_LIBS= $(OS_CFLAGS)
+OS_LIBS  = $(OS_CFLAGS)
 EXE_SUFFIX=
+endif
+
+ifeq "$(OS)" "windows"
+USBFLAGS=
+USBLIBS=    -lhid -lsetupapi
+EXE_SUFFIX= .exe
+endif
+
+ifeq "$(OS)" "linux"
+USBFLAGS =   `libusb-config --cflags`
+USBLIBS  =   `libusb-config --libs`
+EXE_SUFFIX=
+endif
 
 # Use the following 3 lines on Windows and comment out the 3 above:
 #USBFLAGS=
@@ -63,3 +76,6 @@ clean:
 # shows shared lib usage on Mac OS X
 otool:
 	otool -L $(TARGET)
+
+foo:
+	@echo "OS=$(OS), USBFLAGS=$(USBFLAGS)"
