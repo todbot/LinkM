@@ -25,7 +25,7 @@ import java.awt.Color;
 public class LinkM 
 {
   static {
-    System.loadLibrary("nativeLinkM");     // Load the library
+    System.loadLibrary("LinkM");     // Load the library
   }  
   
   static public final int maxScriptLength = 49;
