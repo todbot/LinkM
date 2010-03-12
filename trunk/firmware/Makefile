@@ -71,6 +71,7 @@ help:
 	@echo "make hex ....... to build $(TARGET).hex"
 	@echo "make program ... to flash the firmware"
 	@echo "make fuse ...... to flash the fuses"
+	@echo "make readfuse .. to read fuses to _fuse.txt files"
 	@echo "make flash ..... to flash the firmware" 
 	@echo "make clean ..... to delete objects and hex file"
 
@@ -94,7 +95,7 @@ unlock:
 
 readfuse: getfuse
 getfuse:
-	$(AVRDUDE) -U hfuse:r:hfuse.txt:h -U lfuse:r:lfuse.txt:h -U efuse:r:efuse.txt:h 
+	$(AVRDUDE) -U hfuse:r:hfuse.txt:h -U lfuse:r:lfuse.txt:h -U efuse:r:efuse.txt:h -U lock:r:lockfuse.txt:h
 
 
 # rule for uploading firmware:

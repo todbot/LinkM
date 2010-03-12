@@ -211,11 +211,12 @@ void i2cEnable(int v) {
 // 
 void handleMessage(void)
 {
-    outmsgbuf[0]++;                   // say we've handled a msg
+    //outmsgbuf[0]++;                   // say we've handled a msg
+    outmsgbuf[0] = 1;                   // reportID   FIXME: Hack
     outmsgbuf[1] = LINKM_ERR_NONE;    // be optimistic
     // outmsgbuf[2] starts the actual received data
 
-    uint8_t* mbufp = msgbuf;  // was +1 because had forgot to send repotid
+    uint8_t* mbufp = msgbuf+1;  // was +1 because had forgot to send repotid
 
     if( mbufp[0] != START_BYTE  ) {   // byte 0: start marker
         outmsgbuf[1] = LINKM_ERR_BADSTART;
@@ -673,7 +674,7 @@ int main(void)
 
     // load params from EEPROM
     eeprom_read_block( &params, &ee_params, sizeof(params_t) );
-    blinkmStop( 0 );         // stop all scripts  FIXME: maybe make this a param?
+    blinkmStop( 0 );         // stop all scripts  FIXME:maybe make this a param?
     blinkmSetRGB(0, 0,0,0 ); // turn all off
     if( params.fadespeed != 0 ) {
         blinkmSetFadespeed(0, params.fadespeed);            
