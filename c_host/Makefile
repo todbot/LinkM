@@ -61,7 +61,16 @@ PROGRAM=	$(TARGET)$(EXE_SUFFIX)
 
 all: $(PROGRAM)
 
+# symbolic targets:
+help:
+	@echo "This Makefile works on multiple archs. Use one of the following:"
+	@echo "make OS=windows ... build Windows  linkm-lib and linkm-tool" 
+	@echo "make OS=linux   ... build Linux    linkm-lib and linkm-tool" 
+	@echo "make OS=macosx  ... build Mac OS X linkm-lib and linkm-tool" 
+	@echo "make clean ..... to delete objects and hex file"
+
 $(PROGRAM): $(OBJ)
+	echo "building for OS=$(OS)"
 	$(CC) -o $(PROGRAM) $(OBJ) $(LIBS) 
 
 strip: $(PROGRAM)
