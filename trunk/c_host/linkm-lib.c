@@ -28,7 +28,7 @@ int linkm_open(usbDevice_t **dev)
     return usbhidOpenDevice(dev, 
                             IDENT_VENDOR_NUM,  IDENT_VENDOR_STRING,
                             IDENT_PRODUCT_NUM, IDENT_PRODUCT_STRING,
-                            0);  // NOTE: '0' means "not using report IDs"
+                            1);  // NOTE: '0' means "not using report IDs"
 }
 
 /**
@@ -93,14 +93,15 @@ int linkm_command(usbDevice_t *dev, int cmd,
             fprintf(stderr, "error reading data: %s\n", linkm_error_msg(err));
             return err;
         } else {  // it was good
-            // byte 0 is transaction counter ( we can ignore)
+            // byte 0 is report id
+            //// byte 0 is transaction counter ( we can ignore)
             // byte 1 is error code   // FIXME: return this?
             // byte 2 is resp_byte 0
             // byte 3 is resp_byte 1
             // ...
             if(linkm_debug>1) hexdump("linkmcmd resp: ", buf, 16);
-            memcpy( buf_recv, buf+3, num_recv );  // 1st byte report id
-            return buf[2];  // byte 1 is error code
+            memcpy( buf_recv, buf+2, num_recv );  // byte 0 report id
+            return buf[1];                        // byte 1 is error code
         }
     }
     return 0;
