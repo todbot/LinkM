@@ -20,6 +20,10 @@ ifndef OS
 	OS=macosx
 endif
 
+ifeq "$(OS)" "Windows_NT"
+	OS=windows
+endif
+
 ifeq "$(OS)" "macosx"
 # Mac OS X: "sudo port install libusb-legacy" using MacPorts
 USBFLAGS =  `libusb-legacy-config --cflags`
@@ -33,6 +37,7 @@ endif
 ifeq "$(OS)" "windows"
 USBFLAGS=
 USBLIBS=    -lhid -lsetupapi
+#USBLIBS=    -lhid -lusb -lsetupapi
 EXE_SUFFIX= .exe
 endif
 
@@ -42,12 +47,6 @@ USBLIBS  =   `libusb-config --libs`
 EXE_SUFFIX=
 endif
 
-# Use the following 3 lines on Windows and comment out the 3 above:
-#USBFLAGS=
-#USBLIBS=    -lhid -lusb -lsetupapi
-#OS_CFLAGS=
-#OS_LIBS=
-#EXE_SUFFIX= .exe
 
 CC=				gcc
 ARCHS=          
@@ -70,7 +69,7 @@ help:
 	@echo "make clean ..... to delete objects and hex file"
 
 $(PROGRAM): $(OBJ)
-	echo "building for OS=$(OS)"
+	@echo "building for OS=$(OS)"
 	$(CC) -o $(PROGRAM) $(OBJ) $(LIBS) 
 
 strip: $(PROGRAM)

@@ -546,7 +546,7 @@ uint32_t stampstart()
 	gettimeofday(&tv, &tz);
 	tm = localtime(&tv.tv_sec);
  
-	printf("TIMESTAMP-START\t  %d:%02d:%02d:%d (~%d ms)\n", tm->tm_hour,
+	printf("TIMESTAMP-START\t  %d:%02d:%02d:%ld (~%ld ms)\n", tm->tm_hour,
 	       tm->tm_min, tm->tm_sec, tv.tv_usec,
 	       tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
 	       tm->tm_sec * 1000 + tv.tv_usec / 1000);
@@ -570,7 +570,7 @@ uint32_t stampstop(uint32_t start)
 	stop = tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
 		tm->tm_sec * 1000 + tv.tv_usec / 1000;
  
-	printf("TIMESTAMP-END\t  %d:%02d:%02d:%d (~%d ms) \n", tm->tm_hour,
+	printf("TIMESTAMP-END\t  %d:%02d:%02d:%ld (~%ld ms) \n", tm->tm_hour,
 	       tm->tm_min, tm->tm_sec, tv.tv_usec,
 	       tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
 	       tm->tm_sec * 1000 + tv.tv_usec / 1000);
