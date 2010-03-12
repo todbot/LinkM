@@ -1,37 +1,70 @@
+# Makefile for linkm library for Java -- 
+#  
+#
 
 TARGET = LinkM
-LIBTARGET = libnative$(TARGET).jnilib
-#LIBTARGET = libnative$(TARGET).so  # for linux
 
-PROCESSING_LIBDIR = linkm/library
 LIBUSBA_DIR = libusb-static
+PROCESSING_LIBDIR = linkm/library
 
-# Use the following 3 lines on Unix and Mac OS X:
-USBFLAGS = `libusb-config --cflags`
-USBLIBS =  -L$(LIBUSBA_DIR) `libusb-config --libs`
-EXE_SUFFIX=
 
-# for Mac OS X
-#JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
+# assume macosx for ease of my develoment
+ifndef OS
+	OS=macosx
+endif
+
+ifeq "$(OS)" "Windows_NT"
+	OS=windows
+endif
+
+#################  Mac OS X  ##################################################
+ifeq "$(OS)" "macosx"
+LIBTARGET = lib$(TARGET).jnilib
+LIBUSBA   = libusb-macosx.a
+USBFLAGS  =  -I libusb-static
+USBLIBS   =  -L$(LIBUSBA_DIR)  -lusb-macosx
+
 JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
 JAVAINCLUDE = -I $(JAVAINCLUDEDIR)
 
-# for Windows
+OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -std=gnu99  $(USBFLAGS)
+OS_LDFLAGS =  -Wl,-search_paths_first -framework JavaVM -framework IOKit -framework CoreFoundation $(USBLIBS) 
+endif
+
+#################  Windows  ##################################################
+ifeq "$(OS)" "windows"
+LIBTARGET = $(TARGET).dll
+LIBUSBA   = libusb-windows.a
+USBLIBS   = -lhid -lsetupapi
+#USBLIBS   = -lhid -lsetupapi -L$(LIBUSBA_DIR) -lusb-windows 
+
 #JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_14\\"
 #JAVANATINC = -I${JAVA_HOME}\include -I${JAVA_HOME}\include\win32
+OS_CFLAGS  =
+#OS_LDFLAGS = $(USBLIBS)
+OS_LDFLAGS = -s -shared -Wl,--export-all-symbols -Wl,--kill-a $(USBLIBS)
+endif
 
-# for Linux
+#################  Linux  ###################################################
+ifeq "$(OS)" "linux"
 # ???
+LIBTARGET = lib$(TARGET).so  # for linux
+LIBUSBA   = libusb-linux.a
+USBFLAGS  = `libusb-config --cflags`
+USBLIBS   =  -L$(LIBUSBA_DIR) `libusb-config --libs`
+OS_CFLAGS  =
+OS_LDFLAGS = $(USBLIBS)
+endif
 
-INCLUDES = -I . -I../c_host $(JAVAINCLUDE) $(JAVANATINC) 
-CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -std=gnu99 $(USBFLAGS) $(INCLUDES)
-#CFLAGS = -g -O2 -D_BSD_SOURCE -bundle  -arch i386 -arch ppc -std=gnu99 $(USBFLAGS) $(INCLUDES)
-LDFLAGS =  -Wl,-search_paths_first -framework JavaVM -framework IOKit -framework CoreFoundation $(USBLIBS) 
 
-OBJ=	../c_host/hiddata.o  ../c_host/linkm-lib.o  native$(TARGET).o 
+INCLUDES = -I. -I../c_host $(JAVAINCLUDE) $(JAVANATINC) 
+OBJ = ../c_host/hiddata.o  ../c_host/linkm-lib.o  native$(TARGET).o 
 
+CFLAGS  = $(OS_CFLAGS) -O -Wall -std=gnu99  $(INCLUDES)
+LDFLAGS = $(OS_LDFLAGS)
 CC = gcc
+
 
 # FIXME: hack
 all: help
@@ -40,7 +73,7 @@ help:
 	@echo "This Makefile has no default rule. Use one of the following:"
 	@echo "make javac ..... to build all java classes"
 	@echo "make jni ....... to build JNI stubs"
-	@echo "make libprep ... to get libusb usable for compiling"
+	@echo "#make libprep ... to get libusb usable for compiling"
 	@echo "make compile ....to build the C code" 
 	@echo "make jar ....... to build the distribution jar"
 	@echo "make processing. to build the processing library (only for OSX!)"
@@ -52,14 +85,14 @@ javac:
 jni:
 	javah -jni thingm.linkm.$(TARGET)
 
-# these three steps should be run on each platform, others can be done once
 # the "libprep" is to pull out the libusb.a into its own dir, for static build
-libprep:
-	mkdir -p $(LIBUSBA_DIR)
-	cp `libusb-config --exec-prefix`/lib/libusb.a $(LIBUSBA_DIR)
+#libprep:
+#	mkdir -p $(LIBUSBA_DIR)
+#	cp `libusb-config --exec-prefix`/lib/libusb.a $(LIBUSBA_DIR)/$(LIBUSBA)
 
+#	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(LDFLAGS) $(OBJ)  -lc
 compile: $(OBJ)
-	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(LDFLAGS) $(OBJ)  -lc
+	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(OBJ) $(LDFLAGS) 
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o
@@ -84,10 +117,10 @@ processinglib:	jar
 
 
 clean:
-	rm -f thingm/linkm/*.class *.o $(LIBTARGET) thingm_linkm_$(TARGET).h
+	rm -f thingm/linkm/*.class *.o ../c_host/*.o 
+	rm -f $(LIBTARGET) thingm_linkm_$(TARGET).h
 	rm -f linkm.jar linkm.zip
 	rm -rf linkm
-	rm -rf $(LIBUSBA_DIR)
 
 
 
