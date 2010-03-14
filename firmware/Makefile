@@ -95,8 +95,11 @@ unlock:
 
 readfuse: getfuse
 getfuse:
+	rm -f hfuse.txt lfuse.txt efuse.txt lockfuse.txt
 	$(AVRDUDE) -U hfuse:r:hfuse.txt:h -U lfuse:r:lfuse.txt:h -U efuse:r:efuse.txt:h -U lock:r:lockfuse.txt:h
 
+readflash:
+	$(AVRDUDE) -U flash:r:readflash.hex:i
 
 # rule for uploading firmware:
 flash: $(TARGET).hex

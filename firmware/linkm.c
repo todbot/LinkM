@@ -90,21 +90,9 @@
 /* ----------------------------- USB interface ----------------------------- */
 /* ------------------------------------------------------------------------- */
 
-#define REPORT_COUNT 16
-/*
-PROGMEM char usbHidReportDescriptor[22] = {    // USB report descriptor
-    0x06, 0x00, 0xff,              // USAGE_PAGE (Generic Desktop)
-    0x09, 0x01,                    // USAGE (Vendor Usage 1)
-    0xa1, 0x01,                    // COLLECTION (Application)
-    0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
-    0x26, 0xff, 0x00,              //   LOGICAL_MAXIMUM (255)
-    0x75, 0x08,                    //   REPORT_SIZE (8)
-    0x95, REPORT_COUNT,            //   REPORT_COUNT (32)  // was 32
-    0x09, 0x00,                    //   USAGE (Undefined)
-    0xb2, 0x02, 0x01,              //   FEATURE (Data,Var,Abs,Buf)
-    0xc0                           // END_COLLECTION
-};
-*/
+#define REPORT1_COUNT 16
+#define REPORT2_COUNT 131
+
 PROGMEM char usbHidReportDescriptor[33] = {
     0x06, 0x00, 0xff,              // USAGE_PAGE (Generic Desktop)
     0x09, 0x01,                    // USAGE (Vendor Usage 1)
@@ -114,12 +102,12 @@ PROGMEM char usbHidReportDescriptor[33] = {
     0x75, 0x08,                    //   REPORT_SIZE (8)
 
     0x85, 0x01,                    //   REPORT_ID (1)
-    0x95, REPORT_COUNT,            //   REPORT_COUNT (was 6)
+    0x95, REPORT1_COUNT,           //   REPORT_COUNT (was 6)
     0x09, 0x00,                    //   USAGE (Undefined)
     0xb2, 0x02, 0x01,              //   FEATURE (Data,Var,Abs,Buf)
 
     0x85, 0x02,                    //   REPORT_ID (2)
-    0x95, 0x83,                    //   REPORT_COUNT (131)
+    0x95, REPORT2_COUNT,           //   REPORT_COUNT (131)
     0x09, 0x00,                    //   USAGE (Undefined)
     0xb2, 0x02, 0x01,              //   FEATURE (Data,Var,Abs,Buf)
     0xc0                           // END_COLLECTION
@@ -136,11 +124,14 @@ static uchar    bytesRemaining;
 
 static int numWrites;
 
-static uint8_t msgbuf[REPORT_COUNT];
-static uint8_t outmsgbuf[REPORT_COUNT];
+static uint8_t inmsgbuf[REPORT1_COUNT];
+static uint8_t outmsgbuf[REPORT1_COUNT];
+static uint8_t reportId;  // which report Id we're currently working on
 
 static volatile uint16_t tick;         // tick tock clock
 static volatile uint16_t timertick;         // tick tock clock
+
+static uint8_t goReset = 0;   // set to 1 to reset 
 
 #if DEBUG > 0
 // setup serial routines to become stdio
@@ -161,7 +152,6 @@ typedef struct _params_t {
 
 params_t params;           // local RAM copy of playTicker params
 uint16_t script_pos;       // position for playTicker
-
 
 // magic value read on reset: 0x55 = run bootloader , other = boot normally
 #define GOBOOTLOAD_MAGICVAL 0x55
@@ -184,7 +174,17 @@ int blinkmSetRGB(uint8_t addr, uint8_t r, uint8_t g, uint8_t b );
 int blinkmSetFadespeed(uint8_t addr, uint8_t fadespeed);
 int blinkmPlayScript(uint8_t addr, uint8_t id, uint8_t reps, uint8_t pos);
 
-void(* softReset) (void) = 0;  //declare reset function @ address 0
+//void(* softReset) (void) = 0;  //declare reset function @ address 0
+
+static void (*nullVector)(void) __attribute__((__noreturn__));
+
+static void resetChip()
+{
+    cli();
+    USB_INTR_ENABLE = 0;
+    USB_INTR_CFG = 0;       /* also reset config bits */
+    nullVector();
+}
 
 // ------------------------------------------------------------------------- 
 void statusLedToggle(void)
@@ -212,20 +212,20 @@ void i2cEnable(int v) {
 void handleMessage(void)
 {
     //outmsgbuf[0]++;                   // say we've handled a msg
-    outmsgbuf[0] = 1;                   // reportID   FIXME: Hack
+    outmsgbuf[0] = reportId;          // reportID   FIXME: Hack
     outmsgbuf[1] = LINKM_ERR_NONE;    // be optimistic
     // outmsgbuf[2] starts the actual received data
 
-    uint8_t* mbufp = msgbuf+1;  // was +1 because had forgot to send repotid
+    uint8_t* inmbufp = inmsgbuf+1;  // was +1 because had forgot to send repotid
 
-    if( mbufp[0] != START_BYTE  ) {   // byte 0: start marker
+    if( inmbufp[0] != START_BYTE  ) {   // byte 0: start marker
         outmsgbuf[1] = LINKM_ERR_BADSTART;
         return;
     }
     
-    uint8_t cmd      = mbufp[1];      // byte 1: command
-    uint8_t num_sent = mbufp[2];      // byte 2: number of bytes sent
-    uint8_t num_recv = mbufp[3];      // byte 3: number of bytes to return back
+    uint8_t cmd      = inmbufp[1];     // byte 1: command
+    uint8_t num_sent = inmbufp[2];     // byte 2: number of bytes sent
+    uint8_t num_recv = inmbufp[3];     // byte 3: number of bytes to return back
 
 #if DEBUG > 0
     printf("cmd:%d, sent:%d, recv:%d\n",cmd,num_sent,num_recv);
@@ -244,7 +244,7 @@ void handleMessage(void)
     // FIXME: because "num_sent" and "num_recv" are outside this command
     //        it's confusing
     if( cmd == LINKM_CMD_I2CTRANS ) {
-        uint8_t addr      = mbufp[4];  // byte 4: i2c addr or command
+        uint8_t addr      = inmbufp[4];  // byte 4: i2c addr or command
 
         printdebug("A.");
         if( addr >= 0x80 ) {   // invalid valid I2C address
@@ -262,7 +262,7 @@ void handleMessage(void)
         printdebug("C.");
         // start succeeded, so send data
         for( uint8_t i=0; i<num_sent-1; i++) {
-            i2c_write( mbufp[5+i] );   // byte 5-N: i2c command to send
+            i2c_write( inmbufp[5+i] );   // byte 5-N: i2c command to send
         }
 
         printdebug("D.");
@@ -296,8 +296,8 @@ void handleMessage(void)
     //   outmsgbuf[1] == response code
     // FIXME: this function doesn't work i think
     else if( cmd == LINKM_CMD_I2CWRITE ) {
-        uint8_t addr      = mbufp[4];  // byte 4: i2c addr or command
-        uint8_t doread    = mbufp[5];  // byte 5: do read or not after this
+        uint8_t addr      = inmbufp[4];  // byte 4: i2c addr or command
+        uint8_t doread    = inmbufp[5];  // byte 5: do read or not after this
 
         if( addr >= 0x80 ) {   // invalid valid I2C address
             outmsgbuf[1] = LINKM_ERR_BADARGS;
@@ -311,7 +311,7 @@ void handleMessage(void)
         }
         // start succeeded, so send data
         for( uint8_t i=0; i<num_sent-1; i++) {
-            i2c_write( mbufp[5+i] );   // byte 5-N: i2c command to send
+            i2c_write( inmbufp[5+i] );   // byte 5-N: i2c command to send
         } 
         if( !doread ) {
             i2c_stop();   // done!
@@ -327,7 +327,7 @@ void handleMessage(void)
     //   outmsgbuf[3] == i2c response byte 1  (if any)
     // ...
     else if( cmd == LINKM_CMD_I2CREAD ) {
-        uint8_t addr      = mbufp[4];  // byte 4: i2c addr 
+        uint8_t addr      = inmbufp[4];  // byte 4: i2c addr 
 
         if( num_recv == 0 ) {
             outmsgbuf[1] = LINKM_ERR_BADARGS;
@@ -359,8 +359,8 @@ void handleMessage(void)
     //   outmsgbuf[4] == addr of 2nd device
     // ...
     else if( cmd == LINKM_CMD_I2CSCAN ) {
-        uint8_t addr_start = mbufp[4];  // byte 4: start addr of scan
-        uint8_t addr_end   = mbufp[5];  // byte 5: end addr of scan
+        uint8_t addr_start = inmbufp[4];  // byte 4: start addr of scan
+        uint8_t addr_end   = inmbufp[5];  // byte 5: end addr of scan
         if( addr_start >= 0x80 || addr_end >= 0x80 || addr_start > addr_end ) {
             outmsgbuf[1] = LINKM_ERR_BADARGS;
             return;
@@ -382,7 +382,7 @@ void handleMessage(void)
     //   outmsgbuf[0] == transaction counter
     //   outmsgbuf[1] == response code
     else if( cmd == LINKM_CMD_I2CCONN  ) {
-        uint8_t conn = mbufp[4];        // byte 4: connect/disconnect boolean
+        uint8_t conn = inmbufp[4];        // byte 4: connect/disconnect boolean
         i2cEnable( conn );
     }
     // i2c init
@@ -403,7 +403,7 @@ void handleMessage(void)
     //   outmsgbuf[0] == transaction counter
     //   outmsgbuf[1] == response code
     else if( cmd == LINKM_CMD_STATLEDSET ) {
-        uint8_t led = mbufp[4];        // byte 4: on/off boolean
+        uint8_t led = inmbufp[4];        // byte 4: on/off boolean
         statusLedSet( led );
     }
     // get status led state
@@ -426,7 +426,7 @@ void handleMessage(void)
     // returns:
     //  none
     else if( cmd == LINKM_CMD_PLAYSET ) { 
-        memcpy( &params, mbufp+4, sizeof(params_t));
+        memcpy( &params, inmbufp+4, sizeof(params_t));
         script_pos = params.start_pos;
         if( params.fadespeed != 0 ) {
             blinkmSetFadespeed(0, params.fadespeed);            
@@ -479,6 +479,7 @@ void handleMessage(void)
     else if( cmd == LINKM_CMD_GOBOOTLOAD ) { 
         statusLedToggle();
         eeprom_write_byte( &bootmode, GOBOOTLOAD_MAGICVAL );
+        goReset = 1;
     }
     // cmd xxxx == 
 }
@@ -508,7 +509,7 @@ uchar   usbFunctionWrite(uchar *data, uchar len)
     if(len > bytesRemaining)
         len = bytesRemaining;
     
-    memcpy( msgbuf+currentAddress, data, len );
+    memcpy( inmsgbuf+currentAddress, data, len );
     currentAddress += len;
     bytesRemaining -= len;
     
@@ -526,21 +527,25 @@ uchar   usbFunctionWrite(uchar *data, uchar len)
 usbMsgLen_t usbFunctionSetup(uchar data[8])
 {
     usbRequest_t    *rq = (void *)data;
-    
     // HID class request 
     if((rq->bmRequestType & USBRQ_TYPE_MASK) == USBRQ_TYPE_CLASS) {
         // wValue: ReportType (highbyte), ReportID (lowbyte) 
-        if(rq->bRequest == USBRQ_HID_GET_REPORT){  
-            // since we have only one report type, we can ignore the report-ID 
-            bytesRemaining = REPORT_COUNT;
-            currentAddress = 0;
-            return USB_NO_MSG;  // use usbFunctionRead() to obtain data 
+        uint8_t rid = rq->wValue.bytes[0];  // report Id
+        if(rq->bRequest == USBRQ_HID_GET_REPORT) {  
+            if( rid == 1 || rid == 2 ) { 
+                reportId = rid;
+                bytesRemaining = (rid==1) ? REPORT1_COUNT : REPORT2_COUNT;
+                currentAddress = 0;
+                return USB_NO_MSG;  // use usbFunctionRead() to obtain data 
+            }
         }
         else if(rq->bRequest == USBRQ_HID_SET_REPORT) {
-            // since we have only one report type, we can ignore the report-ID 
-            bytesRemaining = REPORT_COUNT;
-            currentAddress = 0;
-            return USB_NO_MSG; // use usbFunctionWrite() to recv data from host 
+            if( rid == 1 || rid == 2 ) { 
+                reportId = rid;
+                bytesRemaining = (rid==1) ? REPORT1_COUNT : REPORT2_COUNT;
+                currentAddress = 0;
+                return USB_NO_MSG;  // use usbFunctionRead() to obtain data 
+            }
         }
     } else {
         // ignore vendor type requests, we don't use any 
@@ -686,26 +691,20 @@ int main(void)
     puts("linkm dongle test");
 #endif
 
-    // debug: insert some known data into the outbuffer
-    /*
-    outmsgbuf[8]  = 0xde;
-    outmsgbuf[9]  = 0xad;
-    outmsgbuf[10] = 0xbe;
-    outmsgbuf[11] = 0xef;
-    for( int i=0; i<4; i++ ) {
-        outmsgbuf[12+i] = 0x60 + i;
-    }
-    */
-    
-    //odDebugInit();
     usbInit();
     usbDeviceDisconnect();  
-    // enforce re-enumeration, do this while interrupts are disabled!
-    i = 0;
-    while(--i){             // fake USB disconnect for > 250 ms 
-        wdt_reset();
-        _delay_ms(1);
+    for( i=0; i<2; i++ ) {
+        statusLedSet( 1 );
+        _delay_ms(50);
+        statusLedSet( 0 );      // turn off LED to start
+        _delay_ms(50);
     }
+    // enforce re-enumeration, do this while interrupts are disabled!
+    //i = 0;
+    //while(--i) {             // fake USB disconnect for > 250 ms 
+    //    wdt_reset();
+    //    _delay_ms(1);
+    //}
     usbDeviceConnect();
 
 #if ENABLE_PLAYTICKER == 1
@@ -717,15 +716,22 @@ int main(void)
 
     sei();
     
-    //DBG1(0x01, 0, 0);       // debug output: main loop starts 
-    for(;;){                // main event loop 
-        //DBG1(0x02, 0, 0);     // debug output: main loop iterates 
+    for(;;) {  // main event loop 
         wdt_reset();
         usbPoll();
 #if ENABLE_PLAYTICKER == 1
         playTicker();
 #endif
+        if( goReset ) {
+            for( i=0; i<200;i++ ) {  // spin on the USB til watchdog triggers
+                usbPoll();
+                _delay_ms(10);
+            }
+        }
     }
+
+    // this is never executed
+    resetChip();
     return 0;
 }
 
