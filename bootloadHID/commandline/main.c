@@ -1,4 +1,8 @@
-/* Name: main.c
+/*
+ * linkmbootload -- derived from bootloadHID's main.c
+ *
+ *
+ * Name: main.c
  * Project: AVR bootloader HID
  * Author: Christian Starkjohann
  * Creation Date: 2007-03-19
@@ -12,16 +16,28 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <unistd.h>  // for usleep()
+
+// create the "msleep(m)" func
+#ifdef _MINGW32
+#include <windows.h>
+#define msleep(m) Sleep(m)
+#else
+#include <unistd.h>
+#define msleep(m) usleep(1000*m)
+#endif
+
 #include "usbcalls.h"
 
-//#define IDENT_VENDOR_NUM        0x16c0
-//#define IDENT_VENDOR_STRING     "obdev.at"
-//#define IDENT_PRODUCT_NUM       1503
-//#define IDENT_PRODUCT_STRING    "HIDBoot"
+#define IDENT_BOOT_VENDOR_NUM        0x20A0
+#define IDENT_BOOT_PRODUCT_NUM       0x4110
+#define IDENT_BOOT_VENDOR_STRING     "ThingM"
+#define IDENT_BOOT_PRODUCT_STRING    "LinkMBoot"
+
 #define IDENT_VENDOR_NUM        0x20A0
 #define IDENT_PRODUCT_NUM       0x4110
 #define IDENT_VENDOR_STRING     "ThingM"
-#define IDENT_PRODUCT_STRING    "LinkMBoot"
+#define IDENT_PRODUCT_STRING    "LinkM"
 
 /* ------------------------------------------------------------------------- */
 
@@ -155,8 +171,8 @@ union{
     deviceData_t    data;
 }           buffer;
 
-    if((err = usbOpenDevice(&dev, IDENT_VENDOR_NUM, IDENT_VENDOR_STRING, IDENT_PRODUCT_NUM, IDENT_PRODUCT_STRING, 1)) != 0){
-        fprintf(stderr, "Error opening HIDBoot device: %s\n", usbErrorMessage(err));
+    if((err = usbOpenDevice(&dev, IDENT_BOOT_VENDOR_NUM, IDENT_BOOT_VENDOR_STRING, IDENT_BOOT_PRODUCT_NUM, IDENT_BOOT_PRODUCT_STRING, 1)) != 0){
+        fprintf(stderr, "Error opening LinkM: %s\n", usbErrorMessage(err));
         goto errorOccurred;
     }
     len = sizeof(buffer);
@@ -203,10 +219,27 @@ union{
         /* and now leave boot loader: */
         buffer.info.reportId = 1;
         usbSetReport(dev, USB_HID_REPORT_TYPE_FEATURE, buffer.bytes, sizeof(buffer.info));
-        /* Ignore errors here. If the device reboots before we poll the response,
+        /* Ignore errors here.If the device reboots before we poll the response,
          * this request fails.
          */
     }
+errorOccurred:
+    if(dev != NULL)
+        usbCloseDevice(dev);
+    return err;
+}
+
+// ----------------------------
+static int checkForLinkM() 
+{
+    usbDevice_t *dev = NULL;
+    int         err = 0;
+
+    if((err = usbOpenDevice(&dev, IDENT_VENDOR_NUM, IDENT_VENDOR_STRING, IDENT_PRODUCT_NUM, IDENT_PRODUCT_STRING, 1)) != 0){
+        fprintf(stderr, "Error opening LinkM: %s\n", usbErrorMessage(err));
+        goto errorOccurred;
+    }
+
 errorOccurred:
     if(dev != NULL)
         usbCloseDevice(dev);
@@ -223,9 +256,9 @@ static void printUsage(char *pname)
 int main(int argc, char **argv)
 {
 char    *file;
-
+ char checkLinkM = 0;
     if(argc < 2){
-        printUsage(argv[0]);
+        printUsage(PROGNAME); //argv[0]);
         return 1;
     }
     if(strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0){
@@ -234,6 +267,15 @@ char    *file;
     }
     if(strcmp(argv[1], "-r") == 0){
         leaveBootLoader = 1;
+        if(argc < 3){
+            printUsage(argv[0]);
+            return 1;
+        }
+        file = argv[2];
+    }
+    if(strcmp(argv[1], "-R") == 0){
+        leaveBootLoader = 1;
+        checkLinkM = 1;
         if(argc < 3){
             printUsage(argv[0]);
             return 1;
@@ -253,6 +295,17 @@ char    *file;
     }
     if(uploadData(dataBuffer, startAddress, endAddress))
         return 1;
+
+    printf("Flashing done.\n");
+    if( checkLinkM ) { 
+        printf("Checking for LinkM...\n");
+        msleep( 20000 ); // sleep m milliseconds
+        if( checkForLinkM() ) {
+            return 1;
+        }
+        printf("LinkM Found\n");
+    }
+
     return 0;
 }
 
