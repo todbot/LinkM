@@ -10,37 +10,68 @@
 # Please read the definitions below and edit them as appropriate for your
 # system:
 
-# Use the following 3 lines on Unix and Mac OS X:
-USBFLAGS=   `libusb-legacy-config --cflags`
-USBLIBS=    `libusb-legacy-config --libs`
+PROGNAME = linkmbootload
+
+# assume macosx for ease of my develoment
+ifndef OS
+	OS=macosx
+endif
+
+ifeq "$(OS)" "Windows_NT"
+	OS=windows
+endif
+
+
+#################  Mac OS X  ##################################################
+ifeq "$(OS)" "macosx"
+# Mac OS X: "sudo port install libusb-legacy" using MacPorts
+# Use the following 5 lines Mac OS X (and almost unix):
+USBFLAGS =   `libusb-legacy-config --cflags`
+#USBLIBS  =   `libusb-legacy-config --libs`
+USBLIBS  =    /opt/local/lib/libusb-legacy/libusb.a
+USBLIBS +=    -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
+OS_CFLAGS= -arch i386 -arch x86_64 
+OS_LIBS= $(OS_CFLAGS) 
 EXE_SUFFIX=
+endif
 
-# Use the following 3 lines on Windows and comment out the 3 above:
-#USBFLAGS=
-#USBLIBS=    -lhid -lusb -lsetupapi
-#EXE_SUFFIX= .exe
+#################  Windows  ##################################################
+ifeq "$(OS)" "windows"
+USBFLAGS=
+USBLIBS=    -lhid -lsetupapi
+EXE_SUFFIX= .exe
+endif
 
-CC=				gcc
-CXX=			g++
-CFLAGS=			-O2 -Wall $(USBFLAGS) 
-LIBS=			$(USBLIBS)
-ARCH_COMPILE=	
-ARCH_LINK=		
+#################  Linux  ###################################################
+ifeq "$(OS)" "linux"
+USBFLAGS =   `libusb-config --cflags`
+USBLIBS  =   `libusb-config --libs`
+EXE_SUFFIX=
+endif
+
+
+CC=		gcc
+CXX=	g++
+CFLAGS=	$(OS_CFLAGS) -std=gnu99 -O2 -Wall $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
+LIBS=	$(OS_LIBS) $(USBLIBS)
+
 
 OBJ=		main.o usbcalls.o
-PROGRAM=	bootloadHID$(EXE_SUFFIX)
+PROGRAM=	$(PROGNAME)$(EXE_SUFFIX)
 
 all: $(PROGRAM)
 
 $(PROGRAM): $(OBJ)
-	$(CC) $(ARCH_LINK) $(CFLAGS) -o $(PROGRAM) $(OBJ) $(LIBS)
+	$(CC) $(CFLAGS) -o $(PROGRAM) $(OBJ) $(LIBS)
 
+msleeptst: 
+	$(CC) $(CFLAGS) -o msleeptst$(EXE_SUFFIX) msleeptst.c  $(LIBS)
 
 strip: $(PROGRAM)
 	strip $(PROGRAM)
 
 clean:
-	rm -f $(OBJ) $(PROGRAM)
+	rm -f $(OBJ) $(PROGRAM) msleeptst.o
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o
