@@ -273,7 +273,7 @@ char    *file;
         }
         file = argv[2];
     }
-    if(strcmp(argv[1], "-R") == 0){
+    else if(strcmp(argv[1], "-R") == 0){
         leaveBootLoader = 1;
         checkLinkM = 1;
         if(argc < 3){
@@ -297,6 +297,9 @@ char    *file;
         return 1;
 
     printf("Flashing done.\n");
+    if( leaveBootLoader ) {
+        printf("Switching from LinkMBoot to LinkM...\n");
+    }
     if( checkLinkM ) { 
         printf("Checking for LinkM...\n");
         msleep( 20000 ); // sleep m milliseconds
