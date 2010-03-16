@@ -1,4 +1,4 @@
-application.macosx = linkm.jar, libnativeLinkM.jnilib
-application.linux = linkm.jar,libnativeLinkM.so
-application.windows = linkm.jar, libnativeLinkM.dll
+application.macosx = linkm.jar, libLinkM.jnilib
+application.linux = linkm.jar, libLinkM.so
+application.windows = linkm.jar, LinkM.dll
 

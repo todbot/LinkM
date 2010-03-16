@@ -1,5 +1,16 @@
 # Makefile for linkm library for Java -- 
 #  
+# This makefile builds Java and native code for multiple OSes
+# To build the multi-platform Processing library, it's assumed that
+# this directory is shared between a Mac OS X, Windows, and Linux computer
+#
+# Assumptions:
+# Mac OS X is at least 10.6 (Snow Leopard)
+# Windows is at least Windows XP with MinGW and MinSys installed
+# Linux is Ubuntu 9 or above
+#
+# Attempts are made to make universal binary (i386 & x86_64) on Mac OS X
+#
 #
 
 TARGET = LinkM
@@ -13,9 +24,11 @@ ifndef OS
 	OS=macosx
 endif
 
+# MinGW sets OS="Windows_NT" 
 ifeq "$(OS)" "Windows_NT"
 	OS=windows
 endif
+
 
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
@@ -37,12 +50,10 @@ ifeq "$(OS)" "windows"
 LIBTARGET = $(TARGET).dll
 LIBUSBA   = libusb-windows.a
 USBLIBS   = -lhid -lsetupapi
-#USBLIBS   = -lhid -lsetupapi -L$(LIBUSBA_DIR) -lusb-windows 
 
 #JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_14\\"
 #JAVANATINC = -I${JAVA_HOME}\include -I${JAVA_HOME}\include\win32
 OS_CFLAGS  =
-#OS_LDFLAGS = $(USBLIBS)
 OS_LDFLAGS = -s -shared -Wl,--export-all-symbols -Wl,--kill-a $(USBLIBS)
 endif
 
@@ -58,6 +69,7 @@ OS_LDFLAGS = $(USBLIBS)
 endif
 
 
+# now construct normal env vars based on OS-specific ones
 INCLUDES = -I. -I../c_host $(JAVAINCLUDE) $(JAVANATINC) 
 OBJ = ../c_host/hiddata.o  ../c_host/linkm-lib.o  native$(TARGET).o 
 
@@ -93,6 +105,7 @@ jni:
 #	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(LDFLAGS) $(OBJ)  -lc
 compile: $(OBJ)
 	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(OBJ) $(LDFLAGS) 
+	mkdir -p libtargets && cp $(LIBTARGET) libtargets
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o
@@ -102,14 +115,12 @@ jar: javac jni compile
 	jar -cfm linkm.jar  packaging/Manifest.txt thingm/linkm/*.class
 
 processing: processinglib
-processinglib:	jar
+processinglib:
 	rm -f linkm.zip
 	mkdir -p $(PROCESSING_LIBDIR)
 	cp packaging/processing-export.txt $(PROCESSING_LIBDIR)/export.txt
 	cp linkm.jar $(PROCESSING_LIBDIR)
-	cp $(LIBTARGET) $(PROCESSING_LIBDIR)
-	#cp libnativeLinkM.dll $(PROCESSING_LIBDIR)
-	#cp libnativeLinkM.so $(PROCESSING_LIBDIR)
+	cp libtargets/* $(PROCESSING_LIBDIR)
 	zip -r linkm.zip linkm
 	@echo
 	@echo "now unzip linkm.zip into ~/Documents/Processing/libraries"
@@ -123,6 +134,13 @@ clean:
 	rm -rf linkm
 
 
+
+
+
+
+###########################################################################
+
+## NOTES ##
 
 #     -I /export/home/jdk1.2/include 
 #     -I/export/home/jdk1.2/include/linux nativelib.c  
