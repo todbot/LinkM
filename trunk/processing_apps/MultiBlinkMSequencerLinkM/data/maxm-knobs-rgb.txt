@@ -1,0 +1,6 @@
+//
+// MaxM script -- "knobs rgb"
+//  Inputs #0,#1,#2 control R,G,B  -- a stand-alone color mixer! 
+//
+
+{1, {'k', 0xff,0xff,0xff}}, // inputs 0,1,2 control R,G,B

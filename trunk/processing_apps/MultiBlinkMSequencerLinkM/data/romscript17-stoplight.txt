@@ -1,0 +1,8 @@
+//
+// BlinkM ROM script #17 -- "stoplight"
+// 
+
+{  1, {'f', 100,0x00,0x00}},  // set color_step (fade speed) 
+{100, {'h',   0,0xff,0xff}},  // set red
+{100, {'h',  90,0xff,0xff}},  // set 'green' (really teal)
+{ 30, {'h',  48,0xff,0xff}},  // set yellow

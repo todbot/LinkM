@@ -4,9 +4,14 @@
  *
  */
 class Log {
+  int level = 0;
+
   public Log() {
     info("Log started");
   }  
+  public void setLevel(int l) {
+    level = l;
+  }
 
   // shortcut call to debug() method
   public void d(Object o) {
@@ -14,7 +19,7 @@ class Log {
   }  
 
   public void debug(Object o) {
-    println("DEBUG: " + o.toString());
+    if(level>0) println("DEBUG: " + o.toString());
   }
 
   public void info(Object o) {

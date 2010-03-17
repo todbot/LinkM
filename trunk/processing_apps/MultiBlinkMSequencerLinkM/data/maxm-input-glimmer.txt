@@ -1,0 +1,15 @@
+//
+// MaxM script -- "input glimmer"
+//   Display constant red, when input 1 goes > 0xA0, 
+//   do a little glimmer, then go back to being constant red
+//
+
+{  1, {'f',   40,0x00,0x00}}, // set color_step (fade speed) to 40
+{  1, {'c', 0xff,0x00,0x00}}, // red
+{  1, {'i',    1,0xA0,  -1}}, // on input 1, jump -1 if > A0
+{ 10, {'c', 0xff,0xff,0xff}}, // only do this if input is grounded
+{  5, {'c', 0x33,0x00,0xff}}, // blueish purple
+{  2, {'c', 0xff,0xff,0xff}}, // white
+{  5, {'c', 0x00,0x00,0xff}}, // blue
+{  7, {'c', 0xff,0xff,0xff}}, // white
+
