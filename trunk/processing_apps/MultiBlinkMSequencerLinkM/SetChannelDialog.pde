@@ -17,28 +17,6 @@ public class SetChannelDialog extends JDialog { //implements ActionListener {
     trackpanel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
     trackpanel.setLayout( new BoxLayout( trackpanel, BoxLayout.Y_AXIS) );
 
-    /*
-    // a dumb attempt at making table headers
-    p = new JPanel();
-    p.setBackground(cBgDarkGray);
-    JButton fakebut = new JButton();
-    fakebut.setBackground(cBgDarkGray);
-    fakebut.setPreferredSize( new Dimension(20,20) );
-    JTextField faketf1 = new JTextField(3);
-    faketf1.setText("chan");
-    faketf1.setBackground(cBgDarkGray);
-    faketf1.setEditable(false);
-    JTextField faketf2 = new JTextField(20);
-    faketf2.setText("label");
-    faketf2.setBackground(cBgDarkGray);
-    faketf2.setEditable(false);
-    
-    p.add( fakebut );
-    p.add( faketf1 );
-    p.add( faketf2 );
-    trackpanel.add(p);
-    */
-
     colorSpots = new JButton[numTracks];
     channels = new JTextField[numTracks];
     labels = new JTextField[numTracks];
@@ -118,12 +96,43 @@ public class SetChannelDialog extends JDialog { //implements ActionListener {
    */
   public void setVisible(boolean v ) {
     super.setVisible(v);
+    int addrs[] = new int[numTracks];
+    Color black[] = new Color[numTracks];
+    for( int i=0; i< numTracks; i++) { // ugh, wtf 
+      addrs[i] = multitrack.tracks[i].blinkmaddr;
+      black[i] = Color.BLACK;  // what we have here is a failure of the API :)
+    }
     if( v == true ) {
       l.debug("sending blinkm colors!");
-      //sendBlinkMColors( addrs, colors, numTracks)  // FIXME: do this
+      sendBlinkMColors( addrs, setChannelColors, numTracks) ;
     } else { 
+      sendBlinkMColors( addrs, black, numTracks );
       l.debug("sending blinkm all off!");
     }
   }
 
 }
+
+
+    /*
+    // a dumb attempt at making table headers
+    p = new JPanel();
+    p.setBackground(cBgDarkGray);
+    JButton fakebut = new JButton();
+    fakebut.setBackground(cBgDarkGray);
+    fakebut.setPreferredSize( new Dimension(20,20) );
+    JTextField faketf1 = new JTextField(3);
+    faketf1.setText("chan");
+    faketf1.setBackground(cBgDarkGray);
+    faketf1.setEditable(false);
+    JTextField faketf2 = new JTextField(20);
+    faketf2.setText("label");
+    faketf2.setBackground(cBgDarkGray);
+    faketf2.setEditable(false);
+    
+    p.add( fakebut );
+    p.add( faketf1 );
+    p.add( faketf2 );
+    trackpanel.add(p);
+    */
+
