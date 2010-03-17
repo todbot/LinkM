@@ -42,7 +42,7 @@ enum {
     LINKM_CMD_PLAYGET    = 104,  // get params of  player state machine
     LINKM_CMD_EESAVE     = 105,  // save linkm state to EEPROM
     LINKM_CMD_EELOAD     = 106,  // load linkm state from EEPROM
-    LINKM_CMD_GOBOOTLOAD = 107,  // trigger bootload
+    LINKM_CMD_GOBOOTLOAD = 107,  // trigger USB bootload
 };
 
 // Return values for linkm_command()

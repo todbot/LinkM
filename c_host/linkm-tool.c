@@ -93,10 +93,10 @@ void usage(char *myName)
 "  --readinputs       Read inputs (on MaxM)\n"
 "  --linkmcmd         Send a raw linkm command  \n"
 "  --linkmversion     Get LinkM version \n"
-"  --statled <0|1>    Turn on or off status LED  \n"
-"  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params \n"
 "  --linkmeesave      Save playerset and other parms for later \n"
 "  --linkmeeload      Load playerset and other parms \n"
+"  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params \n"
+"  --statled <0|1>    Turn on or off status LED  \n"
 "  --gobootload       Set LinkM so next insertion it comes up in bootloaer\n"
 "\n"
 "and [options] are:\n"
@@ -240,9 +240,9 @@ int main(int argc, char **argv)
     if( cmd == CMD_LINKM_GOBOOTLOAD ) {
         printf("linkm switching to bootloader:\n");
         err = linkm_command(dev, LINKM_CMD_GOBOOTLOAD, 0, 0, NULL, NULL);
-        if( err ) {
-            fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
-        }
+        //if( err ) {
+        //    fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
+        //}
         printf("linkm is now in bootloader mode\n");
     }
     else if( cmd == CMD_LINKM_VERSIONGET ) {
@@ -379,7 +379,7 @@ int main(int argc, char **argv)
         cmdbuf[2] = r;
         cmdbuf[3] = g;
         cmdbuf[4] = b;
-        err = linkm_command(dev, 0x01, 5,0, cmdbuf, NULL );
+        err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL );
         if( err ) {
             fprintf(stderr,"error on color cmd: %s\n",linkm_error_msg(err));
         }
@@ -547,9 +547,9 @@ uint32_t stampstart()
 	tm = localtime(&tv.tv_sec);
  
 	printf("TIMESTAMP-START\t  %d:%02d:%02d:%ld (~%ld ms)\n", tm->tm_hour,
-	       tm->tm_min, tm->tm_sec, tv.tv_usec,
-	       tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
-	       tm->tm_sec * 1000 + tv.tv_usec / 1000);
+	       tm->tm_min, tm->tm_sec, (long)tv.tv_usec,
+	       (long)(tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
+                  tm->tm_sec * 1000 + tv.tv_usec / 1000));
     
 	start = tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
 		tm->tm_sec * 1000 + tv.tv_usec / 1000;
@@ -571,9 +571,9 @@ uint32_t stampstop(uint32_t start)
 		tm->tm_sec * 1000 + tv.tv_usec / 1000;
  
 	printf("TIMESTAMP-END\t  %d:%02d:%02d:%ld (~%ld ms) \n", tm->tm_hour,
-	       tm->tm_min, tm->tm_sec, tv.tv_usec,
-	       tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
-	       tm->tm_sec * 1000 + tv.tv_usec / 1000);
+	       tm->tm_min, tm->tm_sec, (long)tv.tv_usec,
+	       (long)(tm->tm_hour * 3600 * 1000 + tm->tm_min * 60 * 1000 +
+                  tm->tm_sec * 1000 + tv.tv_usec / 1000));
  
 	printf("ELAPSED\t  %d ms\n", stop - start);
  
