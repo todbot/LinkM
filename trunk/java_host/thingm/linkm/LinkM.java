@@ -42,21 +42,21 @@ public class LinkM
   //
   static final int LINKM_CMD_NONE    = 0; // no command, do not use
   // I2C commands
-  static final int LINKM_CMD_I2CTRANS= 1; // i2c read/wri (N args: addr + other)
-  static final int LINKM_CMD_I2CWRITE= 2; // i2c write    (N args: addr + other)
+  static final int LINKM_CMD_I2CTRANS= 1; // i2c read/wri (N args: addr+other)
+  static final int LINKM_CMD_I2CWRITE= 2; // i2c write    (N args: addr+other)
   static final int LINKM_CMD_I2CREAD = 3; // i2c read     (1 args: addr)
   static final int LINKM_CMD_I2CSCAN = 4; // i2c bus scan (2 args: start,end)
   static final int LINKM_CMD_I2CCONN = 5; // i2c connect/disc (1 args: 1/0)
   static final int LINKM_CMD_I2CINIT = 6; // i2c init         (0 args: )
   // linkm commands
-  static final int LINKM_CMD_VERSIONGET= 100;  // version get       (0 args)
-  static final int LINKM_CMD_STATLEDSET= 101;  // status LED set    (1 args: 1/0)
+  static final int LINKM_CMD_VERSIONGET= 100;  // version get    (0 args)
+  static final int LINKM_CMD_STATLEDSET= 101;  // status LED set (1 args: 1/0)
   static final int LINKM_CMD_STATLEDGET= 102;  // status LED get    (0 args)
   static final int LINKM_CMD_PLAYERSET = 103;  // set params        (7 args)
   static final int LINKM_CMD_PLAYERGET = 104;  // get params        (0 args)
   static final int LINKM_CMD_EESAVE    = 105;  // save params to EE (0 args)
   static final int LINKM_CMD_EELOAD    = 106;  // load params fr EE (0 args)
-
+  static final int LINKM_CMD_GOBOOTLOAD= 107;  // trigger USB bootload
 
   //---------------------------------------------------------------------------
   // Test Functionality
@@ -84,8 +84,11 @@ public class LinkM
 "  --upload          Upload a light script to blinkm (reqs addr & file) \n"+
 "  --download <n>    Download light script n from blinkm (reqs addr & file) \n"+
 "  --linkmcmd        Send a raw linkm command  \n"+
+"  --linkmversion    Get LinkM version \n"+
 "  --statled <0|1>   Turn on or off status LED  \n"+
+"  --gobootload      Tell LinkM to go into its bootloaer\n"+
 "  --factoryreset    Restore a BlinkM to factory conditions \n"+
+
 "Options:\n"+
 "  -h, --help                   Print this help message\n"+
 "  -a addr, --addr=i2caddr      I2C address for command (default 0)\n"+
@@ -114,75 +117,82 @@ public class LinkM
     int ac=0;
     while( ac< args.length ) {
       //for( int i=0; i< args.length; i++ ) {
-      String a = args[ac];
-      if( a.equals("--addr") || a.equals("-a") ) {
+      String rawa = args[ac];
+      String a = rawa.replaceAll("-","");
+      if( a.equals("addr") || a.equals("a") ) {
         addr = parseHexDecInt( getArg(args,++ac,"") );
       }
       //else if( a.equals("--color") || a.equals("-c") ) {
       //  color = parseHexDecInt( getArg(args,++ac,"") );
       //  cmd = "color";
       //}
-      else if( a.equals("--debug") || a.equals("-d") || a.equals("-v") ) { 
+      else if( a.equals("debug") || a.equals("d") || a.equals("v") ) { 
         debug++;
       }
-      else if( a.equals("--millis") || a.equals("-m") ) {
+      else if( a.equals("millis") || a.equals("m") ) {
         pausemillis = parseHexDecInt( getArg(args,++ac,"") );
       }
-      else if( a.equals("--statled") ) {
+      else if( a.equals("statled") ) {
         arg = parseHexDecInt( getArg(args,++ac,"") );
         cmd = "statled";
       }
-      else if( a.equals("--i2cscan") ) {
+      else if( a.equals("i2cscan") ) {
         cmd = "i2cscan";
       }
-      else if( a.equals("--i2cenable") ) {
+      else if( a.equals("i2cenable") ) {
         arg = parseHexDecInt( getArg(args,++ac,"") );
         cmd = "i2cenable";
       }
-      else if( a.equals("--cmd")) {
+      else if( a.equals("cmd")) {
         argbuf = parseArgBuf( args[++ac] );  // blinkm cmd, c,0xff,0x33,0xdd
         cmd = "cmd";
       }
-      else if( a.equals("--off") ) { 
+      else if( a.equals("off") ) { 
         addr = parseHexDecInt( getArg(args,++ac,"") );
         cmd = "off";
       }
-      else if( a.equals("--on") ) { 
+      else if( a.equals("on") ) { 
         cmd = "on";
       }
-      else if( a.equals("--play")) { 
+      else if( a.equals("play")) { 
         arg = parseHexDecInt( getArg(args,++ac,"") );  // script num to play
         cmd = "play";
       }
-      else if( a.equals("--stop")) {
+      else if( a.equals("stop")) {
         cmd = "stop";
       }
-      else if( a.equals("--random")) {
+      else if( a.equals("random")) {
         arg = parseHexDecInt( getArg(args,++ac,"") );  // number of rand colors
         cmd = "random";
       }
-      else if( a.equals("--upload")) {
+      else if( a.equals("upload")) {
         file = args[++ac];
         cmd = "upload";
       }
-      else if( a.equals("--download")) {
+      else if( a.equals("download")) {
         cmd = "download";
       }
-      else if( a.equals("--getversion")) {
+      else if( a.equals("getversion")) {
         cmd = "getversion";
       }
-      else if( a.equals("--setaddr")) { 
+      else if( a.equals("setaddr")) { 
         arg = parseHexDecInt( getArg(args,++ac,"") );  // new addr
         cmd = "setaddr";
       }
-      else if( a.equals("--readinputs")) { 
+      else if( a.equals("readinputs")) { 
         cmd = "readinputs";
       }
-      else if( a.equals("--help")) { 
+      else if( a.equals("help")) { 
         cmd = "help";
       }
-      else if( a.equals("--factoryreset") ) {
+      else if( a.equals("linkmversion") ) {
+        cmd = "linkmversion";
+      }
+      else if( a.equals("factoryreset") ) {
         cmd = "factoryreset";
+      }
+      else if( a.equals("gobootload") ) {
+        cmd = "gobootload";
       }
       else { 
         file = args[ac];
@@ -255,7 +265,7 @@ public class LinkM
         linkm.setAddress( addr, (int)arg );
       }
       else if( cmd.equals("i2cscan") ) { 
-        //if( addr == 0 ) addr = 1; // don't scan general call / broadcast addr
+        //if( addr == 0 ) addr = 1; // don't scan general call/ broadcast addr
         println("I2C scan from addresses "+1+" - "+113);
         byte[] addrs = linkm.i2cScan(1,113);
         if( addrs.length == 0 ) {
@@ -281,6 +291,20 @@ public class LinkM
       else if( cmd.equals("statled") ) {
         println("Setting LinkM status LED to "+arg);
         linkm.statusLED( (int)arg );
+      }
+      else if( cmd.equals("linkmversion") ) {
+        print("LinkM Version: ");
+        byte[] ver = linkm.getLinkMVersion();
+        if( ver != null ) { 
+          printHexString("",ver);
+        } else {
+          println("error, getlinkmversion returned null");
+        }
+      }
+      else if( cmd.equals("gobootload") ) {
+        println("LinkM switching to bootloader:");
+        linkm.goBootload();
+        println("LinkM now in bootloader mode.");
       }
       else if( cmd.equals("cmd") ) {
         printHexString("Sending BlinkM command: ", argbuf );
@@ -491,6 +515,13 @@ public class LinkM
   }
 
   /**
+   * Tell LinkM to switch to its USB bootloader mode
+   */
+  public void goBootload() throws IOException {
+    command( LINKM_CMD_GOBOOTLOAD, null, null );
+  }
+  
+  /**
    * Set the state of LinkM's status LED 
    */
   public void statusLED(int val) 
@@ -582,7 +613,7 @@ public class LinkM
    */
   public void off(int addr) 
     throws IOException { 
-    stopScript(addr);               
+    stopScript(addr);
     setRGB(addr, 0,0,0 );
   }
 
