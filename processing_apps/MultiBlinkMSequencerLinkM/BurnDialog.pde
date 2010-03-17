@@ -7,7 +7,7 @@ public class BurnDialog extends JDialog implements ActionListener {
 
   private String msg_uploading = "Uploading...";
   private String msg_done = "Done";
-  private String msg_nowplaying = "Now playing sequence stand-alone";
+  private String msg_nowplaying = "Now playing script...";
   private String msg_error = "ERROR: not connected to a BlinkM.";
   private String msg_empty = "     ";
 
@@ -73,7 +73,7 @@ public class BurnDialog extends JDialog implements ActionListener {
 
       msgtop.setText( msg_uploading );
     
-      boolean rc = doUpload();
+      boolean rc = doUpload(progressbar);
 
       if( rc == true ) 
           msgtop.setText( msg_uploading + msg_done );

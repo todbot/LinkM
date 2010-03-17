@@ -480,6 +480,8 @@ void setupMenus(Frame f) {
   iteme3.addActionListener(menual);
   iteme4.addActionListener(menual);
   itemh1.addActionListener(menual);
+  itemh2.addActionListener(menual);
+  itemh3.addActionListener(menual);
   itemee1.addActionListener(menual);
   itemee2.addActionListener(menual);
   itemee3.addActionListener(menual);
@@ -516,12 +518,61 @@ void setupMenus(Frame f) {
  *
  */
 public void showHelp() {
+  JOptionPane.showMessageDialog(mf,
+                                "Help!",
+                                "Help!",
+                                JOptionPane.INFORMATION_MESSAGE);
 
 }
+/**
+ *
+ */
 public void displayVersions() {
+  //if( !connected ) return;
+  String msg = "Versions:\n";
+
+  Track t = multitrack.getCurrTrack();
+  int addr = t.blinkmaddr;
+  try { 
+    msg += "LinkM : ";
+    byte[] linkmver  = linkm.getLinkMVersion();
+    if( linkmver != null ) {
+      msg += "0x"+ hex(linkmver[0]) + ", 0x"+ hex(linkmver[1]);
+    } else {
+      msg += "-could not be read-";
+    }
+    msg += "\n";
+  } catch( IOException ioe ) {
+    msg += "-error connecting-";
+  }
+   
+  try {
+    msg += "BlinkM : ";
+    if( addr != -1 ) {
+      byte[] blinkmver = linkm.getVersion( addr );
+      if( blinkmver != null ) { 
+        msg += (char)blinkmver[0]+","+(char)blinkmver[1];
+      } else {
+        msg += "-could not be read-";
+      }
+    }
+    msg += "   (trk:"+(multitrack.currTrack+1)+", addr:"+addr +")";
+  } catch( IOException ioe ) {
+    msg += "-error connecting-";
+  }
+
+  JOptionPane.showMessageDialog(mf,
+                                msg,
+                                "LinkM / BlinkM Versions",
+                                JOptionPane.INFORMATION_MESSAGE);
 
 }
+
+/**
+ *
+ */
 public void upgradeLinkMFirmware() {
+  l.debug("upgradeLinkMFirmware");
 
 }
 
@@ -666,7 +717,8 @@ public boolean sendBlinkMColors( int addrs[], Color colors[], int send_count ) {
   long st = System.currentTimeMillis();
   try { 
     for( int i=0; i<send_count; i++) {
-      linkm.fadeToRGB( addrs[i], colors[i] );
+      if( addrs[i]!=-1 ) 
+        linkm.fadeToRGB( addrs[i], colors[i] );
     }
     //linkm.fadeToRGB( addrs, colors, send_count );
   } catch( IOException ioe ) {
@@ -679,6 +731,12 @@ public boolean sendBlinkMColors( int addrs[], Color colors[], int send_count ) {
   return true;
 }
 
+/**
+ *
+ */
+public void prepareForPreview() {
+  prepareForPreview(durationCurrent);
+}
 
 /**
  * Prepare blinkm for playing preview scripts
@@ -735,7 +793,7 @@ public boolean doDownload() {
 /**
  * What happens when "upload" button is pressed
  */
-public boolean doUpload() {
+public boolean doUpload(JProgressBar progressbar) {
   if( !connected ) return false;
   multitrack.stop();
   boolean rc = false;
@@ -761,6 +819,7 @@ public boolean doUpload() {
         scriptLine = new BlinkMScriptLine( durticks, 'c', c.getRed(),
                                            c.getGreen(),c.getBlue());
         linkm.writeScriptLine( blinkmAddr, i, scriptLine);
+        if( progressbar !=null) progressbar.setValue(i);  // hack
       }
       
       // set script length     cmd   id         length         reps
@@ -791,6 +850,7 @@ public boolean doUpload() {
 }
 
 /**
+ * FIXME: this is deprecated!
  * Do address change dialog -- this might be deprecated
  */
 public boolean doAddressChange() {
@@ -824,9 +884,10 @@ public boolean doAddressChange() {
  */
 public void doTrackDialog(int track) {
   multitrack.reset(); // stop preview script
- 
+  
   setChannelDialog.setVisible(true);
   
+  multitrack.reset();
   multitrack.repaint();
 
 }
