@@ -1,0 +1,19 @@
+//
+// MaxM script -- "input selects between two scripts"
+//  A two-mode light script 
+//   mode 1 is a slow red-green-blue fading loop 
+//   mode 2 is a flash to bright white, then fade to black 
+//   a button or switch on input #1 chooses between the two 
+
+{0,  {'I',0,0xA0,6}},       // line 0: set global test: if #1 > 0xA0 
+{0,  {'f',20,0,0}},         // line 1: set fade speed to 20 
+{15, {'c',0xff,0x00,0x00}}, // line 2: fade to red 
+{15, {'c',0x00,0xff,0x00}}, // line 3: fade to blue 
+{15, {'c',0x00,0x00,0xff}}, // line 4: fade to green 
+{0,  {'j',-3,0,0}},         // line 5: jump back 3 
+{0,  {'I',255,255,255}},    // line 6: turn off 'I' test 
+{0,  {'f',100,0,0}},        // line 7: set fadespeed to a fast 100 
+{2,  {'c',0xff,0xff,0xff}}, // line 8: white 
+{0,  {'f',20,0,0}},         // line 9: set fade to a slow 20 
+{20, {'c',0x00,0x00,0x00}}, // line10: fade to black 
+// light script by default loops back to line 0 

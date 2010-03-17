@@ -1,0 +1,5 @@
+//
+// BlinkM ROM script #11 -- "random mood"
+// 
+
+{50, {'H', 0x80,0x00,0x00}}, // random fade to other hues

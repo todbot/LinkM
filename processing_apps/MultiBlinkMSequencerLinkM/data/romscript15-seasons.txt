@@ -1,0 +1,13 @@
+//
+// BlinkM ROM script #15 -- "the seasons"
+// 
+
+{  1, {'f',    4,0x00,0x00}}, // set color_step (fade speed)
+{100, {'h',   70,0xff,0xff}}, // set green/yellow
+{ 50, {'H',   10,0x00,0x00}}, // set green/yellow
+{100, {'h',  128,0xff,0xff}}, // set blue/green
+{ 50, {'H',   10,0x00,0x00}}, // set blue/green
+{100, {'h',   20,0xff,0xff}}, // set orange/red
+{ 50, {'H',   10,0x00,0x00}}, // set orange/red
+{100, {'h',  200,0x40,0xff}}, // set white/blue
+{ 50, {'H',   10,0x00,0x00}}, // set white

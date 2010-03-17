@@ -460,7 +460,7 @@ public class MultiTrackView
    */
   public void setSelectedColor( Color c ) {
     boolean sentColor = false;
-    //l.debug("setSelectedColor: "+c);
+    l.debug("setSelectedColor: "+c);
     for( int i=0; i<numTracks; i++) {
       for( int j=0; j<numSlices; j++) { 
         if( tracks[i].selects[j] ) {
@@ -642,8 +642,16 @@ public class MultiTrackView
       (mouseClickedPt.y > currTrack*trackHeight + scrubHeight) && 
       (mouseClickedPt.y < (currTrack+1)*trackHeight + scrubHeight) ;
 
+    if( clickCnt >= 2 && intrack ) {   // double-click to set color
+      //colorPreview.setColors(  getColorsAtColumn(i) );
+      for( int i=0; i<numSlices; i++ ) {
+        if( isSliceHit( mouseReleasedPt.x,i) ) 
+          colorChooser.setColor( tracks[currTrack].slices[i] );
+      }
+    }
+
+  /*
     if( intrack ) {
-      /*
       for( int i=0; i<numSlices; i++) {
         if( isSliceHit( mouseReleasedPt.x, i) ) {
           if((e.getModifiers() & InputEvent.META_MASK) == 0) // meta key notheld
@@ -651,10 +659,10 @@ public class MultiTrackView
           selectSlice(currTrack, i,true);
         }
       }
-      */
     }
+  */
 
-    /*
+  /*
     // snap playhead to closest time slice
     for( int j=0; j<numTracks; j++ ) {
       TimeSlice[] timeSlices = timeTracks[j].timeSlices;

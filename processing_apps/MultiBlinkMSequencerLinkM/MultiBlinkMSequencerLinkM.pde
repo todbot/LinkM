@@ -46,7 +46,9 @@ import javax.swing.plaf.metal.*;
 import thingm.linkm.*;
 
 final static String VERSION = "002";
-final static String versionInfo = "version "+VERSION+" \u00a9 ThingM Corporation";
+final static String versionInfo="version "+VERSION+" \u00a9 ThingM Corporation";
+
+final static int debugLevel = 1;
 
 Log l = new Log();
 
@@ -55,6 +57,7 @@ LinkM linkm = new LinkM();  // linkm obj only used in this file
 boolean connected = false;   // FIXME: verify semantics correct on this
 boolean blinkmConnected = false;
 long lastConnectCheck;
+//boolean doLinkMCheck = false;  // set to true for autoconnect stuff
 
 String silkfontPath = "slkscrb.ttf";  // in "data" directory
 Font silkfont;
@@ -77,7 +80,7 @@ SetChannelDialog setChannelDialog;
 int numSlices = 48;  
 int numTracks = 8;    // number of different blinkms
 
-int blinkmStartAddr = 10;
+int blinkmStartAddr = 9;
 
 // default blinkm addresses used, can change by clicking on the addresses in UI
 //int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
@@ -146,6 +149,8 @@ Color[] setChannelColors = new Color [] {
 void setup() {
   size(5, 5);   // Processing's frame, we'll turn off in a bit, must be 1st line
   frameRate(30);   // each frame we can potentially redraw timelines
+
+  l.setLevel( debugLevel );
 
   try { 
     // load up the lovely silkscreen font
@@ -426,13 +431,18 @@ void setupMenus(Frame f) {
           multitrack.pasteTrack();
         } else if( cmd.equals("Delete Track") ) {
           multitrack.deleteTrack();
-        } else if( cmd.equals("Help") ) {
+        } else if( cmd.equals("Fill Script0 Default") ) {
+          loadTrack( scriptFile("romscript00-default.txt") );
+        } else if( cmd.equals("Fill Script1 RGB") ) {
+          loadTrack( scriptFile("romscript01-rgb.txt") );
+        }  else if( cmd.equals("Help") ) {
           showHelp();
         } else if( cmd.equals("Display LinkM/BlinkM Versions") ) {
           displayVersions();
         } else if( cmd.equals("Upgrade LinkM Firmware") ) {
           upgradeLinkMFirmware();
         }
+        
         multitrack.repaint();
       }
     };
@@ -441,7 +451,8 @@ void setupMenus(Frame f) {
   Menu fileMenu = new Menu("File");
   Menu editMenu = new Menu("Edit");
   Menu helpMenu = new Menu("Help");
-  
+  Menu fillMenu = new Menu("Fill Track");
+
   MenuItem itemf1 = new MenuItem("Load Set", new MenuShortcut(KeyEvent.VK_O));
   MenuItem itemf2 = new MenuItem("Save Set", new MenuShortcut(KeyEvent.VK_S));
   MenuItem itemf3 = new MenuItem("Load One Track");
@@ -451,6 +462,10 @@ void setupMenus(Frame f) {
   MenuItem iteme2 = new MenuItem("Copy Track", new MenuShortcut(KeyEvent.VK_C));
   MenuItem iteme3 = new MenuItem("Paste Track",new MenuShortcut(KeyEvent.VK_V));
   MenuItem iteme4 = new MenuItem("Delete Track",new MenuShortcut(KeyEvent.VK_D));
+  //MenuItem iteme5 = new MenuItem(fillMenu);
+  MenuItem itemee1= new MenuItem("Fill Script0 Default");
+  MenuItem itemee2= new MenuItem("Fill Script1 RGB");
+  MenuItem itemee3= new MenuItem("Fill Script2");
 
   MenuItem itemh1 = new MenuItem("Help");
   MenuItem itemh2 = new MenuItem("Display LinkM/BlinkM Versions");
@@ -465,7 +480,9 @@ void setupMenus(Frame f) {
   iteme3.addActionListener(menual);
   iteme4.addActionListener(menual);
   itemh1.addActionListener(menual);
-  itemh2.addActionListener(menual);
+  itemee1.addActionListener(menual);
+  itemee2.addActionListener(menual);
+  itemee3.addActionListener(menual);
   
   fileMenu.add(itemf1);
   fileMenu.add(itemf2);
@@ -475,7 +492,12 @@ void setupMenus(Frame f) {
   editMenu.add(iteme1);
   editMenu.add(iteme2);
   editMenu.add(iteme3);
-  
+  editMenu.add(iteme4);
+  editMenu.add(fillMenu);
+  fillMenu.add(itemee1);
+  fillMenu.add(itemee2);
+  fillMenu.add(itemee3);
+
   helpMenu.add(itemh1);
   helpMenu.add(itemh2);
   helpMenu.add(itemh3);
@@ -518,13 +540,14 @@ public boolean checkForLinkM() {
     }
     return true;
   }
-
+  
   try { 
     linkm.open();
   } catch( IOException ioe ) {
     return false;
   }
   linkm.close();
+  
   return true;
 }
 
@@ -534,11 +557,10 @@ public boolean checkForLinkM() {
  */
 public boolean connect() {
   l.debug("connect");
-  //if( disconnectedMode ) return true;
   try { 
     linkm.open();
     linkm.i2cEnable(true);
-      byte[] addrs = linkm.i2cScan(9,17);  // FIXME: not a full scan
+    byte[] addrs = linkm.i2cScan(1,113);
     int cnt = addrs.length;
     if( cnt>0 ) {
       /*
@@ -597,6 +619,7 @@ public boolean connect() {
 
 
 /**
+ * FIXME: this is unused.  superceded by checkForLinkM()/connect() interaction
  * Verifies connetion to LinkM and at least one BlinkM
  * Also clears out any I2C bus errors that may be present
  */
@@ -651,7 +674,7 @@ public boolean sendBlinkMColors( int addrs[], Color colors[], int send_count ) {
     return false;
   }
   long et = System.currentTimeMillis();
-  println("time to SendBlinkMColors: "+(et-st)+" millisecs");
+  l.debug("time to SendBlinkMColors: "+(et-st)+" millisecs");
   
   return true;
 }
@@ -803,17 +826,29 @@ public void doTrackDialog(int track) {
   multitrack.reset(); // stop preview script
  
   setChannelDialog.setVisible(true);
+  
+  multitrack.repaint();
 
 }
 
 
 // ----------------------------------------------------------------------------
 
+File scriptFile(String filename) {
+  File f = new File(dataPath(filename));
+  println("f:"+f);
+  return f;
+}
+
 /**
  * Load current track from a file
  */
 void loadTrack() { 
   loadTrack( multitrack.currTrack );
+}
+
+void loadTrack(File file) {
+  loadTrackWithFile( multitrack.currTrack, file );
 }
 
 /**
@@ -827,6 +862,13 @@ void loadTrack(int tracknum) {
   }
   File file = fc.getSelectedFile();
   lastFile = file;
+  loadTrackWithFile( tracknum, file );
+}
+
+/**
+ *
+ */
+void loadTrackWithFile(int tracknum, File file) {
   if( file != null ) {
     String[] lines = LinkM.loadFile( file );
     BlinkMScript script = LinkM.parseScript( lines );

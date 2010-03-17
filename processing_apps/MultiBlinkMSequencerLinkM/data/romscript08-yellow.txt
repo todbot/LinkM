@@ -1,0 +1,5 @@
+//
+// BlinkM ROM script #8 -- "yellow blink"
+// 
+{ 20, {'c', 0xff,0xff,0x00},  // yellow
+{ 20, {'c', 0x00,0x00,0x00}},  // black
