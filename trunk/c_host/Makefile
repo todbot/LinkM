@@ -24,6 +24,7 @@ ifeq "$(OS)" "Windows_NT"
 	OS=windows
 endif
 
+#################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
 # Mac OS X: "sudo port install libusb-legacy" using MacPorts
 USBFLAGS =  `libusb-legacy-config --cflags`
@@ -34,6 +35,7 @@ OS_LIBS  = $(OS_CFLAGS)
 EXE_SUFFIX=
 endif
 
+#################  Windows  ##################################################
 ifeq "$(OS)" "windows"
 USBFLAGS=
 USBLIBS=    -lhid -lsetupapi
@@ -41,6 +43,7 @@ USBLIBS=    -lhid -lsetupapi
 EXE_SUFFIX= .exe
 endif
 
+#################  Linux  ###################################################
 ifeq "$(OS)" "linux"
 USBFLAGS =   `libusb-config --cflags`
 USBLIBS  =   `libusb-config --libs`
