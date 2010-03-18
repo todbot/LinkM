@@ -51,7 +51,7 @@ int linkm_command(usbDevice_t *dev, int cmd,
                   int num_send, int num_recv,
                   uint8_t* buf_send, uint8_t* buf_recv)
 {
-    static uint8_t buf[129]; // FIXME: correct size?
+    static uint8_t buf[200]; // FIXME: correct size?
     int len,err;
     if(linkm_debug>1) {
         printf("linkmcmd: cmd:0x%x, num_send:%d, num_recv:%d\n",
@@ -72,7 +72,7 @@ int linkm_command(usbDevice_t *dev, int cmd,
         if(linkm_debug) hexdump("linkmcmd: ",buf, 16); // print firest few bytes
     }
     // send out the command part of the transaction
-    if((err = usbhidSetReport(dev, (char*)buf, sizeof(buf))) != 0) {
+    if((err = usbhidSetReport(dev, (char*)buf, REPORT1_SIZE)) != 0) {
         fprintf(stderr, "error writing data: %s\n", linkm_error_msg(err));
         return err;
     }
