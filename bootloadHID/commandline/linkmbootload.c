@@ -18,8 +18,6 @@
 
 #include "linkmbootload-lib.h"
 
-char dataBuffer[65536 + 256];    /* buffer for file data */
-int  startAddress, endAddress;
 
 /* ------------------------------------------------------------------------- */
 
@@ -59,34 +57,18 @@ int main(int argc, char **argv)
         file = argv[0];
     }
 
-    /*
-    int argi = 1;
-    if(argc < 2){
-        printUsage(PROGNAME); //argv[0]);
-        return 1;
-    }
-    if(strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0){
-        printUsage(argv[0]);
-        return 1;
-    }
-    if(strcmp(argv[argi++], "-r") == 0){
-        leaveBootloader = 1;
-    } else{
-        file = argv[1];
-    }
-    */
     if( file ) {
-        startAddress = sizeof(dataBuffer);
-        endAddress = 0;
-        memset(dataBuffer, -1, sizeof(dataBuffer));
-        if(parseIntelHex(file, dataBuffer, &startAddress, &endAddress))
+        int rc = uploadFromFile(file, 0);
+        if( rc == -1 ) {
             return 1;
-        if(startAddress >= endAddress){
+        }
+        if( rc == -2 ) {
             fprintf(stderr, "No data in input file, exiting.\n");
             return 0;
         }
-        if(uploadData(dataBuffer, startAddress, endAddress, 0))
-            return 1;
+        else if( rc == -3 ) { 
+            fprintf(stderr,"error uploading\n");
+        }
         printf("Flashing done.\n");
     }
 
