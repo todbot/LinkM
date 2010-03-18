@@ -50,8 +50,9 @@ enum {
     CMD_LINKM_I2CINIT,
     CMD_LINKM_PLAYSET,
     CMD_LINKM_PLAYGET,
-    CMD_LINKM_GOBOOTLOAD,
-    CMD_LINKM_RESETBOOT,
+    CMD_LINKM_BOOTLOADGO,
+    CMD_LINKM_BOOTLOADRESET,
+    CMD_LINKM_BOOTLOAD,
     CMD_BLINKM_CMD,
     CMD_BLINKM_OFF,
     CMD_BLINKM_ON,
@@ -99,7 +100,7 @@ void usage(char *myName)
 "  --linkmeeload      Load playerset and other parms \n"
 "  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params \n"
 "  --statled <0|1>    Turn on or off status LED  \n"
-"  --gobootload       Set LinkM so next insertion it comes up in bootloaer\n"
+"  --bootloadgo       Start LinkMBoot bootloaer mode\n"
 "\n"
 "and [options] are:\n"
 "  -h, --help                   Print this help message\n"
@@ -185,8 +186,9 @@ int main(int argc, char **argv)
         {"getversion", no_argument,       &cmd,   CMD_BLINKM_GETVERSION },
         {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYSET },
         {"playget",    no_argument,       &cmd,   CMD_LINKM_PLAYGET },
-        {"gobootload", no_argument,       &cmd,   CMD_LINKM_GOBOOTLOAD },
-        {"resetboot",  no_argument,       &cmd,   CMD_LINKM_RESETBOOT },
+        {"bootloadgo",   no_argument,       &cmd,   CMD_LINKM_BOOTLOADGO },
+        {"bootloadreset",no_argument,       &cmd,   CMD_LINKM_BOOTLOADRESET },
+        {"bootload",     required_argument, &cmd,   CMD_LINKM_BOOTLOAD },
         {NULL,         0,                 0,      0}
     };
 
@@ -210,6 +212,9 @@ int main(int argc, char **argv)
             case CMD_BLINKM_PLAY:
             case CMD_BLINKM_FADESPEED:
                 arg = strtol(optarg,NULL,0);   // cmd w/ number arg
+                break;
+            case CMD_LINKM_BOOTLOAD:
+                strcpy(file,optarg);
                 break;
             }
             break;
@@ -235,22 +240,39 @@ int main(int argc, char **argv)
     linkm_debug = debug;
 
 
-    if( cmd == CMD_LINKM_RESETBOOT ) {
-        printf("linkm resetting bootloader:\n");
+    if( cmd == CMD_LINKM_BOOTLOAD ) {
+        printf("linkmboot uploading firmware: %s\n",file);
+        int rc = uploadFromFile(file, 0);
+        if( rc == -1 ) {
+            return 1;
+        }
+        if( rc == -2 ) {
+            fprintf(stderr, "No data in input file, exiting.\n");
+            return 0;
+        }
+        else if( rc == -3 ) { 
+            fprintf(stderr,"error uploading\n");
+        }
+        printf("Flashing done.\n");
+        return 1;
+    }
+
+    if( cmd == CMD_LINKM_BOOTLOADRESET ) {
+        printf("linkmboot resetting bootloader:\n");
         if( resetLinkMBoot() ) {
             exit(1);
         }
         printf("reset done\n");
         exit(0);
     }
-
+    
     // open up linkm, get back a 'dev' to pass around
     if( (err = linkm_open( &dev )) ) {
         fprintf(stderr, "Error opening LinkM: %s\n", linkm_error_msg(err));
         exit(1);
     }
     
-    if( cmd == CMD_LINKM_GOBOOTLOAD ) {
+    if( cmd == CMD_LINKM_BOOTLOADGO ) {
         printf("linkm switching to bootloader:\n");
         err = linkm_command(dev, LINKM_CMD_GOBOOTLOAD, 0, 0, NULL, NULL);
         //if( err ) {
