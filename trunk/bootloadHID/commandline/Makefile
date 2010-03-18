@@ -59,7 +59,7 @@ LIBS=	$(OS_LIBS) $(USBLIBS)
 OBJ=		$(PROGRAM).o $(PROGRAM)-lib.o usbcalls.o
 PROGRAM=	$(PROGNAME)$(EXE_SUFFIX)
 
-all: $(PROGRAM) 
+all: $(PROGRAM) lib
 
 $(PROGRAM): $(OBJ)
 	$(CC) $(CFLAGS) -o $(PROGRAM) $(OBJ) $(LIBS)
