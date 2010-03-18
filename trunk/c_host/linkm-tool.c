@@ -30,6 +30,7 @@ recv: 0x32 0x63 0x8a 0x00 0x00 0x8f 0x84 0xf6 0xff 0xbf 0x04 0x00 0x00 0x00 0x58
 
 #include "linkm-lib.h"
 
+#include "linkmbootload-lib.h"
 
 static int debug = 0;
 
@@ -50,6 +51,7 @@ enum {
     CMD_LINKM_PLAYSET,
     CMD_LINKM_PLAYGET,
     CMD_LINKM_GOBOOTLOAD,
+    CMD_LINKM_RESETBOOT,
     CMD_BLINKM_CMD,
     CMD_BLINKM_OFF,
     CMD_BLINKM_ON,
@@ -184,6 +186,7 @@ int main(int argc, char **argv)
         {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYSET },
         {"playget",    no_argument,       &cmd,   CMD_LINKM_PLAYGET },
         {"gobootload", no_argument,       &cmd,   CMD_LINKM_GOBOOTLOAD },
+        {"resetboot",  no_argument,       &cmd,   CMD_LINKM_RESETBOOT },
         {NULL,         0,                 0,      0}
     };
 
@@ -230,6 +233,16 @@ int main(int argc, char **argv)
     
     if( cmd == CMD_NONE ) usage(argv[0]);   // just in case
     linkm_debug = debug;
+
+
+    if( cmd == CMD_LINKM_RESETBOOT ) {
+        printf("linkm resetting bootloader:\n");
+        if( resetLinkMBoot() ) {
+            exit(1);
+        }
+        printf("reset done\n");
+        exit(0);
+    }
 
     // open up linkm, get back a 'dev' to pass around
     if( (err = linkm_open( &dev )) ) {
@@ -373,7 +386,7 @@ int main(int argc, char **argv)
         uint8_t r = cmdbuf[0];     // this is kind of dumb
         uint8_t g = cmdbuf[1];
         uint8_t b = cmdbuf[2];
-        printf("addr %d: fading to color %02x%02x%02x\n",addr,r,g,b);
+        printf("addr %d: fading to color 0x%02x,0x%02x,0x%02x\n",addr,r,g,b);
         cmdbuf[0] = addr;
         cmdbuf[1] = 'c';
         cmdbuf[2] = r;

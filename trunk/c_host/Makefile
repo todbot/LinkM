@@ -53,9 +53,11 @@ endif
 
 CC=				gcc
 ARCHS=          
-CFLAGS=			$(OS_CFLAGS) -O -Wall -std=gnu99  $(USBFLAGS) 
+CFLAGS=			$(OS_CFLAGS) -O -Wall -std=gnu99  $(USBFLAGS)  
 LIBS=			$(OS_LIBS) $(USBLIBS) 
 
+CFLAGS+=        -I../bootloadHID/commandline
+LIBS+=          ../bootloadHID/commandline/liblinkmbootload.a 
 
 OBJ=		$(TARGET).o linkm-lib.o hiddata.o 
 
