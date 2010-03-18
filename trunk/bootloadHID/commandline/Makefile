@@ -55,8 +55,8 @@ CXX=	g++
 CFLAGS=	$(OS_CFLAGS) -std=gnu99 -O2 -Wall $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
 LIBS=	$(OS_LIBS) $(USBLIBS)
 
-
-OBJ=		main.o usbcalls.o
+	
+OBJ=		$(PROGRAM).o usbcalls.o
 PROGRAM=	$(PROGNAME)$(EXE_SUFFIX)
 
 all: $(PROGRAM)
