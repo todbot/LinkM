@@ -59,10 +59,15 @@ LIBS=	$(OS_LIBS) $(USBLIBS)
 OBJ=		$(PROGRAM).o $(PROGRAM)-lib.o usbcalls.o
 PROGRAM=	$(PROGNAME)$(EXE_SUFFIX)
 
-all: $(PROGRAM)
+all: $(PROGRAM) 
 
 $(PROGRAM): $(OBJ)
 	$(CC) $(CFLAGS) -o $(PROGRAM) $(OBJ) $(LIBS)
+
+# FIXME: this isn't cross-platform I think
+lib: $(PROGRAM)
+	ar rcs lib$(PROGRAM).a $(OBJ) 
+
 
 msleeptst: 
 	$(CC) $(CFLAGS) -o msleeptst$(EXE_SUFFIX) msleeptst.c  $(LIBS)
@@ -71,7 +76,7 @@ strip: $(PROGRAM)
 	strip $(PROGRAM)
 
 clean:
-	rm -f $(OBJ) $(PROGRAM) msleeptst.o
+	rm -f $(OBJ) $(PROGRAM) lib$(PROGRAM).a msleeptst.o 
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o
