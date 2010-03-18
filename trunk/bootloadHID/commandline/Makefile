@@ -56,7 +56,7 @@ CFLAGS=	$(OS_CFLAGS) -std=gnu99 -O2 -Wall $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
 LIBS=	$(OS_LIBS) $(USBLIBS)
 
 	
-OBJ=		$(PROGRAM).o usbcalls.o
+OBJ=		$(PROGRAM).o $(PROGRAM)-lib.o usbcalls.o
 PROGRAM=	$(PROGNAME)$(EXE_SUFFIX)
 
 all: $(PROGRAM)
