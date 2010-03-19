@@ -74,8 +74,13 @@ INCLUDES = -I. -I../c_host $(JAVAINCLUDE) $(JAVANATINC)
 OBJ = ../c_host/hiddata.o  ../c_host/linkm-lib.o  native$(TARGET).o 
 
 CFLAGS  = $(OS_CFLAGS) -O -Wall -std=gnu99  $(INCLUDES)
-LDFLAGS = $(OS_LDFLAGS)
+LDFLAGS = $(OS_LDFLAGS) 
+
 CC = gcc
+
+# add linkmbootload fun
+INCLUDES += -I../bootloadHID/commandline
+LDFLAGS  += -L../bootloadHID/commandline -llinkmbootload
 
 
 # FIXME: hack
