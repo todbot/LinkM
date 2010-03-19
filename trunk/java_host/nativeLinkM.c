@@ -6,7 +6,7 @@
 
 #include "hiddata.h"
 #include "linkm-lib.h"
-
+#include "linkmbootload-lib.h"
 
 /* ------------------------------------------------------------------------- */
 static usbDevice_t* dev = NULL;   // sigh.
@@ -153,6 +153,59 @@ JNIEXPORT jbyteArray JNICALL Java_thingm_linkm_LinkM_test
 
 }
 
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_bootload
+(JNIEnv *env, jobject obj, jstring filename, jboolean reset)
+{
+    int err=0;
+    char* errmsg = NULL;
+    const char *fileutf;
+    // Convert to UTF8 
+    if( filename == NULL ) {
+        errmsg = "must give filename";
+    }
+    else { 
+        fileutf = (*env)->GetStringUTFChars(env, filename, JNI_FALSE);
+
+        err = linkmboot_uploadFromFile(fileutf, reset);
+        if( err == -1 ) {
+            errmsg = "bad upload";
+        }
+        if( err == -2 ) {
+            errmsg = "No data in input file";
+        }
+        else if( err == -3 ) { 
+            errmsg = "error uploading";
+        }
+
+        // release created UTF string
+        (*env)->ReleaseStringUTFChars(env, filename, fileutf);
+    }
+
+    if( err ) {
+        (*env)->ExceptionDescribe(env);          // throw an exception.
+        (*env)->ExceptionClear(env);
+        jclass newExcCls = (*env)->FindClass(env,"java/io/IOException");
+        (*env)->ThrowNew(env, newExcCls, errmsg);
+    }
+
+}
+
+JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_bootloadReset
+(JNIEnv *env, jobject obj)
+{
+    int err=0;
+    
+    err = linkmboot_reset();
+
+    if( err ) {
+        (*env)->ExceptionDescribe(env);          // throw an exception.
+        (*env)->ExceptionClear(env);
+        jclass newExcCls = (*env)->FindClass(env,"java/io/IOException");
+        (*env)->ThrowNew(env, newExcCls, linkm_error_msg(err));
+    }
+}
 
 /*
  //what is wrong with this?

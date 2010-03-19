@@ -194,6 +194,12 @@ public class LinkM
       else if( a.equals("gobootload") ) {
         cmd = "gobootload";
       }
+      else if( a.equals("bootload") ) {
+        cmd = "bootload";
+      }
+      else if( a.equals("bootloadreset") ) {
+        cmd = "bootloadreset";
+      }
       else { 
         file = args[ac];
       }
@@ -204,7 +210,6 @@ public class LinkM
       usage();
     }
 
-    
     // 
     LinkM linkm = new LinkM();
 
@@ -213,11 +218,27 @@ public class LinkM
       linkm.linkmdebug( debug );
     }
 
+    
+
     try { 
+
+      // linkmboot commands
+      if( cmd.equals("bootload") ) {
+        println("LinkMBoot flashing...");
+        linkm.bootload( file, false);
+        println("flashing done.");
+        return;
+      }
+      else if( cmd.equals("bootloadreset") ) {
+        println("LinkMBoot reset, switching to LinkM mode");
+        linkm.bootloadReset();
+        return;
+      }
+      
+      // otherwise, begin normal linkm tasks
       linkm.open();
       
-      // command handling
-
+      // normal linkm command handling
       if( cmd.equals("upload") ) {
         String[] lines = linkm.loadFile( file );
         BlinkMScript script = linkm.parseScript( lines );
@@ -440,6 +461,9 @@ public class LinkM
    */
   native byte[] test(byte[] buff);
 
+
+  native void bootload(String filename, boolean reset) throws IOException;
+  native void bootloadReset() throws IOException;
 
   //---------------------------------------------------------------------------
   // Instance methods
@@ -704,6 +728,7 @@ public class LinkM
   }
 
   /**
+   * FIXME: this doesn't work
    * Fade many devices to RGB colors
    * @param addrs list of i2c addresses
    * @param colors list of colors
@@ -713,7 +738,7 @@ public class LinkM
     throws IOException { 
     int cmdlen = 5;  // {addr,'c',r,g,b}
     byte[] cmdbuf = new byte[ cmdlen * count ];
-    for( int i=0; i< count; i++ ) { 
+    for( int i=0; i< count; i++ ) {
       cmdbuf[ (i*cmdlen)+0 ] = (byte)addrs[i];
       cmdbuf[ (i*cmdlen)+1 ] = (byte)'c';
       cmdbuf[ (i*cmdlen)+2 ] = (byte)colors[i].getRed();
