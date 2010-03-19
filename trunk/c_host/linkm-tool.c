@@ -242,7 +242,7 @@ int main(int argc, char **argv)
 
     if( cmd == CMD_LINKM_BOOTLOAD ) {
         printf("linkmboot uploading firmware: %s\n",file);
-        int rc = uploadFromFile(file, 0);
+        int rc = linkmboot_uploadFromFile(file, 0);
         if( rc == -1 ) {
             return 1;
         }
@@ -259,7 +259,7 @@ int main(int argc, char **argv)
 
     if( cmd == CMD_LINKM_BOOTLOADRESET ) {
         printf("linkmboot resetting bootloader:\n");
-        if( resetLinkMBoot() ) {
+        if( linkmboot_reset() ) {
             exit(1);
         }
         printf("reset done\n");
