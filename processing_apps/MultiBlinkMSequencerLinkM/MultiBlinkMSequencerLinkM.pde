@@ -57,8 +57,9 @@ LinkM linkm = new LinkM();  // linkm obj only used in this file
 boolean connected = false;   // FIXME: verify semantics correct on this
 boolean blinkmConnected = false;
 long lastConnectCheck;
-//boolean doLinkMCheck = false;  // set to true for autoconnect stuff
 
+String romScriptsDir;  // set to dataPath(".");
+File   romScripts[];   // list of ROM scripts that can fill a track
 String silkfontPath = "slkscrb.ttf";  // in "data" directory
 Font silkfont;
 File lastFile;  // last file (if any) used to save or load
@@ -130,7 +131,7 @@ Color cBriOrange   = new Color(0xFB,0xC0,0x80);      // bright yellow/orange
 Color cMuteOrange  = new Color(0xBC,0x83,0x45);
 
 Color cEmpty   = tlDarkGray;
-
+// colors for SetChannelDialog
 Color[] setChannelColors = new Color [] {
   new Color( 0xff,0x00,0x00 ),
   new Color( 0x00,0xff,0x00 ),
@@ -151,6 +152,15 @@ void setup() {
   frameRate(30);   // each frame we can potentially redraw timelines
 
   l.setLevel( debugLevel );
+  romScriptsDir = dataPath(".");
+  File fdir = new File(romScriptsDir);
+  romScripts = fdir.listFiles( new FileFilter() {
+      public boolean accept(File f) {
+        String n = f.getName().toLowerCase();
+        if( n.startsWith("romscript") && n.endsWith("txt") ) return true;
+        return false;
+      }
+    });
 
   try { 
     // load up the lovely silkscreen font
@@ -214,305 +224,7 @@ void draw() {
   }
 }
 
-/**
- *
- */
-void setStatus(String status) {
-    statusLabel.setText( status );
-}
-
-void updateInfo() {
-  Track trk = multitrack.tracks[multitrack.currTrack];
-  currChanIdLabel.setText( String.valueOf(trk.blinkmaddr) );
-  currChanLabel.setText( trk.label );
-  repaint();
-}
-
-/**
- *
- */
-void setupGUI() {
-
-  setupMainframe();  // creates 'mf'
-
-  Container mainpane = mf.getContentPane();
-  BoxLayout layout = new BoxLayout( mainpane, BoxLayout.Y_AXIS);
-  mainpane.setLayout(layout);
-
-  JPanel chtop     = makeChannelsTopPanel();
-  multitrack       = new MultiTrackView( mainWidth,300 );
-
-  // controlsPanel contains colorpicker and all buttons
-  JPanel controlsPanel = makeControlsPanel();
-
-  JPanel bottomPanel = makeBottomPanel();
-
-  // add everything to the main pane, in order
-  mainpane.add( chtop );
-  mainpane.add( multitrack );
-  mainpane.add( controlsPanel );
-
-  mainpane.add( bottomPanel );
-
-  mf.setVisible(true);
-  mf.setResizable(false);
-
-  fc = new JFileChooser( super.sketchPath ); 
-  fc.setFileFilter( new javax.swing.filechooser.FileFilter() {
-      public boolean accept(File f) {
-        if (f.isDirectory()) 
-          return true;
-        if (f.getName().endsWith("txt") ||
-            f.getName().endsWith("TXT")) 
-          return true;
-        return false;
-      }
-      public String getDescription() {
-        return "TXT files";
-      }
-    }
-    );
-  
-  setChannelDialog = new SetChannelDialog(); // defaults to invisible
-  updateInfo();
-}
-
-/**
- * Make the panel that contains "CHANNELS" and the current channel info
- */
-JPanel makeChannelsTopPanel() {
-  JPanel p = new JPanel();
-  p.setBackground(cBgLightGray);  
-  p.setLayout( new BoxLayout(p, BoxLayout.X_AXIS) );
-  p.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
-
-  ImageIcon chText = util.createImageIcon("blinkm_text_channels.gif",
-                                          "CHANNELS");
-  JLabel chLabel = new JLabel(chText);
-  JLabel currChanIdText = new JLabel("CURRENT CHANNEL ID:");
-  currChanIdLabel = new JLabel("--");
-  JLabel currChanLabelText = new JLabel("LABEL:");
-  currChanLabel = new JLabel("-nuh-");
-  
-  p.add( Box.createRigidArea(new Dimension(25,0) ) );
-  p.add(chLabel);
-  p.add(Box.createHorizontalStrut(10));
-  p.add(currChanIdText);
-  p.add(Box.createHorizontalStrut(5));
-  p.add(currChanIdLabel);
-  p.add(Box.createHorizontalStrut(10));
-  p.add(currChanLabelText);
-  p.add(Box.createHorizontalStrut(5));
-  p.add(currChanLabel);
-  p.add(Box.createHorizontalGlue());  // boing
-
-  return p;
-}
-
-/**
- * Make the controlsPanel that contains colorpicker and all buttons
- */
-JPanel makeControlsPanel() {
-  JPanel colorChooserPanel = makeColorChooserPanel();
-  buttonPanel       = new ButtonPanel(); //380, 280);
-
-  JPanel controlsPanel = new JPanel();
-  controlsPanel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
-  //  controlsPanel.setBorder(BorderFactory.createMatteBorder(10,0,0,0,cBgDarkGray));
-  controlsPanel.setBorder(BorderFactory.createCompoundBorder(  // debug
-                   BorderFactory.createLineBorder(Color.blue),
-                   controlsPanel.getBorder()));
-  controlsPanel.setLayout(new BoxLayout(controlsPanel, BoxLayout.X_AXIS));
-  controlsPanel.add( colorChooserPanel );
-  controlsPanel.add( buttonPanel );
-  controlsPanel.add( Box.createHorizontalGlue() );
-  return controlsPanel;
-}
-
-/**
- * Makes and sets up the colorChooserPanel
- */
-JPanel makeColorChooserPanel() {
-  colorChooser = new JColorChooser();
-  colorChooser.setBackground(cBgDarkGray);
-  colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
-      public void stateChanged(ChangeEvent e) {
-        Color c = colorChooser.getColor();
-        multitrack.setSelectedColor(c);
-      }
-    });
-
-  colorChooser.setPreviewPanel( new JPanel() ); // we have our custom preview
-  colorChooser.setColor( cEmpty );
-
-  JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
-  colorChooserPanel.setBackground(cBgDarkGray);  
-  colorChooserPanel.add( colorChooser );
-  return colorChooserPanel;
-}
-
-/**
- * Make the bottom panel, it contains version & copyright info and status line
- */
-JPanel makeBottomPanel() {
-  JLabel botLabel = new JLabel(versionInfo, JLabel.LEFT);
-  statusLabel = new JLabel("status");
-  botLabel.setHorizontalAlignment(JLabel.LEFT);
-  JPanel bp = new JPanel();
-  bp.setBackground(cBgMidGray);
-  bp.setLayout( new BoxLayout( bp, BoxLayout.X_AXIS) );
-  bp.add( Box.createHorizontalStrut(10) );
-  bp.add( botLabel );
-  bp.add( Box.createHorizontalGlue() );
-  bp.add( statusLabel );
-  bp.add( Box.createHorizontalStrut(25) );
-  return bp;
-}
-
-/**
- * Create the containing frame (or JDialog in this case) 
- */
-void setupMainframe() {
-  //Frame f = new Frame();
-  //mf = new JDialog( f, "BlinkM Sequencer", false);
-  mf = new JFrame( "BlinkM Sequencer" );
-  mf.setBackground(cBgDarkGray);
-  mf.setFocusable(true);
-  mf.setSize( mainWidth, mainHeight);
-  Frame f = mf;
-
-  Toolkit tk = Toolkit.getDefaultToolkit();
-  // FIXME: why doesn't either of these seem to work
-  //ImageIcon i = new Util().createImageIcon("blinkm_thingm_logo.gif","title");
-  //f.setIconImage(i.getImage());
-  f.setIconImage(tk.getImage("blinkm_thingm_logo.gif"));
-
-  // handle window close events
-  mf.addWindowListener(new WindowAdapter() {
-      public void windowClosing(WindowEvent e) {
-        mf.dispose();          // close mainframe
-        p.destroy();           // close processing window as well
-        p.frame.setVisible(false); // hmm, seems out of order
-        System.exit(0);
-      }
-    });
-  
-  // center MainFrame on the screen and show it
-  //mf.setSize(this.width, this.height);
-  Dimension scrnSize = tk.getScreenSize();
-  mf.setLocation(scrnSize.width/2 - mf.getWidth()/2, 
-                 scrnSize.height/2 - mf.getHeight()/2);
-  mf.setVisible(true);
-  
-  setupMenus(f);
-}
-
-void setupMenus(Frame f) {
-  MenuBar menubar = new MenuBar();
-  //int shortcutMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
-
-  ActionListener menual = new ActionListener() { 
-      void actionPerformed(ActionEvent e) {
-        String cmd = e.getActionCommand();
-        println("action listener: "+cmd);
-        if(        cmd.equals("Load Set") ) {  // FIXME: such a hack
-          loadAllTracks();
-        } else if( cmd.equals("Save Set") ) { 
-          saveAllTracks();
-        } else if( cmd.equals("Load One Track") ) {
-          loadTrack();
-        } else if( cmd.equals("Save One Track") ) {
-          saveTrack();
-        } else if( cmd.equals("Cut Track") ) {
-          multitrack.cutTrack();
-        } else if( cmd.equals("Copy Track") ) {
-          multitrack.copyTrack();
-        } else if( cmd.equals("Paste Track") ) {
-          multitrack.pasteTrack();
-        } else if( cmd.equals("Delete Track") ) {
-          multitrack.deleteTrack();
-        } else if( cmd.equals("Fill Script0 Default") ) {
-          loadTrack( scriptFile("romscript00-default.txt") );
-        } else if( cmd.equals("Fill Script1 RGB") ) {
-          loadTrack( scriptFile("romscript01-rgb.txt") );
-        }  else if( cmd.equals("Help") ) {
-          showHelp();
-        } else if( cmd.equals("Display LinkM/BlinkM Versions") ) {
-          displayVersions();
-        } else if( cmd.equals("Upgrade LinkM Firmware") ) {
-          upgradeLinkMFirmware();
-        }
-        
-        multitrack.repaint();
-      }
-    };
-  
-  //create all the Menu Items and add the menuListener to check their state.
-  Menu fileMenu = new Menu("File");
-  Menu editMenu = new Menu("Edit");
-  Menu helpMenu = new Menu("Help");
-  Menu fillMenu = new Menu("Fill Track");
-
-  MenuItem itemf1 = new MenuItem("Load Set", new MenuShortcut(KeyEvent.VK_O));
-  MenuItem itemf2 = new MenuItem("Save Set", new MenuShortcut(KeyEvent.VK_S));
-  MenuItem itemf3 = new MenuItem("Load One Track");
-  MenuItem itemf4 = new MenuItem("Save One Track");
-
-  MenuItem iteme1 = new MenuItem("Cut Track",  new MenuShortcut(KeyEvent.VK_X));
-  MenuItem iteme2 = new MenuItem("Copy Track", new MenuShortcut(KeyEvent.VK_C));
-  MenuItem iteme3 = new MenuItem("Paste Track",new MenuShortcut(KeyEvent.VK_V));
-  MenuItem iteme4 = new MenuItem("Delete Track",new MenuShortcut(KeyEvent.VK_D));
-  //MenuItem iteme5 = new MenuItem(fillMenu);
-  MenuItem itemee1= new MenuItem("Fill Script0 Default");
-  MenuItem itemee2= new MenuItem("Fill Script1 RGB");
-  MenuItem itemee3= new MenuItem("Fill Script2");
-
-  MenuItem itemh1 = new MenuItem("Help");
-  MenuItem itemh2 = new MenuItem("Display LinkM/BlinkM Versions");
-  MenuItem itemh3 = new MenuItem("Upgrade LinkM Firmware");
-
-  itemf1.addActionListener(menual);
-  itemf2.addActionListener(menual);
-  itemf3.addActionListener(menual);
-  itemf4.addActionListener(menual);
-  iteme1.addActionListener(menual);
-  iteme2.addActionListener(menual);
-  iteme3.addActionListener(menual);
-  iteme4.addActionListener(menual);
-  itemh1.addActionListener(menual);
-  itemh2.addActionListener(menual);
-  itemh3.addActionListener(menual);
-  itemee1.addActionListener(menual);
-  itemee2.addActionListener(menual);
-  itemee3.addActionListener(menual);
-  
-  fileMenu.add(itemf1);
-  fileMenu.add(itemf2);
-  fileMenu.add(itemf3);
-  fileMenu.add(itemf4);
-  
-  editMenu.add(iteme1);
-  editMenu.add(iteme2);
-  editMenu.add(iteme3);
-  editMenu.add(iteme4);
-  editMenu.add(fillMenu);
-  fillMenu.add(itemee1);
-  fillMenu.add(itemee2);
-  fillMenu.add(itemee3);
-
-  helpMenu.add(itemh1);
-  helpMenu.add(itemh2);
-  helpMenu.add(itemh3);
-
-  menubar.add(fileMenu);
-  menubar.add(editMenu);
-  menubar.add(helpMenu);
-  
-  f.setMenuBar(menubar);   //add the menu to the frame
-}
-
-
-// -----------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /**
  *
@@ -524,6 +236,7 @@ public void showHelp() {
                                 JOptionPane.INFORMATION_MESSAGE);
 
 }
+
 /**
  *
  */
@@ -561,11 +274,8 @@ public void displayVersions() {
     msg += "-error connecting-";
   }
 
-  JOptionPane.showMessageDialog(mf,
-                                msg,
-                                "LinkM / BlinkM Versions",
+  JOptionPane.showMessageDialog(mf, msg, "LinkM / BlinkM Versions",
                                 JOptionPane.INFORMATION_MESSAGE);
-
 }
 
 /**
@@ -573,9 +283,53 @@ public void displayVersions() {
  */
 public void upgradeLinkMFirmware() {
   l.debug("upgradeLinkMFirmware");
-
+  String msg = "-not implemented yet-";
+  //linkm.goBootload();
+  //linkm.delay(2000);
+  //open("linkmbootload -r link.hex");
+  JOptionPane.showMessageDialog(mf, msg, "Upgrade LinkM Firmware",
+                                JOptionPane.INFORMATION_MESSAGE);
 }
 
+/**
+ *
+ */
+public void doI2CScan() {
+  l.debug("doI2CScan");
+  String msg = "no devices found";
+  try {
+    byte[] addrs = linkm.i2cScan(1,113);
+    int cnt = addrs.length;
+    if( cnt>0 ) {
+      msg = "Found "+cnt+" devices:\n";
+      for( int i=0; i<cnt; i++) {
+        byte a = addrs[i];
+        msg += "addr: "+a;
+      }
+      msg += "\nDone.";
+    }
+  } catch( IOException ioe) {
+  }
+  JOptionPane.showMessageDialog(mf, msg, "I2C Bus Scan",
+                                JOptionPane.INFORMATION_MESSAGE);
+}
+
+public void doFactoryReset() { 
+  l.debug("doFactoryReset");
+  Track t = multitrack.getCurrTrack();
+  int addr = t.blinkmaddr;
+  String msg = "No BlinkM selected!";
+  if( addr != -1 ) {
+    try { 
+      linkm.doFactoryReset(addr);
+      msg = "BlinkM reset to factory defaults";
+    } catch(IOException ioe ) {
+      msg = "Error talking to BlinkM";
+    }
+  }
+  JOptionPane.showMessageDialog(mf, msg, "LinkM Factory Reset",
+                                JOptionPane.INFORMATION_MESSAGE);
+}
 
 /**
  * Used to periodically check for a connected LinkM (if we are disconnected)
@@ -640,20 +394,6 @@ public boolean connect() {
     }
   } catch(IOException ioe) {
     println("connect: no linkm?  "+ioe);
-    /*
-    Object[] options = {"Try again", "Run Disconnected"};
-    int n = JOptionPane.showOptionDialog(mf,
-                                         "No LinkM found.\n"+
-                                         "Plug LinkM in and try again, "+
-                                         "or you can run in disconnected mode.",
-                                         "LinkM Not Found",
-                                         JOptionPane.YES_NO_CANCEL_OPTION,
-                                         JOptionPane.QUESTION_MESSAGE,
-                                         null,
-                                         options,
-                                         options[1]);
-    if( n != 0 ) disconnectedMode = true;
-    */
     JOptionPane.showMessageDialog(mf,
                                   "No LinkM found.\n"+
                                   "Plug LinkM in at any time and "+
@@ -674,6 +414,7 @@ public boolean connect() {
  * Verifies connetion to LinkM and at least one BlinkM
  * Also clears out any I2C bus errors that may be present
  */
+/*
 public boolean verifyConnection() {
   try { 
     // FIXME: what to do here
@@ -686,7 +427,7 @@ public boolean verifyConnection() {
   }
   return true;
 }
-
+*/
 
 /**
  * Sends a single color to a single BlinkM, using the "Fade to RGB" function
@@ -695,16 +436,15 @@ public boolean verifyConnection() {
  * @param c color to send
  */
 public boolean sendBlinkMColor( int blinkmAddr, Color c ) {
-  l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
+  //l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
   if( !connected ) return true;
   try { 
+    if( c == cEmpty ) c = Color.BLACK;  // empty is off
     linkm.fadeToRGB( blinkmAddr, c);  // FIXME:  which track 
-  } catch( IOException ioe) {
-    // hmm, what to do here
+  } catch( IOException ioe) {        // hmm, what to do here
     connected = false;
     return false;
   }
-
   return true;
 }
 
@@ -712,7 +452,7 @@ public boolean sendBlinkMColor( int blinkmAddr, Color c ) {
  *
  */
 public boolean sendBlinkMColors( int addrs[], Color colors[], int send_count ) {
-  l.debug("sendBlinkMColors "+send_count);
+  //l.debug("sendBlinkMColors "+send_count);
   if( !connected ) return true;
   long st = System.currentTimeMillis();
   try { 
@@ -744,7 +484,7 @@ public void prepareForPreview() {
  */
 public void prepareForPreview(int loopduration) {
   byte fadespeed = getFadeSpeed(loopduration);
-  //l.debug("prepareForPreview: fadespeed:"+fadespeed);
+  l.debug("prepareForPreview: fadespeed:"+fadespeed);
   if( !connected ) return;
 
   int blinkmAddr = 0x00;  // FIXME: ????
@@ -892,28 +632,26 @@ public void doTrackDialog(int track) {
 
 }
 
-
 // ----------------------------------------------------------------------------
 
-File scriptFile(String filename) {
-  File f = new File(dataPath(filename));
-  println("f:"+f);
-  return f;
-}
-
 /**
- * Load current track from a file
+ * Load current track from a file.
+ * Opens up a OpenDialog
  */
 void loadTrack() { 
   loadTrack( multitrack.currTrack );
 }
 
+/**
+ * Loads specified file (if possible) into current track
+ */
 void loadTrack(File file) {
   loadTrackWithFile( multitrack.currTrack, file );
 }
 
 /**
  * Load a text file containing a light script, turn it into BlinkMScriptLines
+ * Opens up a OpenDialog then loads into track tracknum
  */
 void loadTrack(int tracknum) {
   int returnVal = fc.showOpenDialog(mf);  // this does most of the work
@@ -930,6 +668,7 @@ void loadTrack(int tracknum) {
  *
  */
 void loadTrackWithFile(int tracknum, File file) {
+  l.debug("loadTrackWithFile:"+tracknum+","+file);
   if( file != null ) {
     String[] lines = LinkM.loadFile( file );
     BlinkMScript script = LinkM.parseScript( lines );
@@ -967,7 +706,7 @@ void loadAllTracks() {
   File file = fc.getSelectedFile();
   lastFile = file;
   if( file != null ) {
-    LinkM.debug = 1;
+    //LinkM.debug = 1;
     String[] lines = LinkM.loadFile( file );
     if( lines == null ) println(" null lines? ");
     BlinkMScript scripts[] = LinkM.parseScripts( lines );
@@ -1072,6 +811,330 @@ void saveAllTracks() {
 
 // ------------------------------------------------
 
+// ---------------------------------------------------------------------------
+
+/**
+ * Sets status label at bottom of mainframe
+ */
+void setStatus(String status) {
+    statusLabel.setText( status );
+}
+
+/**
+ * Updates the current channel info at top of mainframe
+ */
+void updateInfo() {
+  Track trk = multitrack.tracks[multitrack.currTrack];
+  currChanIdLabel.setText( String.valueOf(trk.blinkmaddr) );
+  currChanLabel.setText( trk.label );
+  repaint();
+}
+
+/**
+ * Creates all the GUI elements
+ */
+void setupGUI() {
+
+  setupMainframe();  // creates 'mf'
+
+  Container mainpane = mf.getContentPane();
+  BoxLayout layout = new BoxLayout( mainpane, BoxLayout.Y_AXIS);
+  mainpane.setLayout(layout);
+
+  JPanel chtop     = makeChannelsTopPanel();
+  multitrack       = new MultiTrackView( mainWidth,300 );
+
+  // controlsPanel contains colorpicker and all buttons
+  JPanel controlsPanel = makeControlsPanel();
+  JPanel bottomPanel = makeBottomPanel();
+
+  // add everything to the main pane, in order
+  mainpane.add( chtop );
+  mainpane.add( multitrack );
+  mainpane.add( controlsPanel );
+  mainpane.add( bottomPanel );
+
+  mf.setVisible(true);
+  mf.setResizable(false);
+
+  fc = new JFileChooser( super.sketchPath ); 
+  fc.setFileFilter( new javax.swing.filechooser.FileFilter() {
+      public boolean accept(File f) {
+        if(f.isDirectory()) return true;
+        if (f.getName().toLowerCase().endsWith("txt") ) return true;
+        return false;
+      }
+      public String getDescription() { return "TXT files";  }
+    }
+    );
+  
+  setChannelDialog = new SetChannelDialog(); // defaults to invisible
+  updateInfo();
+}
+
+/**
+ * Make the panel that contains "CHANNELS" and the current channel info
+ */
+JPanel makeChannelsTopPanel() {
+  JPanel p = new JPanel();
+  p.setBackground(cBgLightGray);  
+  p.setLayout( new BoxLayout(p, BoxLayout.X_AXIS) );
+  p.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+
+  ImageIcon chText = util.createImageIcon("blinkm_text_channels.gif",
+                                          "CHANNELS");
+  JLabel chLabel = new JLabel(chText);
+  JLabel currChanIdText = new JLabel("CURRENT CHANNEL ID:");
+  currChanIdLabel = new JLabel("--");
+  JLabel currChanLabelText = new JLabel("LABEL:");
+  currChanLabel = new JLabel("-nuh-");
+  
+  p.add( Box.createRigidArea(new Dimension(25,0) ) );
+  p.add(chLabel);
+  p.add(Box.createHorizontalStrut(10));
+  p.add(currChanIdText);
+  p.add(Box.createHorizontalStrut(5));
+  p.add(currChanIdLabel);
+  p.add(Box.createHorizontalStrut(10));
+  p.add(currChanLabelText);
+  p.add(Box.createHorizontalStrut(5));
+  p.add(currChanLabel);
+  p.add(Box.createHorizontalGlue());  // boing
+
+  return p;
+}
+
+/**
+ * Make the controlsPanel that contains colorpicker and all buttons
+ */
+JPanel makeControlsPanel() {
+  JPanel colorChooserPanel = makeColorChooserPanel();
+  buttonPanel       = new ButtonPanel(); //380, 280);
+
+  JPanel controlsPanel = new JPanel();
+  controlsPanel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
+  //  controlsPanel.setBorder(BorderFactory.createMatteBorder(10,0,0,0,cBgDarkGray));
+  controlsPanel.setBorder(BorderFactory.createCompoundBorder(  // debug
+                   BorderFactory.createLineBorder(Color.blue),
+                   controlsPanel.getBorder()));
+  controlsPanel.setLayout(new BoxLayout(controlsPanel, BoxLayout.X_AXIS));
+  controlsPanel.add( colorChooserPanel );
+  controlsPanel.add( buttonPanel );
+  controlsPanel.add( Box.createHorizontalGlue() );
+  return controlsPanel;
+}
+
+/**
+ * Makes and sets up the colorChooserPanel
+ */
+JPanel makeColorChooserPanel() {
+  colorChooser = new JColorChooser();
+  colorChooser.setBackground(cBgDarkGray);
+  colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
+      public void stateChanged(ChangeEvent e) {
+        Color c = colorChooser.getColor();
+        multitrack.setSelectedColor(c);
+      }
+    });
+
+  colorChooser.setPreviewPanel( new JPanel() ); // we have our custom preview
+  colorChooser.setColor( cEmpty );
+
+  JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
+  colorChooserPanel.setBackground(cBgDarkGray);  
+  colorChooserPanel.add( colorChooser );
+  return colorChooserPanel;
+}
+
+/**
+ * Make the bottom panel, it contains version & copyright info and status line
+ */
+JPanel makeBottomPanel() {
+  JLabel botLabel = new JLabel(versionInfo, JLabel.LEFT);
+  statusLabel = new JLabel("status");
+  botLabel.setHorizontalAlignment(JLabel.LEFT);
+  JPanel bp = new JPanel();
+  bp.setBackground(cBgMidGray);
+  bp.setLayout( new BoxLayout( bp, BoxLayout.X_AXIS) );
+  bp.add( Box.createHorizontalStrut(10) );
+  bp.add( botLabel );
+  bp.add( Box.createHorizontalGlue() );
+  bp.add( statusLabel );
+  bp.add( Box.createHorizontalStrut(25) );
+  return bp;
+}
+
+/**
+ * Create the containing frame (or JDialog in this case) 
+ */
+void setupMainframe() {
+  mf = new JFrame( "BlinkM Sequencer" );
+  mf.setBackground(cBgDarkGray);
+  mf.setFocusable(true);
+  mf.setSize( mainWidth, mainHeight);
+  Frame f = mf;
+
+  Toolkit tk = Toolkit.getDefaultToolkit();
+  // FIXME: why doesn't either of these seem to work
+  //ImageIcon i = new Util().createImageIcon("blinkm_thingm_logo.gif","title");
+  //f.setIconImage(i.getImage());
+  f.setIconImage(tk.getImage("blinkm_thingm_logo.gif"));
+
+  // handle window close events
+  mf.addWindowListener(new WindowAdapter() {
+      public void windowClosing(WindowEvent e) {
+        mf.dispose();          // close mainframe
+        p.destroy();           // close processing window as well
+        p.frame.setVisible(false); // hmm, seems out of order
+        System.exit(0);
+      }
+    });
+  
+  // center MainFrame on the screen and show it
+  //mf.setSize(this.width, this.height);
+  Dimension scrnSize = tk.getScreenSize();
+  mf.setLocation(scrnSize.width/2 - mf.getWidth()/2, 
+                 scrnSize.height/2 - mf.getHeight()/2);
+  mf.setVisible(true);
+  
+  setupMenus(f);
+}
+
+public static class MenuInfo { 
+  public MenuItem item;
+  public String cmd;
+  // how to do functors?
+  public MenuInfo(String c,MenuShortcut ms) {  // action?
+    cmd = c;
+    item = new MenuItem(cmd, ms);
+  }
+}
+public static MenuInfo[] editMenus = new MenuInfo[] {
+  new MenuInfo("Load Set", new MenuShortcut(KeyEvent.VK_O) ),
+  new MenuInfo("Save Set", new MenuShortcut(KeyEvent.VK_S) ),
+};
+
+/**
+ * Create all the application menus
+ */
+void setupMenus(Frame f) {
+  MenuBar menubar = new MenuBar();
+
+  ActionListener menual = new ActionListener() { 
+      void actionPerformed(ActionEvent e) {
+        String cmd = e.getActionCommand();
+        println("action listener: "+cmd);
+        if(        cmd.equals("Load Set") ) {  // FIXME: such a hack
+          loadAllTracks();
+        } else if( cmd.equals("Save Set") ) { 
+          saveAllTracks();
+        } else if( cmd.equals("Load One Track") ) {
+          loadTrack();
+        } else if( cmd.equals("Save One Track") ) {
+          saveTrack();
+        } else if( cmd.equals("Cut Track") ) {
+          multitrack.cutTrack();
+        } else if( cmd.equals("Copy Track") ) {
+          multitrack.copyTrack();
+        } else if( cmd.equals("Paste Track") ) {
+          multitrack.pasteTrack();
+        } else if( cmd.equals("Delete Track") ) {
+          multitrack.deleteTrack();
+        }  else if( cmd.equals("Help") ) {
+          showHelp();
+        } else if( cmd.equals("Display LinkM/BlinkM Versions") ) {
+          displayVersions();
+        } else if( cmd.equals("BlinkM Factory Reset") ) {
+          doFactoryReset();
+        } else if( cmd.equals("Upgrade LinkM Firmware") ) {
+          upgradeLinkMFirmware();
+        } else if( cmd.equals("Scan I2C Bus") ) {
+          doI2CScan();
+        } else {
+          for( int i=0; i<romScripts.length; i++ ) {
+            if( romScripts[i].getName().equals(cmd+".txt") ) {
+              loadTrack( romScripts[i] );
+            }
+          }
+        }
+        
+        multitrack.repaint();
+      }
+    };
+  
+  //create all the Menu Items and add the menuListener to check their state.
+  Menu fileMenu = new Menu("File");
+  Menu editMenu = new Menu("Edit");
+  Menu toolMenu = new Menu("Tools");
+  Menu helpMenu = new Menu("Help");
+  Menu fillMenu = new Menu("Fill Track With");
+
+  MenuItem itemf1 = new MenuItem("Load Set", new MenuShortcut(KeyEvent.VK_O));
+  MenuItem itemf2 = new MenuItem("Save Set", new MenuShortcut(KeyEvent.VK_S));
+  MenuItem itemf3 = new MenuItem("Load One Track");
+  MenuItem itemf4 = new MenuItem("Save One Track");
+
+  MenuItem iteme1= new MenuItem("Cut Track",  new MenuShortcut(KeyEvent.VK_X));
+  MenuItem iteme2= new MenuItem("Copy Track", new MenuShortcut(KeyEvent.VK_C));
+  MenuItem iteme3= new MenuItem("Paste Track",new MenuShortcut(KeyEvent.VK_V));
+  MenuItem iteme4= new MenuItem("Delete Track",new MenuShortcut(KeyEvent.VK_D));
+  MenuItem[] fills = new MenuItem[romScripts.length];
+  for( int i=0; i< romScripts.length; i++) {
+    fills[i] = new MenuItem( romScripts[i].getName().replace(".txt","") );
+    fills[i].addActionListener(menual);
+    fillMenu.add(fills[i]);
+  }
+
+  MenuItem itemt1 = new MenuItem("Display LinkM/BlinkM Versions");
+  MenuItem itemt2 = new MenuItem("Upgrade LinkM Firmware");
+  MenuItem itemt3 = new MenuItem("BlinkM Factory Reset");
+  MenuItem itemt4 = new MenuItem("Scan I2C Bus");
+
+  MenuItem itemh1 = new MenuItem("Help");
+  MenuItem itemh2 = new MenuItem("Quick Start Guide");
+
+
+  itemf1.addActionListener(menual);
+  itemf2.addActionListener(menual);
+  itemf3.addActionListener(menual);
+  itemf4.addActionListener(menual);
+  iteme1.addActionListener(menual);
+  iteme2.addActionListener(menual);
+  iteme3.addActionListener(menual);
+  iteme4.addActionListener(menual);
+  itemt1.addActionListener(menual);
+  itemt2.addActionListener(menual);
+  itemt3.addActionListener(menual);
+  itemt4.addActionListener(menual);
+  itemh1.addActionListener(menual);
+  itemh2.addActionListener(menual);
+  
+  fileMenu.add(itemf1);
+  fileMenu.add(itemf2);
+  fileMenu.add(itemf3);
+  fileMenu.add(itemf4);
+  
+  editMenu.add(iteme1);
+  editMenu.add(iteme2);
+  editMenu.add(iteme3);
+  editMenu.add(iteme4);
+  editMenu.add(fillMenu);
+
+  toolMenu.add(itemt1);
+  toolMenu.add(itemt2);
+  toolMenu.add(itemt3);
+  toolMenu.add(itemt4);
+
+  helpMenu.add(itemh1);
+  helpMenu.add(itemh2);
+
+  menubar.add(fileMenu);
+  menubar.add(editMenu);
+  menubar.add(toolMenu);
+  menubar.add(helpMenu);
+  
+  f.setMenuBar(menubar);   //add the menu to the frame
+}
 
 public byte getDurTicks() { 
   return getDurTicks(durationCurrent);
@@ -1176,6 +1239,8 @@ void bindKeys() {
       }
     });
 }
+
+
 
 
 
