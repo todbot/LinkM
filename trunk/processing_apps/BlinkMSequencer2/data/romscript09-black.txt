@@ -1,0 +1,4 @@
+//
+// BlinkM ROM script #8 -- "fade to black"
+// 
+{ 20, {'c', 0x00,0x00,0x00}},  // black
