@@ -142,9 +142,11 @@ public class ButtonPanel extends JPanel {
     durChoice.setMaximumSize( durChoice.getPreferredSize() ); 
     durChoice.addItemListener(new ItemListener() {
         public void itemStateChanged(ItemEvent ie) {
-          int indx = durChoice.getSelectedIndex();  // FIXME
-          durationCurrent = timings[indx].duration;
-          prepareForPreview(durationCurrent);
+          if( ie.getStateChange() == ItemEvent.SELECTED ) {
+            int indx = durChoice.getSelectedIndex();  // FIXME
+            durationCurrent = timings[indx].duration;
+            prepareForPreview(durationCurrent);
+          }
         }        
       }
       );

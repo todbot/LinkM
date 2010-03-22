@@ -643,10 +643,12 @@ public class MultiTrackView
       (mouseClickedPt.y < (currTrack+1)*trackHeight + scrubHeight) ;
 
     if( clickCnt >= 2 && intrack ) {   // double-click to set color
+      println("doublclick!");
       //colorPreview.setColors(  getColorsAtColumn(i) );
       for( int i=0; i<numSlices; i++ ) {
-        if( isSliceHit( mouseReleasedPt.x,i) ) 
+        if( isSliceHit( mouseReleasedPt.x,i) ) {
           colorChooser.setColor( tracks[currTrack].slices[i] );
+        }
       }
     }
 
