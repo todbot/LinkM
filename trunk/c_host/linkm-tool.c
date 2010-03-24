@@ -100,7 +100,9 @@ void usage(char *myName)
 "  --linkmeeload      Load playerset and other parms \n"
 "  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params \n"
 "  --statled <0|1>    Turn on or off status LED  \n"
-"  --bootloadgo       Start LinkMBoot bootloaer mode\n"
+"  --gobootload       Switch from LinkM to LinkMBoot bootloader mode\n"
+"  --bootloadreset    If in LinkMBoot bootloader mode, reset to LinkM mode\n"
+"  --bootload <file>  If in LinkMBoot bootloader mode, upload new firmware\n"
 "\n"
 "and [options] are:\n"
 "  -h, --help                   Print this help message\n"
@@ -186,7 +188,7 @@ int main(int argc, char **argv)
         {"getversion", no_argument,       &cmd,   CMD_BLINKM_GETVERSION },
         {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYSET },
         {"playget",    no_argument,       &cmd,   CMD_LINKM_PLAYGET },
-        {"bootloadgo",   no_argument,       &cmd,   CMD_LINKM_BOOTLOADGO },
+        {"gobootload", no_argument,       &cmd,   CMD_LINKM_BOOTLOADGO },
         {"bootloadreset",no_argument,       &cmd,   CMD_LINKM_BOOTLOADRESET },
         {"bootload",     required_argument, &cmd,   CMD_LINKM_BOOTLOAD },
         {NULL,         0,                 0,      0}
