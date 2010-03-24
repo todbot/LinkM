@@ -9,7 +9,9 @@
 #include "linkmbootload-lib.h"
 
 /* ------------------------------------------------------------------------- */
+
 static usbDevice_t* dev = NULL;   // sigh.
+
 // the goal is to have a usbDevice_t* per LinkM instance, 
 // but for some reason I cannot get a LinkM instance int or long to
 // store the pointer in and then retrieve it. 
@@ -124,37 +126,12 @@ JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_commandmany
 
 }
 
-/*
- * Class:     LinkM
- * Method:    test
- * Signature: ([B)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_thingm_linkm_LinkM_test
-(JNIEnv *env, jobject obj, jbyteArray jba)
-{
-
-  jbyteArray jbo;
-  int jbsize;
-  jbyte* ba;
-  int i;
-
-  jbsize = (*env)->GetArrayLength(env, jba );
-  ba = (jbyte*) (*env)->GetByteArrayElements(env, jba, 0);
-  
-  jbo = (*env)->NewByteArray(env, jbsize);
-  
-  for( i=0; i< jbsize; i++ ) {
-    ba[i] = toupper( ba[i] );
-  }
-
-  (*env)->SetByteArrayRegion(env, jbo, 0, jbsize, (jbyte *)ba );
-
-  return (jbo);
-
-}
 
 // ----------------------------------------------------------------------------
 
+/*
+ *
+ */
 JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_bootload
 (JNIEnv *env, jobject obj, jstring filename, jboolean reset)
 {
@@ -192,6 +169,9 @@ JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_bootload
 
 }
 
+/*
+ *
+ */
 JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_bootloadReset
 (JNIEnv *env, jobject obj)
 {
@@ -215,3 +195,33 @@ JNIEXPORT void JNICALL Java_thingm_linkm_LinkM_bootloadReset
     dev = (usbDevice_t*) (*env)->GetLongField(env,obj, fid);
 
 */
+
+
+/*
+ * Class:     LinkM
+ * Method:    test
+ * Signature: ([B)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_thingm_linkm_LinkM_test
+(JNIEnv *env, jobject obj, jbyteArray jba)
+{
+
+  jbyteArray jbo;
+  int jbsize;
+  jbyte* ba;
+  int i;
+
+  jbsize = (*env)->GetArrayLength(env, jba );
+  ba = (jbyte*) (*env)->GetByteArrayElements(env, jba, 0);
+  
+  jbo = (*env)->NewByteArray(env, jbsize);
+  
+  for( i=0; i< jbsize; i++ ) {
+    ba[i] = toupper( ba[i] );
+  }
+
+  (*env)->SetByteArrayRegion(env, jbo, 0, jbsize, (jbyte *)ba );
+
+  return (jbo);
+
+}
