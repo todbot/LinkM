@@ -330,7 +330,7 @@ public class LinkM
       else if( cmd.equals("cmd") ) {
         printHexString("Sending BlinkM command: ", argbuf );
         if( argbuf.length == 4 ) {   // deal with common case
-          linkm.cmd3( addr, argbuf[0],argbuf[1],argbuf[2],argbuf[3] );
+          linkm.cmd( addr, argbuf[0],argbuf[1],argbuf[2],argbuf[3] );
         } 
         else {                       // deal with general case
           byte[] cmdbuf = new byte[ argbuf.length + 1];
@@ -429,7 +429,7 @@ public class LinkM
    * @param buf_recv is byte array of any receive data, may be null
    * @throws linkm_command response code, 0 == success, non-zero == fail
    */
-  native void command(int cmd, byte[] buf_send, byte[] buf_recv)
+  native synchronized void command(int cmd, byte[] buf_send, byte[] buf_recv)
     throws IOException;
 
   /**
@@ -462,8 +462,8 @@ public class LinkM
   native byte[] test(byte[] buff);
 
 
-  native void bootload(String filename, boolean reset) throws IOException;
-  native void bootloadReset() throws IOException;
+  public native void bootload(String filename, boolean reset) throws IOException;
+  public native void bootloadReset() throws IOException;
 
   //---------------------------------------------------------------------------
   // Instance methods
@@ -625,7 +625,7 @@ public class LinkM
    * @param arg2 first argument (if any)
    * @param arg3 first argument (if any)
    */
-  public void cmd3(int addr, int cmd, int arg1, int arg2, int arg3 )
+  public void cmd(int addr, int cmd, int arg1, int arg2, int arg3 )
     throws IOException {
     byte[] cmdbuf = { (byte)addr, (byte)cmd, (byte)arg1,(byte)arg2,(byte)arg3};
     commandi2c( cmdbuf, null );     // do i2c transaction with no recv
