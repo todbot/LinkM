@@ -36,7 +36,8 @@ int linkm_open(usbDevice_t **dev)
  */
 void linkm_close(usbDevice_t *dev)
 {
-    usbhidCloseDevice(dev);
+    if( dev != NULL )
+        usbhidCloseDevice(dev);
 }
 
 /**
@@ -51,7 +52,7 @@ int linkm_command(usbDevice_t *dev, int cmd,
                   int num_send, int num_recv,
                   uint8_t* buf_send, uint8_t* buf_recv)
 {
-    static uint8_t buf[200]; // FIXME: correct size?
+    uint8_t buf[200]; // FIXME: correct size?  // FIXME: was static
     int len,err;
     if(linkm_debug>1) {
         printf("linkmcmd: cmd:0x%x, num_send:%d, num_recv:%d\n",
