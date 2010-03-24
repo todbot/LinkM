@@ -55,18 +55,20 @@ CXX=	g++
 CFLAGS=	$(OS_CFLAGS) -std=gnu99 -O2 -Wall $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
 LIBS=	$(OS_LIBS) $(USBLIBS)
 
-	
-OBJ=		$(PROGRAM).o $(PROGRAM)-lib.o usbcalls.o
+
+OBJ=		$(PROGNAME).o $(PROGNAME)-lib.o usbcalls.o
 PROGRAM=	$(PROGNAME)$(EXE_SUFFIX)
 
-all: $(PROGRAM) lib
 
-$(PROGRAM): $(OBJ)
-	$(CC) $(CFLAGS) -o $(PROGRAM) $(OBJ) $(LIBS)
+all: $(PROGRAM) 
+
+$(PROGRAM): lib
+	$(CC) $(CFLAGS) $(LIBS) -L. -l$(PROGNAME) -o $(PROGRAM) $(LIBS)
 
 # FIXME: this isn't cross-platform I think
-lib: $(PROGRAM)
-	ar rcs lib$(PROGRAM).a $(OBJ) 
+lib: $(OBJ)
+	rm -f lib$(PROGNAME).a   # FIXME
+	ar rcs lib$(PROGNAME).a $(OBJ) 
 
 
 msleeptst: 
@@ -76,7 +78,7 @@ strip: $(PROGRAM)
 	strip $(PROGRAM)
 
 clean:
-	rm -f $(OBJ) $(PROGRAM) lib$(PROGRAM).a msleeptst.o 
+	rm -f $(OBJ) $(PROGRAM) lib$(PROGNAME).a msleeptst.o 
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o

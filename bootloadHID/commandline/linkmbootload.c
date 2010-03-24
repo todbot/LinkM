@@ -23,18 +23,18 @@
 
 static void printUsage()
 {
-    fprintf(stderr, "usage: %s [-r] <intel-hexfile>\n", PROGNAME);
+    fprintf(stderr, "usage: %s [-f] [-r] <intel-hexfile>\n", PROGNAME);
     exit(0);
 }
 
 int main(int argc, char **argv)
 {
     char *file = NULL; 
-    char checkLinkM = 0;
+    char findLinkM = 0;
     char leaveBootloader = 0;
 
     int ch;
-    while( (ch = getopt(argc,argv, "chr") ) != -1 ) {
+    while( (ch = getopt(argc,argv, "cfhr") ) != -1 ) {
         switch(ch) {
         case 'h':
             printUsage(); //argv[0]);
@@ -43,13 +43,14 @@ int main(int argc, char **argv)
             leaveBootloader = 1;
             break;
         case 'c':
-            checkLinkM = 1;
+        case 'f':
+            findLinkM = 1;
             break;
         }
     }
     argc -= optind; 
     argv += optind;
-    if( argc < 1 && !(leaveBootloader || checkLinkM) ) {
+    if( argc < 1 && !(leaveBootloader || findLinkM) ) {
         printUsage();
     }
 
@@ -57,8 +58,22 @@ int main(int argc, char **argv)
         file = argv[0];
     }
 
+    if( findLinkM ) { 
+        printf("Looking for LinkM...\n");
+        int rc =  linkmboot_findLinkM();
+        if( rc == FOUND_LINKM ) {
+            printf("found LinkM");
+        } else if( rc == FOUND_LINKMBOOT ) {
+            printf("found LinkMBoot");
+        }
+        else {
+            return 1;
+        }
+        return 0;
+    }
+
     if( file ) {
-        int rc = uploadFromFile(file, 0);
+        int rc = linkmboot_uploadFromFile(file, 0);
         if( rc == -1 ) {
             return 1;
         }
@@ -74,18 +89,8 @@ int main(int argc, char **argv)
 
     if( leaveBootloader ) {
         printf("Switching from LinkMBoot to LinkM...\n");
-        resetLinkMBoot();
+        linkmboot_reset();
     }
-
-    if( checkLinkM ) { 
-        printf("Checking for LinkM...\n");
-        //msleep( 20000 ); // sleep m milliseconds
-        if( checkForLinkM() ) {
-            return 1;
-        }
-        printf("LinkM Found\n");
-    }
-
     return 0;
 }
 
