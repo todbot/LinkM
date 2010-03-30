@@ -72,6 +72,7 @@ ButtonPanel buttonPanel;
 JPanel connectPanel;
 JFileChooser fc;
 JLabel statusLabel;
+JLabel heartbeatLabel;
 JLabel currChanIdLabel;
 JLabel currChanLabel;
 
@@ -200,7 +201,7 @@ void draw() {
   long millis = System.currentTimeMillis();
 
   if( frameCount > 5 && ((millis-lastConnectCheck) > 1000) ) {
-    verifyLinkM();
+    if( verifyLinkM() )     heartbeat();
     lastConnectCheck = millis;
   }
   /*
@@ -393,7 +394,7 @@ public boolean verifyLinkM() {
     } catch(IOException ioe) {
       l.debug("verifyLinkM:closing and connected");
       connected = false;
-      //linkm.close();
+      linkm.close();
     }
   }
   else {  // else, we're not connected, so try a quick open and close
@@ -593,7 +594,7 @@ public boolean doDownload() {
   int blinkmAddr;
   for( int j=0; j< numTracks; j++ ) {
     boolean active = multitrack.tracks[j].active;
-    if( !active ) continue;
+    if( !active ) continue; 
     blinkmAddr = multitrack.tracks[j].blinkmaddr;
     try { 
       script = linkm.readScript( blinkmAddr, 0, true );  // read all
@@ -603,6 +604,8 @@ public boolean doDownload() {
         // FIXME: maybe move this into BlinkMScriptLine
         if( scriptLine.cmd == 'c' ) {  // only pay attention to color cmds
           c = new Color( scriptLine.arg1,scriptLine.arg2,scriptLine.arg3 );
+          //println("c:"+c+","+Color.BLACK); // FIXME: why isn't this equal?
+          if( c == Color.BLACK ) { c = cEmpty; println("BLACK!"); }
           multitrack.tracks[j].slices[i] = c;
         }
       }
@@ -904,6 +907,11 @@ void saveAllTracks() {
 void setStatus(String status) {
     statusLabel.setText( status );
 }
+void heartbeat() {
+  String s = heartbeatLabel.getText();
+  s = (s.equals(".")) ? " " : "."; // toggle
+  heartbeatLabel.setText(s);
+}
 
 /**
  * Updates the current channel info at top of mainframe
@@ -1037,6 +1045,7 @@ JPanel makeColorChooserPanel() {
 JPanel makeBottomPanel() {
   JLabel botLabel = new JLabel(versionInfo, JLabel.LEFT);
   statusLabel = new JLabel("status");
+  heartbeatLabel = new JLabel(".");
   botLabel.setHorizontalAlignment(JLabel.LEFT);
   JPanel bp = new JPanel();
   bp.setBackground(cBgMidGray);
@@ -1044,6 +1053,8 @@ JPanel makeBottomPanel() {
   bp.add( Box.createHorizontalStrut(10) );
   bp.add( botLabel );
   bp.add( Box.createHorizontalGlue() );
+  bp.add( heartbeatLabel );
+  bp.add( Box.createHorizontalStrut(5) );
   bp.add( statusLabel );
   bp.add( Box.createHorizontalStrut(25) );
   return bp;
