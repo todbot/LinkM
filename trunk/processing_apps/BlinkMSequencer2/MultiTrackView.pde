@@ -610,7 +610,7 @@ public class MultiTrackView
         (mp.y > j*trackHeight + scrubHeight) && 
         (mp.y < (j+1)*trackHeight + scrubHeight) ;
 
-      if( intrack && (mp.x >= 3 && mp.x <= 3+15 ) ) // enable button
+      if( intrack && (mp.x >= 9+0 && mp.x <=  9+20 ) ) // enable button
         toggleTrackEnable(j);
       else if( intrack && (mp.x >= 26 && mp.x <= 26+20 ) ) // addr button
         doTrackDialog(j);
