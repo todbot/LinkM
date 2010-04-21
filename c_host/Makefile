@@ -1,6 +1,7 @@
-# Makefile for linkm-tool -- 
+# Makefile for "linkm-lib" and "linkm-tool"
+# should work on Mac OS X, Windows, and Linux
 #  
-#
+# Dependencies: "../bootloadHID/commandline/linkmbootload" must be compiled beforehand if using bootload functionality
 #
 # Based off of obdev hid-data "hidtool":
 # Name: Makefile
@@ -15,13 +16,27 @@
 
 TARGET=linkm-tool
 
-# assume macosx for ease of my develoment
-ifndef OS
+# set to 1 to include bootloading functionality
+ADDBOOTLOAD=0
+
+# try to do some autodetecting
+UNAME := $(shell uname -s)
+
+ifeq "$(UNAME)" "Darwin"
 	OS=macosx
 endif
 
 ifeq "$(OS)" "Windows_NT"
 	OS=windows
+endif
+
+ifeq "$(UNAME)" "Linux"
+	OS=linux
+endif
+
+# if all else fails, assume mac :)
+ifndef "$(OS)" 
+	OS=macosx
 endif
 
 #################  Mac OS X  ##################################################
@@ -53,17 +68,22 @@ endif
 
 CC=				gcc
 ARCHS=          
-CFLAGS=			$(OS_CFLAGS) -O -Wall -std=gnu99  $(USBFLAGS)  
+CFLAGS=			$(OS_CFLAGS) -O -Wall -std=gnu99  $(USBFLAGS) -DADDBOOTLOAD=$(ADDBOOTLOAD)
 LIBS=			$(OS_LIBS) $(USBLIBS) 
 
+ifdef "$(ADDBOOTLOAD)" 
 CFLAGS+=        -I../bootloadHID/commandline
 LIBS+=          ../bootloadHID/commandline/liblinkmbootload.a 
+endif
 
 OBJ=		$(TARGET).o linkm-lib.o hiddata.o 
 
 PROGRAM=	$(TARGET)$(EXE_SUFFIX)
 
-all: $(PROGRAM)
+all: msg $(PROGRAM)
+
+msg: 
+	@echo "building for OS=$(OS)"
 
 # symbolic targets:
 help:
@@ -72,10 +92,11 @@ help:
 	@echo "make OS=linux   ... build Linux    linkm-lib and linkm-tool" 
 	@echo "make OS=macosx  ... build Mac OS X linkm-lib and linkm-tool" 
 	@echo "make clean ..... to delete objects and hex file"
+	@echo
 
 $(PROGRAM): $(OBJ)
-	@echo "building for OS=$(OS)"
 	$(CC) -o $(PROGRAM) $(OBJ) $(LIBS) 
+
 
 strip: $(PROGRAM)
 	strip $(PROGRAM)
