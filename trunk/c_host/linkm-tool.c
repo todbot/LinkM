@@ -30,7 +30,9 @@ recv: 0x32 0x63 0x8a 0x00 0x00 0x8f 0x84 0xf6 0xff 0xbf 0x04 0x00 0x00 0x00 0x58
 
 #include "linkm-lib.h"
 
+#if ADDBOOTLOAD == 1
 #include "linkmbootload-lib.h"
+#endif
 
 static int debug = 0;
 
@@ -101,8 +103,10 @@ void usage(char *myName)
 "  --playset <onoff,scriptid,len,tickspeed>  set periodic play ticker params \n"
 "  --statled <0|1>    Turn on or off status LED  \n"
 "  --gobootload       Switch from LinkM to LinkMBoot bootloader mode\n"
+#if ADDBOOTLOAD == 1
 "  --bootloadreset    If in LinkMBoot bootloader mode, reset to LinkM mode\n"
 "  --bootload <file>  If in LinkMBoot bootloader mode, upload new firmware\n"
+#endif
 "\n"
 "and [options] are:\n"
 "  -h, --help                   Print this help message\n"
@@ -189,8 +193,10 @@ int main(int argc, char **argv)
         {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYSET },
         {"playget",    no_argument,       &cmd,   CMD_LINKM_PLAYGET },
         {"gobootload", no_argument,       &cmd,   CMD_LINKM_BOOTLOADGO },
+#if ADDBOOTLOAD == 1
         {"bootloadreset",no_argument,       &cmd,   CMD_LINKM_BOOTLOADRESET },
         {"bootload",     required_argument, &cmd,   CMD_LINKM_BOOTLOAD },
+#endif
         {NULL,         0,                 0,      0}
     };
 
@@ -242,6 +248,7 @@ int main(int argc, char **argv)
     linkm_debug = debug;
 
 
+#if ADDBOOTLOAD == 1
     if( cmd == CMD_LINKM_BOOTLOAD ) {
         printf("linkmboot uploading firmware: %s\n",file);
         int rc = linkmboot_uploadFromFile(file, 0);
@@ -267,7 +274,8 @@ int main(int argc, char **argv)
         printf("reset done\n");
         exit(0);
     }
-    
+#endif
+
     // open up linkm, get back a 'dev' to pass around
     if( (err = linkm_open( &dev )) ) {
         fprintf(stderr, "Error opening LinkM: %s\n", linkm_error_msg(err));
