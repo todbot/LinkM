@@ -1,19 +1,16 @@
-# Name: Makefile
-# Project: Automator
-# Author: Christian Starkjohann
-# Creation Date: 2006-02-01
-# Tabsize: 4
-# Copyright: (c) 2006 by OBJECTIVE DEVELOPMENT Software GmbH
-# License: Proprietary, free under certain conditions. See Documentation.
-# This Revision: $Id: Makefile 281 2007-03-20 13:22:10Z cs $
-
-# Please read the definitions below and edit them as appropriate for your
-# system:
+# Makefile for "linkmbootload" and "linkmboot-lib"
+# should work on Mac OS X, Windows, and Linux
+#
+#
+#
+#
 
 PROGNAME = linkmbootload
 
-# assume macosx for ease of my develoment
-ifndef OS
+# try to do some autodetecting
+UNAME := $(shell uname -s)
+
+ifeq "$(UNAME)" "Darwin"
 	OS=macosx
 endif
 
@@ -21,6 +18,14 @@ ifeq "$(OS)" "Windows_NT"
 	OS=windows
 endif
 
+ifeq "$(UNAME)" "Linux"
+	OS=linux
+endif
+
+# if all else fails, assume mac :)
+ifndef "$(OS)" 
+	OS=macosx
+endif
 
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
@@ -52,7 +57,8 @@ endif
 
 CC=		gcc
 CXX=	g++
-CFLAGS=	$(OS_CFLAGS) -std=gnu99 -O2 -Wall $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
+#CFLAGS=	$(OS_CFLAGS) -std=gnu99 -O2 -Wall $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
+CFLAGS=	$(OS_CFLAGS) -O -Wall -std=gnu99 $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
 LIBS=	$(OS_LIBS) $(USBLIBS)
 
 
@@ -60,7 +66,10 @@ OBJ=		$(PROGNAME).o $(PROGNAME)-lib.o usbcalls.o
 PROGRAM=	$(PROGNAME)$(EXE_SUFFIX)
 
 
-all: $(PROGRAM) 
+all: msg $(PROGRAM) 
+
+msg: 
+	@echo "building for OS=$(OS)"
 
 $(PROGRAM): lib
 	$(CC) $(CFLAGS) $(LIBS) -L. -l$(PROGNAME) -o $(PROGRAM) $(LIBS)
