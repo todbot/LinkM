@@ -34,10 +34,6 @@ ifeq "$(UNAME)" "Linux"
 	OS=linux
 endif
 
-# if all else fails, assume mac :)
-ifndef "$(OS)" 
-	OS=macosx
-endif
 
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
