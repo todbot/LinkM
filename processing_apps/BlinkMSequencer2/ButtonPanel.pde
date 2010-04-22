@@ -22,8 +22,8 @@ public class ButtonPanel extends JPanel {
     //setPreferredSize(new Dimension(aWidth,aHeight));
     //setMaximumSize(new Dimension(aWidth,aHeight));
 
-    setBorder(BorderFactory.createCompoundBorder(  // debug
-    BorderFactory.createLineBorder(Color.red),this.getBorder()));
+    //setBorder(BorderFactory.createCompoundBorder(  // debug
+    //BorderFactory.createLineBorder(Color.red),this.getBorder()));
 
     // add play button
     makePlayButton();
@@ -98,7 +98,7 @@ public class ButtonPanel extends JPanel {
     this.add(playBtnPanel); 
     this.add(grayspacePanel); //Box.createVerticalStrut(5));
     this.add(updnPanel);
-    this.add(Box.createVerticalStrut(5));
+    //this.add(Box.createVerticalStrut(1));
     this.add(opensavePanel);
 
   }

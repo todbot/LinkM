@@ -42,6 +42,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.colorchooser.*;
 import javax.swing.plaf.metal.*;
+import java.util.jar.*;
 
 import thingm.linkm.*;
 
@@ -126,10 +127,12 @@ Color cFgLightGray = new Color(230, 230, 230);
 Color cBgLightGray = new Color(200, 200, 200);
 Color cBgMidGray   = new Color(140, 140, 140);
 Color cBgDarkGray  = new Color(100, 100, 100);
+Color cDarkGray    = new Color( 90,  90,  90);
 Color tlDarkGray   = new Color(55,   55,  55);       // dark color for timeline
 Color cHighLight   = new Color(255,   0,   0);       // used for selections
 Color cBriOrange   = new Color(0xFB,0xC0,0x80);      // bright yellow/orange
 Color cMuteOrange  = new Color(0xBC,0x83,0x45);
+Color cMuteOrange2 = new Color(0xF1,0x9E,0x34);
 
 Color cEmpty   = tlDarkGray;
 // colors for SetChannelDialog
@@ -153,6 +156,28 @@ void setup() {
   frameRate(30);   // each frame we can potentially redraw timelines
 
   l.setLevel( debugLevel );
+
+  l.debug("loading romscripts...");
+  println("sketchPath:"+sketchPath);
+    java.net.URL url = getClass().getResource(".");
+    println("url:"+url);
+    url = getClass().getResource("romscripts.jar");
+    println("url:"+url);
+
+    /*
+  try {
+    JarFile jarFile = new JarFile(getClass().getResource("romscripts.jar").getFile());
+    Enumeration en = jarFile.entries();
+    while (en.hasMoreElements()) {
+      l.debug(en.nextElement());
+    }
+    } catch( IOException ioe ) {
+    println("ioe:" +ioe);
+  }
+    */
+  l.debug("done");
+
+  /*
   romScriptsDir = dataPath(".");
   File fdir = new File(romScriptsDir);
   romScripts = fdir.listFiles( new FileFilter() {
@@ -162,6 +187,7 @@ void setup() {
         return false;
       }
     });
+  */
 
   try { 
     // load up the lovely silkscreen font
@@ -201,7 +227,8 @@ void draw() {
   long millis = System.currentTimeMillis();
 
   if( frameCount > 5 && ((millis-lastConnectCheck) > 1000) ) {
-    if( verifyLinkM() )     heartbeat();
+    if( verifyLinkM() ) 
+      heartbeat();
     lastConnectCheck = millis;
   }
   /*
@@ -917,9 +944,11 @@ void heartbeat() {
  * Updates the current channel info at top of mainframe
  */
 void updateInfo() {
+  //for( int i=0;
   Track trk = multitrack.tracks[multitrack.currTrack];
   currChanIdLabel.setText( String.valueOf(trk.blinkmaddr) );
   currChanLabel.setText( trk.label );
+  multitrack.repaint();
   repaint();
 }
 
@@ -1006,10 +1035,10 @@ JPanel makeControlsPanel() {
 
   JPanel controlsPanel = new JPanel();
   controlsPanel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
-  //  controlsPanel.setBorder(BorderFactory.createMatteBorder(10,0,0,0,cBgDarkGray));
-  controlsPanel.setBorder(BorderFactory.createCompoundBorder(  // debug
-                   BorderFactory.createLineBorder(Color.blue),
-                   controlsPanel.getBorder()));
+  //controlsPanel.setBorder(BorderFactory.createMatteBorder(10,0,0,0,cBgDarkGray));
+  //controlsPanel.setBorder(BorderFactory.createCompoundBorder(  // debug
+  //                 BorderFactory.createLineBorder(Color.blue),
+  //                 controlsPanel.getBorder()));
   controlsPanel.setLayout(new BoxLayout(controlsPanel, BoxLayout.X_AXIS));
   controlsPanel.add( colorChooserPanel );
   controlsPanel.add( buttonPanel );
@@ -1035,6 +1064,7 @@ JPanel makeColorChooserPanel() {
 
   JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
   colorChooserPanel.setBackground(cBgDarkGray);  
+  colorChooserPanel.add( Box.createVerticalStrut(5) );
   colorChooserPanel.add( colorChooser );
   return colorChooserPanel;
 }
@@ -1131,11 +1161,13 @@ ActionListener menual = new ActionListener() {
       } else if( cmd.equals("Scan I2C Bus") ) {
         doI2CScan();
       } else {
+        /*
         for( int i=0; i<romScripts.length; i++ ) {
           if( romScripts[i].getName().equals(cmd+".txt") ) {
             loadTrack( romScripts[i] );
           }
         }
+        */
       }
       multitrack.repaint();
     } // actionPerformed
@@ -1180,13 +1212,14 @@ void setupMenus(Frame f) {
   MenuItem iteme2= new MenuItem("Copy Track", new MenuShortcut(KeyEvent.VK_C));
   MenuItem iteme3= new MenuItem("Paste Track",new MenuShortcut(KeyEvent.VK_V));
   MenuItem iteme4= new MenuItem("Delete Track",new MenuShortcut(KeyEvent.VK_D));
+  /*
   MenuItem[] fills = new MenuItem[romScripts.length];
   for( int i=0; i< romScripts.length; i++) {
     fills[i] = new MenuItem( romScripts[i].getName().replace(".txt","") );
     fills[i].addActionListener(menual);
     fillMenu.add(fills[i]);
   }
-
+  */
   MenuItem itemt1 = new MenuItem("Display LinkM/BlinkM Versions");
   MenuItem itemt2 = new MenuItem("Upgrade LinkM Firmware");
   MenuItem itemt3 = new MenuItem("Reset LinkM");
@@ -1307,6 +1340,7 @@ void bindKeys() {
           if( multitrack.playing ) { 
             multitrack.stop();
           } else { 
+            //verifyLinkM();  
             multitrack.play();
           }
           rc = true;

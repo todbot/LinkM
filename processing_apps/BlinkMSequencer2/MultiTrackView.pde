@@ -14,6 +14,7 @@ public class MultiTrackView
   extends JPanel implements MouseListener, MouseMotionListener {
 
   PImage previewAlpha;  // oi
+  PImage checkboxImg;
 
   Track[] tracks;
   Color[] previewColors;
@@ -66,6 +67,7 @@ public class MultiTrackView
 
     this.font = silkfont;  // global in main class
     previewAlpha = loadImage("radial-gradient.png");//"alpha_channel.png");
+    checkboxImg = loadImage("checkbox.gif");
 
     bufferTrack = new Track(numSlices, cEmpty);
     bufferTrack.active = false; // say not full of copy
@@ -186,13 +188,24 @@ public class MultiTrackView
       g.drawRect( 30,ty+tnum*trackHeight, 20,th );  // addr button outline 
       
       if( tracks[tnum].active == true ) { 
-        g.setColor( cMuteOrange );
+        g.setColor( cMuteOrange2 );
         g.fillRect(  9, ty+1+tnum*trackHeight, 14,th-1 ); // enable butt insides
-        
+        g.drawImage( checkboxImg.getImage(), 10,ty+3+tnum*trackHeight  ,null);
+
+        /*
+        g.setStroke( new BasicStroke(1.0f) );
+        g.setColor( cBlack );
+        g.drawLine(  9,    ty+1+tnum*trackHeight, 
+                     9+15, ty+1+tnum*trackHeight+18 ); // draw checkbox
+        g.drawLine(  9,    ty+1+tnum*trackHeight+18, 
+                     9+15, ty+1+tnum*trackHeight ); // draw checkbox
+        */
         int blinkmAddr = tracks[tnum].blinkmaddr; // this track's i2c address
         if( blinkmAddr != -1 ) { // if it's been set to something meaningful
+          g.setStroke( new BasicStroke(1.0f) );
+          g.setColor( cMuteOrange2 );
           g.fillRect( 31, ty+1+tnum*trackHeight, 19,th-1 ); // addr butt insides
-          g.setColor( cBlack );
+          g.setColor( cDarkGray );
           int offs = 31;
           offs = ( blinkmAddr < 100 ) ? offs += 3 : offs;
           offs = ( blinkmAddr < 10 )  ? offs += 2 : offs;
@@ -211,9 +224,9 @@ public class MultiTrackView
     g.fillRect(0, 0, getWidth(), scrubHeight-spacerWidth);
 
     g.setStroke( new BasicStroke(0.5f) );
-    
-    g.setColor( playHeadC );
-    g.fillRect((int)playHeadCurr, 0, spacerWidth, getHeight());
+    // create vertical playbar
+    g.setColor( playHeadC );                      //FIXME:why 10?
+    g.fillRect((int)playHeadCurr, 0, spacerWidth, getHeight()-10);
 
     Polygon p = new Polygon();
     p.addPoint((int)playHeadCurr - 5, 0);
