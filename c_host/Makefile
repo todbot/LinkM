@@ -3,6 +3,17 @@
 #  
 # Dependencies: "../bootloadHID/commandline/linkmbootload" must be compiled beforehand if using bootload functionality
 #
+# Platform-specific notes:
+#
+# Mac OS X 
+#   - Install Xcode with Unix Dev Support 
+#   - Install 'make' from macports (or similar)
+# Windows XP/7  
+#   - Install MinGW and MSYS (http://www.tdragon.net/recentgcc/ )
+# Linux (Ubuntu) 
+#   - apt-get install gcc-avr avr-libc avrdude java librxtx-java
+#
+#
 # Based off of obdev hid-data "hidtool":
 # Name: Makefile
 # Project: hid-data example
