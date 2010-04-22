@@ -22,10 +22,6 @@ ifeq "$(UNAME)" "Linux"
 	OS=linux
 endif
 
-# if all else fails, assume mac :)
-ifndef "$(OS)" 
-	OS=macosx
-endif
 
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
@@ -69,7 +65,7 @@ PROGRAM=	$(PROGNAME)$(EXE_SUFFIX)
 all: msg $(PROGRAM) 
 
 msg: 
-	@echo "building for OS=$(OS)"
+	@echo "Building for OS=$(OS)"
 
 $(PROGRAM): lib
 	$(CC) $(CFLAGS) $(LIBS) -L. -l$(PROGNAME) -o $(PROGRAM) $(LIBS)
