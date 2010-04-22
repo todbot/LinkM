@@ -53,10 +53,13 @@ public class SetChannelDialog extends JDialog { //implements ActionListener {
     okbut.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
           for( int i=0; i< numTracks; i++ ) {
-            try { 
+            try {
               int a = Integer.parseInt( channels[i].getText() );
-              if( a >=0 && a < 127 )  // i2c limits
+              if( a >=0 && a < 127 ) { // i2c limits
                 multitrack.tracks[i].blinkmaddr = a;
+              } else {
+                println("bad value");
+              }
             } catch(Exception e) {}
             multitrack.tracks[i].label = labels[i].getText();
           }
