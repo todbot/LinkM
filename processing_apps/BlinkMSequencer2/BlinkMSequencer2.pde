@@ -62,7 +62,10 @@ long lastConnectCheck;
 String romScriptsDir;  // set to dataPath(".");
 File   romScripts[];   // list of ROM scripts that can fill a track
 String silkfontPath = "slkscrb.ttf";  // in "data" directory
-Font silkfont;
+String textfontPath = "HelveticaNeue-CondensedBold.ttf";
+Font silk8font;
+Font textBigfont;
+Font textSmallfont;
 File lastFile;  // last file (if any) used to save or load
 
 //JDialog mf;  // the main holder of the app
@@ -89,8 +92,8 @@ int blinkmStartAddr = 9;
 //int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
 
 // overall dimensions
-int mainWidth  = 860;
-int mainHeight = 510; //630;  // was 455
+int mainWidth  = 900; // 955; //950; //860;
+int mainHeight = 490; //630;  // was 455
 int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
 
 
@@ -124,7 +127,7 @@ Util util = new Util();  // can't be a static class because of getClass() in it
 
 Color cBlack       = new Color(0,0,0);               // black like my soul
 Color cFgLightGray = new Color(230, 230, 230);
-Color cBgLightGray = new Color(200, 200, 200);
+Color cBgLightGray = new Color(200, 200, 200); //new Color(0xD1, 0xD3, 0xD4); 
 Color cBgMidGray   = new Color(140, 140, 140);
 Color cBgDarkGray  = new Color(100, 100, 100);
 Color cDarkGray    = new Color( 90,  90,  90);
@@ -193,7 +196,12 @@ void setup() {
     // load up the lovely silkscreen font
     InputStream in = getClass().getResourceAsStream(silkfontPath);
     Font dynamicFont = Font.createFont(Font.TRUETYPE_FONT, in);
-    silkfont = dynamicFont.deriveFont( 8f );
+    silk8font = dynamicFont.deriveFont( 8f );
+
+    in = getClass().getResourceAsStream(textfontPath);
+    dynamicFont = Font.createFont(Font.TRUETYPE_FONT, in);
+    textBigfont = dynamicFont.deriveFont( 16f );
+    textSmallfont = dynamicFont.deriveFont( 13f );
 
     // use a Swing look-and-feel that's the same across all OSs
     MetalLookAndFeel.setCurrentTheme(new DefaultMetalTheme());
@@ -1003,14 +1011,18 @@ JPanel makeChannelsTopPanel() {
   p.setLayout( new BoxLayout(p, BoxLayout.X_AXIS) );
   p.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
 
-  ImageIcon chText = util.createImageIcon("blinkm_text_channels.gif",
+  ImageIcon chText = util.createImageIcon("blinkm_text_channels_fixed.gif",
                                           "CHANNELS");
   JLabel chLabel = new JLabel(chText);
   JLabel currChanIdText = new JLabel("CURRENT CHANNEL ID:");
+  currChanIdText.setFont( textBigfont );
   currChanIdLabel = new JLabel("--");
+  currChanIdLabel.setFont(textBigfont);
   JLabel currChanLabelText = new JLabel("LABEL:");
+  currChanLabelText.setFont(textBigfont);
   currChanLabel = new JLabel("-nuh-");
-  
+  currChanLabel.setFont(textBigfont);
+
   p.add( Box.createRigidArea(new Dimension(25,0) ) );
   p.add(chLabel);
   p.add(Box.createHorizontalStrut(10));
@@ -1050,7 +1062,22 @@ JPanel makeControlsPanel() {
  * Makes and sets up the colorChooserPanel
  */
 JPanel makeColorChooserPanel() {
+  MouseListener ml = new java.awt.event.MouseListener() { 
+          public void mouseClicked(MouseEvent e) {
+              println(" mouseclicked!");
+          }
+          public void mouseEntered(MouseEvent e) {}
+          public void mouseExited(MouseEvent e) {}
+          public void mousePressed(MouseEvent e) {}
+          public void mouseReleased(MouseEvent e) {}
+  };
   colorChooser = new JColorChooser();
+  //AbstractColorChooserPanel[] cpanels = colorChooser.getChooserPanels();
+  //for( int i=0; i< cpanels.length; i++) {
+  //    println( cpanels[i] );
+  //    //    cpanels[i].setFont(textBigfont);
+  //    cpanels[i].addMouseListener(ml);
+  //}
   colorChooser.setBackground(cBgDarkGray);
   colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
       public void stateChanged(ChangeEvent e) {
@@ -1063,6 +1090,7 @@ JPanel makeColorChooserPanel() {
   colorChooser.setColor( cEmpty );
 
   JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
+  //colorChooserPanel.addMouseListener();
   colorChooserPanel.setBackground(cBgDarkGray);  
   colorChooserPanel.add( Box.createVerticalStrut(5) );
   colorChooserPanel.add( colorChooser );

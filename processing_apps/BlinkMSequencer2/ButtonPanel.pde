@@ -94,7 +94,7 @@ public class ButtonPanel extends JPanel {
     this.setBackground(cBgDarkGray);
     this.setLayout( new BoxLayout(this, BoxLayout.Y_AXIS));
     this.add(loopPanel);
-    this.add(Box.createVerticalStrut(5));
+    this.add(Box.createVerticalStrut(4));
     this.add(playBtnPanel); 
     this.add(grayspacePanel); //Box.createVerticalStrut(5));
     this.add(updnPanel);
@@ -112,6 +112,7 @@ public class ButtonPanel extends JPanel {
     //                                                    "Loop");
     //JLabel loopCheckLabel = new JLabel(loopCheckIcn);
     JLabel loopCheckLabel = new JLabel("LOOP");
+    loopCheckLabel.setFont(textBigfont);
     loopCheckLabel.setForeground(cBgMidGray);
 
     JCheckBox loopCheckbox = new JCheckBox("", true);
@@ -129,6 +130,7 @@ public class ButtonPanel extends JPanel {
     //ImageIcon loopIcn=new Util().createImageIcon("blinkm_text_loop_speed.gif",
     //                                               "Loop Speed");
     JLabel loopLabel = new JLabel("LOOP SPEED");
+    loopLabel.setFont(textBigfont);
     loopLabel.setForeground(cBgMidGray);
 
     durChoice = new JComboBox();
@@ -154,7 +156,8 @@ public class ButtonPanel extends JPanel {
     JPanel loopPanel = new JPanel();
     loopPanel.setLayout(new BoxLayout( loopPanel, BoxLayout.X_AXIS) );
     loopPanel.setBackground(cBgDarkGray);
-    loopPanel.add(Box.createHorizontalGlue());
+    //loopPanel.add(Box.createHorizontalGlue());
+    loopPanel.add(Box.createHorizontalStrut(108));
     loopPanel.add(loopCheckLabel);
     loopPanel.add(Box.createHorizontalStrut(5));
     loopPanel.add(loopCheckbox);
@@ -162,7 +165,7 @@ public class ButtonPanel extends JPanel {
     loopPanel.add(loopLabel);
     loopPanel.add(Box.createHorizontalStrut(5));
     loopPanel.add(durChoice);
-    loopPanel.add(Box.createHorizontalStrut(25));
+    //loopPanel.add(Box.createHorizontalStrut(38));
 
     return loopPanel;
   }
@@ -178,9 +181,9 @@ public class ButtonPanel extends JPanel {
     iconPlayHov = new Util().createImageIcon("blinkm_butn_play_hover.gif", 
                                              "Play"); 
     // FIXME FIXME FIXME: need blinkm_butn_stop_{normal,hover}.gif
-    iconStop    = new Util().createImageIcon("blinkm_butn_play_normal.gif",  
+    iconStop    = new Util().createImageIcon("blinkm_butn_stop_normal.gif",  
                                              "Stop"); 
-    iconStopHov = new Util().createImageIcon("blinkm_butn_play_normal.gif", 
+    iconStopHov = new Util().createImageIcon("blinkm_butn_stop_hover.gif", 
                                              "Stop"); 
     playBtn = new JButton();
     playBtn.setOpaque(true);
