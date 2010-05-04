@@ -33,15 +33,15 @@ public class MultiTrackView
   private int w,h;                          // dimensions of me
   private int sx = 57;                    // aka "trackX", offset from left edge
   private int previewWidth = 19;            // width of preview cells
-  private int sliceWidth   = 16;            // width of editable cells
-  private int trackHeight  = 20;            // height of each track 
+  private int sliceWidth   = 17;            // width of editable cells
+  private int trackHeight  = 18;            // height of each track 
   private int trackWidth;                   // == numSlices * sliceWidth
   private int previewX;
   private Color playHeadC = new Color(255, 0, 0);
   private float playHeadCurr;
   private boolean playheadClicked = false;
 
-  private Font font;
+  private Font trackfont;
 
   private Point mouseClickedPt;
 
@@ -59,14 +59,16 @@ public class MultiTrackView
     this.setPreferredSize(new Dimension(this.w, this.h));
     this.setBackground(tlDarkGray);
 
+
     addMouseListener(this);
     addMouseMotionListener(this);
 
     trackWidth = numSlices * sliceWidth;
-    previewX =  sx + trackWidth + 10;
+    previewX =  sx + trackWidth + 5;
 
-    this.font = silkfont;  // global in main class
+    trackfont = textSmallfont;  //silkfont;  // global in main class
     previewAlpha = loadImage("radial-gradient.png");//"alpha_channel.png");
+    previewAlpha = previewAlpha.get(0,2,previewAlpha.width,previewAlpha.height-1);
     checkboxImg = loadImage("checkbox.gif");
 
     bufferTrack = new Track(numSlices, cEmpty);
@@ -102,14 +104,14 @@ public class MultiTrackView
    */
   public void paintComponent(Graphics gOG) {
     Graphics2D g = (Graphics2D) gOG;
-    //g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
-    //                   RenderingHints.VALUE_ANTIALIAS_ON);
+    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
+                       RenderingHints.VALUE_ANTIALIAS_ON);
     super.paintComponent(g); 
 
     g.setColor( cBgDarkGray );
     g.fillRect( 0,0, getWidth(), getHeight() );
 
-    g.setFont(font);
+    g.setFont(trackfont);
 
     drawTracks(g);
     
@@ -151,7 +153,7 @@ public class MultiTrackView
 
       boolean sel = track.selects[i];
       if( track.selects[i] ) { // if selected 
-        g.setStroke( new BasicStroke(1.1f) );
+        g.setStroke( new BasicStroke(2f) );
         g.setColor(cHighLight);
         g.drawRect(x, y, sliceWidth-1, h-1 );
       }
@@ -208,8 +210,8 @@ public class MultiTrackView
           g.setColor( cDarkGray );
           int offs = 31;
           offs = ( blinkmAddr < 100 ) ? offs += 3 : offs;
-          offs = ( blinkmAddr < 10 )  ? offs += 2 : offs;
-          g.drawString( ""+blinkmAddr, offs, ty+12+tnum*trackHeight);//addr text
+          offs = ( blinkmAddr < 10 )  ? offs += 4 : offs;
+          g.drawString( ""+blinkmAddr, offs, ty+13+tnum*trackHeight);//addr text
         }
       }
     }
