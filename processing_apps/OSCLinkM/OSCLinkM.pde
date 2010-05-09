@@ -20,15 +20,15 @@ import thingm.linkm.*;
 import oscP5.*;
 import netP5.*;
 
-OscP5 oscP5;
-
 // UDP port for receiving OSC messages
 int port = 12000;
 
-LinkM linkm = new LinkM(); 
-
 // blinkm i2c address (can be changed with "/blinkm/toAddr" OSC message
 int blinkmaddr = 0;
+
+OscP5 oscP5;
+
+LinkM linkm = new LinkM(); 
 
 static final boolean debug = true;
 
@@ -50,7 +50,7 @@ void setup() {
 
 void draw() {
   background(0);  
-  text("OSCLinKM: listening on port "+port, 20,20);
+  text("OSCLinkM: listening on port "+port, 20,20);
   if( lastMsg !=null ) text("status: "+lastMsg, 20, 100);
 }
 
@@ -130,6 +130,7 @@ void connectLinkM() {
   debug("linkm connected.");
 }
 
+//
 void debug(String s) {
   debug( s,null);
 }
