@@ -69,32 +69,15 @@ void draw() {
   // make circle last tweeted color, as nice radial alpha gradient
   createGradient(width/2, width/2, width*3/4,  lc, color(0,0,0,10)  ); 
 
-  /*
-  // super simple version
-  fill( lc );  // make circle last tweeted color
-  ellipse( width/2,height/2, width*7/8,width*7/8 );
-  */
-
-  /*
-  // wow this causes bus error eventually on mac os x
-  Graphics2D g2 = ((PGraphicsJava2D)g).g2;
-  int rad = width*10/8;
-  RadialGradientPaint grad =
-    new RadialGradientPaint( width/2,height/2, rad/2,
-                             new float[] {0.0f,0.5f,1.0f},
-                             new Color[] { lastColor, lastColor,
-                                           new Color(0,0,0,100) } );
-  g2.setPaint(grad);
-  g2.fill(new Ellipse2D.Float(width/2-(rad/2), height/2-(rad/2), rad, rad));
-  */
+  noStroke();
+  fill(0,0,0,50);
+  roundrect( 30,height-60, width-60,40, 20); // draw text background
 
   textAlign(CENTER);
-  fill(0);
-  text(lastMsg, 11, height/2-9, width-20,50 ); // a little drop shadow
   fill(255);
-  text(lastMsg, 9, height/2-11, width-20,50 );
-  
+  text(lastMsg, 9, height-50, width-20,50 );  // draw text
 
+  
   long t = millis();
   if( (t-lastMillis) > 10000 ) { 
     lastMillis = t;
@@ -264,3 +247,27 @@ void createGradient (float x, float y, float radius, color c1, color c2) {
   ellipse(x, y, radius*2, radius*2);
 }
 
+//
+// stolen from: http://processing.org/discourse/yabb2/YaBB.pl?num=1213696787/1
+//
+void roundrect(int x, int y, int  w, int h, int r) {
+ noStroke();
+ rectMode(CORNER);
+
+ int  ax, ay, hr;
+
+ ax=x+w-1;
+ ay=y+h-1;
+ hr = r/2;
+
+ rect(x, y, w, h);
+ arc(x, y, r, r, radians(180.0), radians(270.0));
+ arc(ax, y, r,r, radians(270.0), radians(360.0));
+ arc(x, ay, r,r, radians(90.0), radians(180.0));
+ arc(ax, ay, r,r, radians(0.0), radians(90.0));
+ rect(x, y-hr, w, hr);
+ rect(x-hr, y, hr, h);
+ rect(x, y+h, w, hr);
+ rect(x+w,y,hr, h);
+
+}
