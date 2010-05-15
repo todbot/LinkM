@@ -1,0 +1,25 @@
+
+README for "linkm" project
+==========================
+2010 Tod E. Kurt, ThingM
+
+This project contains the following directories:
+
+- c_host          -- C library for talking to LinkM
+  - linkm-tool       -- Command-line tool for testing C library
+- java_host       -- Java library for talking to LinkM 
+  - linkm.sh         -- Command-line tool for testing Java library
+- processing_apps -- Several applications using Java library and Processing
+  - BlinkMSequencer2 -- Multi-channel light sequencer
+  - BlinkMScriptTool -- Helps write text light scripts
+  - TwitterBlinkM    -- Turns BlinkMs colors from twitter stream mentions
+  - OSCLinkM         -- OSC gateway for LinkM
+  - LinkMLibTest     -- Simple tests of LinkM Processing/Java library
+- tools           -- Misc tools
+  - linkm_load       -- mass bootloading tool
+  - linux_usb_setup  -- fixes USB permissions on Ubuntu & other udev Linux 
+- schematic       -- LinkM device schematics
+- firmware        -- LinkM device firmware code
+- bootloadHID     -- LinkM device bootloader firmware and commandline tool 
+
+
