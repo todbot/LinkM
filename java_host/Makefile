@@ -19,14 +19,19 @@ LIBUSBA_DIR = libusb-static
 PROCESSING_LIBDIR = linkm/library
 
 
-# assume macosx for ease of my develoment
-ifndef OS
+# try to do some autodetecting
+UNAME := $(shell uname -s)
+
+ifeq "$(UNAME)" "Darwin"
 	OS=macosx
 endif
 
-# MinGW sets OS="Windows_NT" 
 ifeq "$(OS)" "Windows_NT"
 	OS=windows
+endif
+
+ifeq "$(UNAME)" "Linux"
+	OS=linux
 endif
 
 
@@ -63,9 +68,10 @@ ifeq "$(OS)" "linux"
 LIBTARGET = lib$(TARGET).so  # for linux
 LIBUSBA   = libusb-linux.a
 USBFLAGS  = `libusb-config --cflags`
-USBLIBS   =  -L$(LIBUSBA_DIR) `libusb-config --libs`
-OS_CFLAGS  =
-OS_LDFLAGS = $(USBLIBS)
+USBLIBS   = `libusb-config --libs`
+#USBLIBS   =  -L$(LIBUSBA_DIR) -lusb-linux
+OS_CFLAGS  = $(USBFLAGS) -shared -I/usr/lib/jvm/java-6-sun/include -I/usr/lib/jvm/java-6-sun/include/linux
+OS_LDFLAGS = $(USBLIBS) 
 endif
 
 

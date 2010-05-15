@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # FIXME: doesn't work for all OS types
 
