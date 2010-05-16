@@ -10,50 +10,76 @@
  
 import thingm.linkm.*;
 
-LinkM linkm;
+LinkM linkm = new LinkM();
 
-int addr = 0;
+int blinkmaddr = 0;
+
+color lastColor = color(20);
+
+String helpstr = 
+  "LinkMLibTest\n\n"+
+  "'0' - turn blinkm off\n" +
+  "'o' - turn blinkm on (play script 0)\n" +
+  "'r' - random color\n" +
+  "'c' - reconnect to LinkM\n";
+
 
 void setup() 
 {
-  size(255,200);
-  frameRate(10);
-  linkm = new LinkM();  
+  size(300,200);
+  frameRate(20);
+
   try { 
     linkm.open();
+    linkm.setFadeSpeed( blinkmaddr, 20);
   } catch(IOException ioe) { 
     println("Could not find LinkM \n"+ioe);
   }
+
+
 }
 
 void draw()
 {
-  background(100);
-  
+  background(lastColor);
+  text(helpstr, 10,20, 200,100 );
 }
+
 
 void keyPressed() { 
   try { 
-  if( key  == CODED ) {
-    if( keyCode == LEFT ) { 
+    if( key  == CODED ) {
+      if( keyCode == LEFT ) { 
+      }
+      else if( keyCode == RIGHT ) {
+      }
     }
-    else if( keyCode == RIGHT ) {
+    else if( key == '0' ) {
+      println("turning off");
+      linkm.off( blinkmaddr );
     }
+    else if( key == 'o' ) { 
+      println("turning on");
+      linkm.playScript( blinkmaddr, 0, 0,0 );
+    }
+    else if( key == 'r' ) {
+      println("random color");
+      int r = (int)random(255);
+      int g = (int)random(255);
+      int b = (int)random(255);
+      lastColor = color(r,g,b);
+      linkm.fadeToRGB(  blinkmaddr, r,g,b );
+      //linkm.cmd(  blinkmaddr, 'c', r,g,b ); // equivalent
+    }
+    else if( key == 'c' ) { 
+      println("reconnecting");
+      linkm.close();
+      linkm.open();
+      linkm.getLinkMVersion();
+    }
+  } catch(IOException ioe) { 
+    println("linkm error: "+ioe);
   }
-  else if( key == '0' ) {
-    println("turning off");
-    linkm.off( addr );
-  }
-  else if( key == 'r' ) {
-    println("random color");
-    int r = (int)random(255);
-    int g = (int)random(255);
-    int b = (int)random(255);
-    linkm.cmd(  9, 'n', r,g,b );
-    linkm.cmd( 10, 'n', r,g,b );
-    linkm.cmd( 12, 'n', r,g,b );
-  }
-  } catch(IOException ioe) { println(ioe); }
 }
 
 
