@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FIXME: doesn't work for all OS types
+# build all the host-side code
 
 pushd bootloadHID/commandline
 make clean && make
