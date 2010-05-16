@@ -3,32 +3,43 @@ README for "linkm" project
 ==========================
 2010 Tod E. Kurt, ThingM
 
+Hosted on Google Code at: http://code.google.com/p/linkm/
+
 OVERVIEW
 --------
 This project contains the following directories:
 
 - c_host          -- C library for talking to LinkM
-  - linkm-tool       -- Command-line tool for testing C library
+  - linkm-tool       -- Command-line tool for exercising C library
+
 - java_host       -- Java library for talking to LinkM 
-  - linkm.sh         -- Command-line tool for testing Java library
+  - linkm.sh         -- Command-line tool for exercising Java library
+
 - processing_apps -- Several applications using Java library and Processing
   - BlinkMSequencer2 -- Multi-channel light sequencer
   - BlinkMScriptTool -- Helps write text light scripts
   - TwitterBlinkM    -- Turns BlinkMs colors from twitter stream mentions
   - OSCLinkM         -- OSC gateway for LinkM
   - LinkMLibTest     -- Simple tests of LinkM Processing/Java library
+
 - tools           -- Misc tools
   - linkm_load       -- mass bootloading tool
   - linux_usb_setup  -- fixes USB permissions on Ubuntu & other udev Linux 
-- schematic       -- LinkM device schematics
+
+- schematic       -- LinkM device schematics in Eagle format
+
 - firmware        -- LinkM device firmware code
+
 - bootloadHID     -- LinkM device bootloader firmware and commandline tool 
+  - firmware         -- firmware for bootloader
+  - commandline      -- commandline host-side tool to upload new firmware
 
 
 
 BUILDING THE PC-SIDE (HOST) CODE
 --------------------------------
-There is a "build_all.sh" script that should build all the host code
+There is a "build_all_host.sh" script that should build all the host code,
+in the order it needs to be built.
 
 Host code dependencies:
 - The Java library in "java_host" depends on the C library in "c_host"
