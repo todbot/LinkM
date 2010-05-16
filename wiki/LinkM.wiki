@@ -8,7 +8,7 @@ LinkM homepage: http://linkm.thingm.com/
 
 = Details =
 
-Check out the main: 
+Check out the main README: 
 http://linkm.googlecode.com/svn/trunk/README.TXT
 
 And maybe the Java API Javadoc:
