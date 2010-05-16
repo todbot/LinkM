@@ -142,6 +142,7 @@ $(TARGET).hex: $(TARGET).elf
 	avr-objcopy -j .text -j .data -O ihex $(TARGET).elf $(TARGET).hex
 	avr-objcopy -O ihex -R .eeprom $< $@
 	avr-size --mcu=$(MCU) --format=avr $(TARGET).elf
+	@echo "True available space = 8k-2k = 6144 bytes"
 
 %.lss: %.elf
 	avr-objdump -h -S $< > $@

@@ -81,6 +81,7 @@ JLabel currChanIdLabel;
 JLabel currChanLabel;
 
 SetChannelDialog setChannelDialog;
+GridTestDialog gridTestDialog;
 
 // number of slices in the timeline == number of script lines written to BlinkM
 int numSlices = 48;  
@@ -273,10 +274,30 @@ void draw() {
  *
  */
 public void showHelp() {
+    /*
   JOptionPane.showMessageDialog(mf,
                                 "Help!",
                                 "Help!",
                                 JOptionPane.INFORMATION_MESSAGE);
+    */
+    String helpstr = "<html><b><u>Hellow!</u></b></html>\n";
+
+    JDialog dialog = new JDialog(mf, 
+                                 "Click a button",
+                                 true);
+    
+    JPanel panel = new JPanel(new BorderLayout());
+    panel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
+    panel.setBorder( BorderFactory.createEmptyBorder(20,20,20,20) );
+    panel.add( new JLabel(helpstr) );
+
+    dialog.getContentPane().add(panel);
+
+    dialog.setPreferredSize( new Dimension(400,500));
+    dialog.setResizable(false);
+    dialog.setLocationRelativeTo(null); // center it on the BlinkMSequencer
+    dialog.pack();
+    dialog.setVisible(true);
 
 }
 
@@ -749,6 +770,7 @@ public void doTrackDialog(int track) {
   multitrack.reset(); // stop preview script
   
   setChannelDialog.setVisible(true);
+  gridTestDialog.setVisible(true);
   
   multitrack.reset();
   multitrack.repaint();
@@ -999,6 +1021,7 @@ void setupGUI() {
     );
   
   setChannelDialog = new SetChannelDialog(); // defaults to invisible
+  gridTestDialog = new GridTestDialog(); 
   updateInfo();
 }
 

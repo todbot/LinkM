@@ -63,7 +63,7 @@
 #include "linkm-lib.h"
 
 // uncomment to enable debugging to serial port
-#define DEBUG   0
+#define DEBUG   1
 
 #define ENABLE_PLAYTICKER 1
 
@@ -78,12 +78,14 @@
 #define PIN_USB_DMINUS         PORTD3
 
 #define LINKM_VERSION_MAJOR    0x13
-#define LINKM_VERSION_MINOR    0x37
+#define LINKM_VERSION_MINOR    0x36   // not quite leet yet
 
 #if DEUBG > 0
-#define printdebug(s)
+#define printdebug(str)
+#define putchdebug(c)
 #else
-#define printdebug(s) puts(s)
+#define printdebug(str) fputs(str,stdout)
+#define putchdebug(c)   uart_putchar(c,stdout)
 #endif
 
 /* ------------------------------------------------------------------------- */
@@ -122,7 +124,7 @@ PROGMEM char usbHidReportDescriptor[33] = {
 static uchar    currentAddress;
 static uchar    bytesRemaining;
 
-static int numWrites;
+//static int numWrites;  // FIXME: what was this for?
 
 static uint8_t inmsgbuf[REPORT1_COUNT];
 static uint8_t outmsgbuf[REPORT1_COUNT];
@@ -134,6 +136,9 @@ static volatile uint16_t timertick;         // tick tock clock
 static uint8_t goReset = 0;   // set to 1 to reset 
 
 #if DEBUG > 0
+#warning "DEBUG is enabled!"
+#warning "DEBUG is enabled!"
+#warning "DEBUG is enabled!"
 // setup serial routines to become stdio
 extern int uart_putchar(char c, FILE *stream);
 extern int uart_getchar(FILE *stream);
@@ -211,6 +216,9 @@ void i2cEnable(int v) {
 // 
 void handleMessage(void)
 {
+    statusLedSet(1);
+    uint8_t ledval = 0;
+
     //outmsgbuf[0]++;                   // say we've handled a msg
     outmsgbuf[0] = reportId;          // reportID   FIXME: Hack
     outmsgbuf[1] = LINKM_ERR_NONE;    // be optimistic
@@ -220,7 +228,7 @@ void handleMessage(void)
 
     if( inmbufp[0] != START_BYTE  ) {   // byte 0: start marker
         outmsgbuf[1] = LINKM_ERR_BADSTART;
-        return;
+        goto doneHandleMessage; //return;
     }
     
     uint8_t cmd      = inmbufp[1];     // byte 1: command
@@ -228,7 +236,7 @@ void handleMessage(void)
     uint8_t num_recv = inmbufp[3];     // byte 3: number of bytes to return back
 
 #if DEBUG > 0
-    printf("cmd:%d, sent:%d, recv:%d\n",cmd,num_sent,num_recv);
+    printf("\nc:%d s:%d r:%d ",cmd,num_sent,num_recv); // FIXME: fat
 #endif
 
     // i2c transaction
@@ -246,28 +254,27 @@ void handleMessage(void)
     if( cmd == LINKM_CMD_I2CTRANS ) {
         uint8_t addr      = inmbufp[4];  // byte 4: i2c addr or command
 
-        printdebug("A.");
+        putchdebug('A');
         if( addr >= 0x80 ) {   // invalid valid I2C address
             outmsgbuf[1] = LINKM_ERR_BADARGS;
-            return;
+            goto doneHandleMessage; //return;
         }
 
-        printdebug("B.");
+        putchdebug('B');
         if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c trans
             printdebug("!");
             outmsgbuf[1] = LINKM_ERR_I2C;
             i2c_stop();
-            return;
+            goto doneHandleMessage; //return;
         }
-        printdebug("C.");
+        putchdebug('C');
         // start succeeded, so send data
         for( uint8_t i=0; i<num_sent-1; i++) {
             i2c_write( inmbufp[5+i] );   // byte 5-N: i2c command to send
         }
 
-        printdebug("D.");
+        putchdebug('D');
         if( num_recv != 0 ) {
-            statusLedSet(1);
             if( i2c_rep_start( (addr<<1) | I2C_READ ) == 1 ) { // start i2c
                 outmsgbuf[1] = LINKM_ERR_I2CREAD;
             }
@@ -282,9 +289,8 @@ void handleMessage(void)
                     outmsgbuf[2+i] = c;             // store in response buff
                 }
             }
-            statusLedSet(0);
         }
-        printdebug("Z.\n");
+        putchdebug('Z');
         i2c_stop();  // done!
     }
     // i2c write
@@ -301,13 +307,13 @@ void handleMessage(void)
 
         if( addr >= 0x80 ) {   // invalid valid I2C address
             outmsgbuf[1] = LINKM_ERR_BADARGS;
-            return;
+            goto doneHandleMessage; //return;
         }
 
         if( i2c_start( (addr<<1) | I2C_WRITE ) == 1) {  // start i2c trans
             outmsgbuf[1] = LINKM_ERR_I2C;
             i2c_stop();
-            return;
+            goto doneHandleMessage; //return;
         }
         // start succeeded, so send data
         for( uint8_t i=0; i<num_sent-1; i++) {
@@ -331,7 +337,7 @@ void handleMessage(void)
 
         if( num_recv == 0 ) {
             outmsgbuf[1] = LINKM_ERR_BADARGS;
-            return;
+            goto doneHandleMessage; //return;
         }
         statusLedSet(1);
 
@@ -363,7 +369,7 @@ void handleMessage(void)
         uint8_t addr_end   = inmbufp[5];  // byte 5: end addr of scan
         if( addr_start >= 0x80 || addr_end >= 0x80 || addr_start > addr_end ) {
             outmsgbuf[1] = LINKM_ERR_BADARGS;
-            return;
+            goto doneHandleMessage; //return;
         }
         int numfound = 0;
         for( uint8_t a = 0; a < (addr_end-addr_start); a++ ) {
@@ -403,8 +409,7 @@ void handleMessage(void)
     //   outmsgbuf[0] == transaction counter
     //   outmsgbuf[1] == response code
     else if( cmd == LINKM_CMD_STATLEDSET ) {
-        uint8_t led = inmbufp[4];        // byte 4: on/off boolean
-        statusLedSet( led );
+        ledval = inmbufp[4];        // byte 4: on/off boolean
     }
     // get status led state
     // params:
@@ -482,21 +487,10 @@ void handleMessage(void)
         goReset = 1;
     }
     // cmd xxxx == 
-}
 
-/* usbFunctionRead() is called when the host requests a chunk of data from
- * the device. For more information see the docs in usbdrv/usbdrv.h.
- */
-uchar   usbFunctionRead(uchar *data, uchar len)
-{
-    if(len > bytesRemaining)
-        len = bytesRemaining;
-    
-    memcpy( data, outmsgbuf + currentAddress, len);
-    numWrites = 0;
-    currentAddress += len;
-    bytesRemaining -= len;
-    return len;
+ doneHandleMessage:
+    statusLedSet(ledval);
+
 }
 
 /* usbFunctionWrite() is called when the host sends a chunk of data to the
@@ -518,6 +512,21 @@ uchar   usbFunctionWrite(uchar *data, uchar len)
     }
     
     return bytesRemaining == 0; // return 1 if this was the last chunk 
+}
+
+/* usbFunctionRead() is called when the host requests a chunk of data from
+ * the device. For more information see the docs in usbdrv/usbdrv.h.
+ */
+uchar   usbFunctionRead(uchar *data, uchar len)
+{
+    if(len > bytesRemaining)
+        len = bytesRemaining;
+    
+    memcpy( data, outmsgbuf + currentAddress, len);
+    //numWrites = 0;
+    currentAddress += len;
+    bytesRemaining -= len;
+    return len;
 }
 
 // ------------------------------------------------------------------------- 
@@ -688,7 +697,7 @@ int main(void)
 #if DEBUG > 0
     uart_init();                // initialize UART hardware
     stdout = stdin = &uart_str; // setup stdio = RS232 port
-    puts("linkm dongle test");
+    puts("linkm debug mode");
 #endif
 
     usbInit();

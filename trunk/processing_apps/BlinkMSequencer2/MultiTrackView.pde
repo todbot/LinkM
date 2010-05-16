@@ -44,6 +44,7 @@ public class MultiTrackView
   private Font trackfont;
 
   private Point mouseClickedPt;
+  private Point mousePt = new Point();;
 
   private long startTime = 0;             // debug, start time of play
 
@@ -184,12 +185,20 @@ public class MultiTrackView
     g.setStroke( new BasicStroke(1.0f) );
     int ty = 2 + scrubHeight ;
     int th = trackHeight - 3;
+    Point mp = mousePt;
     for( int tnum=0; tnum<numTracks; tnum++ ) {
-      g.setColor( cBriOrange);
+
+      //boolean intrack = (mp.y > tnum*trackHeight + scrubHeight) && 
+      //  (mp.y < (tnum+1)*trackHeight + scrubHeight) ;
+      Color outlinecolor = cBriOrange;
+      //if( int(random(2)) == 0)
+      //  outlinecolor = cHighLight;
+
+      g.setColor( outlinecolor );
       g.drawRect(  8,ty+tnum*trackHeight, 15,th );  // enable button outline 
       g.drawRect( 30,ty+tnum*trackHeight, 20,th );  // addr button outline 
       
-      if( tracks[tnum].active == true ) { 
+      if( tracks[tnum].active == true ) {
         g.setColor( cMuteOrange2 );
         g.fillRect(  9, ty+1+tnum*trackHeight, 14,th-1 ); // enable butt insides
         g.drawImage( checkboxImg.getImage(), 10,ty+3+tnum*trackHeight  ,null);
@@ -700,6 +709,7 @@ public class MultiTrackView
   }
 
   public void mouseMoved(MouseEvent e) {
+    mousePt = e.getPoint();
   }
 
   public void mouseDragged(MouseEvent e) {
