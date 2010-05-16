@@ -101,6 +101,7 @@ help:
 	@echo "make jar ....... to build the distribution jar"
 	@echo "make processing. to build the processing library (only for OSX!)"
 	@echo "make clean ..... to clean all built files"
+	@echo "make javadoc ... to make the javadoc"
 
 javac:
 	javac thingm/linkm/$(TARGET).java	
@@ -137,6 +138,8 @@ processinglib:
 	@echo "now unzip linkm.zip into ~/Documents/Processing/libraries"
 	@echo "or maybe just: cp -r linkm ~/Documents/Processing/libraries"
 
+javadoc:
+	cd doc && javadoc -sourcepath .. thingm.linkm && cd ..
 
 clean:
 	rm -f thingm/linkm/*.class *.o ../c_host/*.o 

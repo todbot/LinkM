@@ -22,6 +22,15 @@ import java.util.*;
 import java.util.regex.*;
 import java.awt.Color;
 
+/**
+ * The entry point into the LinkM Java API.
+ * It depends on a native C library, named (depending on your OS)
+ * "libLinkM.dylib", "libLinkM.so", "LinkM.dll". 
+ * 
+ * This class also provides a main() function that acts as a command-line
+ * exerciser of the API.
+ *
+ */
 public class LinkM 
 {
   static {
@@ -471,6 +480,7 @@ public class LinkM
 
   /**
    * Open the first LinkM found
+   * @throws IOException if no LinkM found
    */
   public void open() throws IOException {
     open( 0,0, null,null );
@@ -478,9 +488,10 @@ public class LinkM
 
   /**
    * Do an I2C transaction via the dongle
+   * length of both byte arrays determines amount of data sent or received
    * @param buf_send is byte array of command to send
    * @param buf_recv is byte array of any receive data, may be null
-   * length of both byte arrays determines amount of data sent or received
+   * @throws IOException on transmit or receive error
    */
   public void commandi2c( byte[] buf_send, byte[] buf_recv ) 
     throws IOException { 
@@ -495,6 +506,7 @@ public class LinkM
    * @param script_tick the number of ticks between lines in the script
    * @param script_len  the length of the script in script lines
    * @param start_pos   starting position of script (usually 0)
+   * @throws IOException on transmit or receive error
    */
   public void setPlayset( boolean playing, int script_id, int script_tick, 
                           int script_len, int start_pos, int fadespeed,
@@ -508,6 +520,7 @@ public class LinkM
   
   /**
    * Get playticker parameters
+   * @throws IOException on transmit or receive error
    */
   public byte[] getPlayset() throws IOException {
     byte[] recvbuf = new byte[ 7 ];
@@ -517,12 +530,14 @@ public class LinkM
 
   /**
    * Save the playticker parameters from RAM to EEPROM
+   * @throws IOException on transmit or receive error
    */
   public void eeParamSave() throws IOException {
     command( LINKM_CMD_EESAVE, null, null );
   }
   /**
    * Load the playticker parameters from EEPROM to RAM
+   * @throws IOException on transmit or receive error
    */
   public void eeParamLoad() throws IOException {    
     command( LINKM_CMD_EELOAD, null, null );
@@ -531,6 +546,7 @@ public class LinkM
 
   /**
    * Get LinkM firmware version
+   * @throws IOException on transmit or receive error
    */
   public byte[] getLinkMVersion() throws IOException {
     byte[] recvbuf = new byte[ 2 ];
@@ -540,6 +556,7 @@ public class LinkM
 
   /**
    * Tell LinkM to switch to its USB bootloader mode
+   * @throws IOException on transmit or receive error
    */
   public void goBootload() throws IOException {
     command( LINKM_CMD_GOBOOTLOAD, null, null );
@@ -547,6 +564,9 @@ public class LinkM
   
   /**
    * Set the state of LinkM's status LED 
+   * @note future versions of LinkM might support brightness levels
+   * @param val 1 = turn LED on, 0 = turn LED off
+   * @throws IOException on transmit or receive error
    */
   public void statusLED(int val) 
     throws IOException {
@@ -557,7 +577,9 @@ public class LinkM
   
   /**
    * FIXME: currently ignores start_addr and end_addr
-   * @param
+   * @param start_addr start address of scan
+   * @param end_addr end address of scan
+   * @throws IOException on transmit or receive error
    */
   public byte[] i2cScan(int start_addr, int end_addr)
     throws IOException {
@@ -583,6 +605,7 @@ public class LinkM
    * FIXME: only works for spans up to 16 addrs
    * @param start_addr start address of scan
    * @param end_addr end address of scan
+   * @throws IOException on transmit or receive error
    */
   public byte[] i2cScan16(int start_addr, int end_addr)
     throws IOException { 
@@ -601,7 +624,9 @@ public class LinkM
 
   /**
    * Enable or disable the I2C bus buffer
-   *
+   * By selectively disabling and enabling the bus buffer you can do hotswap
+   * @param state set to true to enable I2C bus, false to disable
+   * @throws IOException on transmit or receive error
    */
   public void i2cEnable(boolean state) 
     throws IOException { 
@@ -610,7 +635,8 @@ public class LinkM
   }
 
   /**
-   *
+   * (Re)Initialize the I2C subsystem on LinkM
+   * @throws IOException on transmit or receive error
    */
   public void i2cInit()
     throws IOException { 
@@ -624,6 +650,7 @@ public class LinkM
    * @param arg1 first argument (if any)
    * @param arg2 first argument (if any)
    * @param arg3 first argument (if any)
+   * @throws IOException on transmit or receive error
    */
   public void cmd(int addr, int cmd, int arg1, int arg2, int arg3 )
     throws IOException {
@@ -634,6 +661,7 @@ public class LinkM
   /**
    * Turn BlinkM at address addr off.
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void off(int addr) 
     throws IOException { 
@@ -645,6 +673,7 @@ public class LinkM
    * Get the version of a BlinkM at a specific address
    * @param addr the i2c address
    * @returns 2 bytes of version info
+   * @throws IOException on transmit or receive error
    */
   public byte[] getVersion(int addr)
     throws IOException { 
@@ -658,6 +687,7 @@ public class LinkM
    * Sets the I2C address of a BlinkM
    * @param addr old address, can be 0 to change all connected BlinkMs
    * @param newaddr new address
+   * @throws IOException on transmit or receive error
    */
   public void setAddress(int addr, int newaddr)
     throws IOException { 
@@ -672,6 +702,7 @@ public class LinkM
    * @param script_id id of light script (#0 is reprogrammable one)
    * @param reps  number of repeats
    * @param pos   position in script to play
+   * @throws IOException on transmit or receive error
    */
   public void playScript(int addr, int script_id, int reps, int pos) 
     throws IOException {
@@ -681,6 +712,7 @@ public class LinkM
   /**
    * Plays the eeprom script (script id 0) from start, forever
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void playScript(int addr) 
     throws IOException {
@@ -690,6 +722,7 @@ public class LinkM
   /**
    * Stop any playing script at address 'addr'
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void stopScript(int addr) 
     throws IOException {
@@ -699,8 +732,13 @@ public class LinkM
   }
   
   /**
+   * Set the blinkm at 'addr' to the specified RGB color 
    *
    * @param addr the i2c address of blinkm
+   * @param r red component, 8-bit
+   * @param g green component, 8-bit
+   * @param b blue component, 8-bit
+   * @throws IOException on transmit or receive error
    */
   public void setRGB(int addr, int r, int g, int b) 
     throws IOException { 
@@ -709,8 +747,11 @@ public class LinkM
   }
 
   /**
+   * Set the blinkm at 'addr' to the specified RGB color 
    *
    * @param addr the i2c address of blinkm
+   * @param color the color to set
+   * @throws IOException on transmit or receive error
    */
   public void setRGB(int addr, Color color) 
     throws IOException { 
@@ -718,8 +759,12 @@ public class LinkM
   }
 
   /**
-   *
+   * Fade the blinkm at 'addr' to the specified color
    * @param addr the i2c address of blinkm
+   * @param r red component, 8-bit
+   * @param g green component, 8-bit
+   * @param b blue component, 8-bit
+   * @throws IOException on transmit or receive error
    */
   public void fadeToRGB(int addr, int r, int g, int b) 
     throws IOException { 
@@ -728,8 +773,11 @@ public class LinkM
   }
 
   /**
+   * Fade the blinkm at 'addr' to the specified color
    *
    * @param addr the i2c address of blinkm
+   * @param color the color to set
+   * @throws IOException on transmit or receive error
    */
   public void fadeToRGB(int addr, Color color) 
     throws IOException { 
@@ -737,11 +785,12 @@ public class LinkM
   }
 
   /**
+   * Fade a list of devices to a list of RGB colors
    * FIXME: this doesn't work
-   * Fade many devices to RGB colors
    * @param addrs list of i2c addresses
    * @param colors list of colors
    * @param count number of items in list
+   * @throws IOException on transmit or receive error
    */
   public void fadeToRGB( int addrs[], Color colors[], int count ) 
     throws IOException { 
@@ -758,8 +807,13 @@ public class LinkM
   }
 
   /**
-   *
+   * Fade to a random color.  
+   * Here the r,g,b components are the amount of random for each color channel
    * @param addr the i2c address of blinkm
+   * @param r red component, 8-bit
+   * @param g green component, 8-bit
+   * @param b blue component, 8-bit
+   * @throws IOException on transmit or receive error
    */
   public void fadeToRandomRGB(int addr, int r, int g, int b) 
     throws IOException { 
@@ -768,8 +822,12 @@ public class LinkM
   }
 
   /**
-   *
+   * Fade to a color by HSB.
    * @param addr the i2c address of blinkm
+   * @param h hue component, 8-bit
+   * @param s saturation component, 8-bit
+   * @param b brightness component, 8-bit
+   * @throws IOException on transmit or receive error
    */
   public void fadeToHSB(int addr, int h, int s, int b)
     throws IOException {
@@ -778,8 +836,13 @@ public class LinkM
   }
 
   /**
-   *
+   * Fade to a random HSB color.  
+   * Here the r,g,b components are the amount of random for each color channel
    * @param addr the i2c address of blinkm
+   * @param h hue component, 8-bit
+   * @param s saturation component, 8-bit
+   * @param b brightness component, 8-bit
+   * @throws IOException on transmit or receive error
    */
   public void fadeToRandomHSB(int addr, int h, int s, int b)
     throws IOException {
@@ -790,6 +853,7 @@ public class LinkM
   /**
    * Return the RGB color the BlinkM is currently at.
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public Color getRGBColor( int addr )
     throws IOException { 
@@ -803,6 +867,8 @@ public class LinkM
   /**
    * Set fade speed of a BlinkM
    * @param addr the i2c address of blinkm
+   * @param fadespeed fadespeed value (1 = very slow, 255 = instantaneous)
+   * @throws IOException on transmit or receive error
    */
   public void setFadeSpeed(int addr, int fadespeed)
     throws IOException { 
@@ -811,8 +877,10 @@ public class LinkM
   }
 
   /**
-   * Set time adjust of a BlinkM
+   * Set time adjust of a BlinkM light script playing
    * @param addr the i2c address of blinkm
+   * @param timeadj time adjust amount (0 = no adjust, negative = faster, positve = slower)
+   * @throws IOException on transmit or receive error
    */
   public void setTimeAdj(int addr, int timeadj)
     throws IOException { 
@@ -823,6 +891,7 @@ public class LinkM
   /**
    * Set boot params   cmd,mode,id,reps,fadespeed,timeadj
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void setStartupParams( int addr, int mode, int script_id, int reps, 
                                 int fadespeed, int timeadj )
@@ -836,6 +905,7 @@ public class LinkM
   /**
    * Default values for startup params
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void setStartupParamsDefault(int addr) throws IOException {
     setStartupParams( addr, 1, 0, 0, 8, 0 );
@@ -845,6 +915,7 @@ public class LinkM
    * Set light script default length and repeats.
    * reps == 0 means infinite repeats
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void setScriptLengthRepeats( int addr, int len, int reps)
     throws IOException {
@@ -854,9 +925,10 @@ public class LinkM
   }
 
   /**
-   *
-   * @param addr the i2c address of blinkm
+   * Read inputs on BlinkMs that have inputs
    * @note only works on MaxM or MinM
+   * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public byte[] readInputs( int addr ) throws IOException { 
     debug("BlinkMComm.readInputs");
@@ -867,8 +939,9 @@ public class LinkM
   }
 
   /**
-   *
+   * Write an entire light script contained in a string
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void writeScript( int addr, String scriptstr ) 
     throws IOException {
@@ -884,6 +957,7 @@ public class LinkM
    * FIXME: speed this up by implementing second report size 
    * @param addr the i2c address of blinkm
    * @param script BlinkMScript object of script lines
+   * @throws IOException on transmit or receive error
    */
   public void writeScript( int addr,  BlinkMScript script) 
     throws IOException {
@@ -900,6 +974,7 @@ public class LinkM
    * Write a single BlinkM light script line at position 'pos'.
    * FIXME: hard-coded script_id 0 (only one that can be written for now, still)
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void writeScriptLine( int addr, int pos, BlinkMScriptLine line )
     throws IOException {
@@ -924,6 +999,7 @@ public class LinkM
    * Read a BlinkMScriptLine from 'script_id' and pos 'pos', 
    * from BlinkM at 'addr'.
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public BlinkMScriptLine readScriptLine( int addr, int script_id, int pos )
     throws IOException {
@@ -946,7 +1022,9 @@ public class LinkM
    * Read an entire light script from a BlinkM at address 'addr' 
    * FIXME: this only really works for script_id==0
    * @param addr the i2c address of blinkm
+   * @param script_id id of script to read from (usually 0)
    * @param readAll read all script lines, or just the good ones
+   * @throws IOException on transmit or receive error
    */
   public BlinkMScript readScript( int addr, int script_id, boolean readAll ) 
     throws IOException { 
@@ -970,6 +1048,7 @@ public class LinkM
   /**
    * Read an entire light script, return as a string
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public String readScriptToString( int addr, int script_id, boolean readAll )
     throws IOException {
@@ -983,6 +1062,7 @@ public class LinkM
    * Sets the i2c address to 0x09
    * Writes a new light script and sets the startup paramters
    * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
    */
   public void doFactoryReset( int addr ) throws IOException {
     setAddress( addr, 0x09 );
@@ -1018,6 +1098,8 @@ public class LinkM
   /**
    * Essentially a sparse-array lookup-table for those commands that may 
    * return a value.
+   * @param c command code character
+   * @returns num of args for given command
    */
   static final public int respSizeForCommand( int c ) {
     int s = 0;
@@ -1033,6 +1115,8 @@ public class LinkM
 
   /**
    * Load a text file and turn it into an array of Strings.
+   * @param filename name of file to load
+   * @returns array of Strings, one per line, of file
    */
   static final public String[] loadFile( String filename ) {
     return loadFile( new File(filename) );
@@ -1040,6 +1124,8 @@ public class LinkM
 
   /**
    * Load a text file and turn it into an array of Strings.
+   * @param filename name of file to load
+   * @returns array of Strings, one per line, of file
    */
   static final public String[] loadFile( File filename ) {
     ArrayList<String> linesl = new ArrayList<String>();
@@ -1070,7 +1156,9 @@ public class LinkM
   }
 
   /**
-   *
+   * Save a script in string format to a file
+   * @param filename name of file to write
+   * @param scripstr script in String format
    */
   static final public boolean saveFile( String filename, String scriptstr ) { 
     return saveFile( new File(filename), scriptstr );
@@ -1078,6 +1166,9 @@ public class LinkM
 
   /**
    * Take a script in String format and save it to as a text file.
+   * @param file file to write
+   * @param scripstr script in String format
+   * @returns true on success, false on failure
    */
   static final public boolean saveFile( File file, String scriptstr ) { 
     //File f = new File( filename );
@@ -1096,6 +1187,8 @@ public class LinkM
 
   /**
    * Take a String containing an entire script and turn it into a BlinkMScript
+   * @param scripstr script in String format
+   * @returns a BlinkMScript or null
    */
   static final public BlinkMScript parseScript( String scriptstr ) {
     return parseScript( scriptstr.split("\n") );
