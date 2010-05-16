@@ -59,14 +59,15 @@ int main(int argc, char **argv)
     }
 
     if( findLinkM ) { 
-        printf("Looking for LinkM...\n");
+        printf("Looking for LinkM...");
         int rc =  linkmboot_findLinkM();
         if( rc == FOUND_LINKM ) {
-            printf("found LinkM");
+            printf("found LinkM\n");
         } else if( rc == FOUND_LINKMBOOT ) {
-            printf("found LinkMBoot");
+            printf("found LinkMBoot\n");
         }
         else {
+            printf("NO LINKM FOUND\n");
             return 1;
         }
         return 0;

@@ -712,6 +712,15 @@ public class LinkM
    *
    * @param addr the i2c address of blinkm
    */
+  public void setRGB(int addr, Color color) 
+    throws IOException { 
+    setRGB( addr, color.getRed(), color.getGreen(), color.getBlue());
+  }
+
+  /**
+   *
+   * @param addr the i2c address of blinkm
+   */
   public void fadeToRGB(int addr, int r, int g, int b) 
     throws IOException { 
     byte[] cmdbuf = { (byte)addr, 'c', (byte)r, (byte)g, (byte)b };
@@ -986,6 +995,9 @@ public class LinkM
     script.add( new BlinkMScriptLine( 50, 'c', 0xff,0x00,0x00) );
     script.add( new BlinkMScriptLine( 50, 'c', 0x00,0xff,0x00) );
     script.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0xff) );
+    for( int i=0; i< 48-4; i++ ) {  // FIXME:  make this length correct
+      script.add( new BlinkMScriptLine( 0, 'c', 0,0,0 ) );
+    }
 
     writeScript( addr, script);
   }

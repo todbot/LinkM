@@ -14,14 +14,15 @@ LinkM linkm = new LinkM();
 
 int blinkmaddr = 0;
 
-color lastColor = color(20);
 
 String helpstr = 
   "LinkMLibTest\n\n"+
-  "'0' - turn blinkm off\n" +
-  "'o' - turn blinkm on (play script 0)\n" +
+  "'o' - turn blinkm off\n" +
+  "'p' - play script 0\n" +
   "'r' - random color\n" +
   "'c' - reconnect to LinkM\n";
+
+color lastColor = color(20);
 
 
 void setup() 
@@ -48,18 +49,12 @@ void draw()
 
 void keyPressed() { 
   try { 
-    if( key  == CODED ) {
-      if( keyCode == LEFT ) { 
-      }
-      else if( keyCode == RIGHT ) {
-      }
-    }
-    else if( key == '0' ) {
+    if( key == 'o' ) {
       println("turning off");
       linkm.off( blinkmaddr );
     }
-    else if( key == 'o' ) { 
-      println("turning on");
+    else if( key == 'p' ) { 
+      println("playing script 0");
       linkm.playScript( blinkmaddr, 0, 0,0 );
     }
     else if( key == 'r' ) {
