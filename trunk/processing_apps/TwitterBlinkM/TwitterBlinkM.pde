@@ -19,15 +19,15 @@ import thingm.linkm.*;
 
 static final boolean debug = true;
 
-String username = "blinkmlive";
-String password = "redgreenblue";
+String username = "";
+String password = "";
 
 String colorfile = "rgb.txt";
 HashMap colormap;  // stores String -> Color mappings of rgb.txt file
 
 TwitterStream twitterStream ;
 
-String mentionString = "blinkn";
+String mentionString = "blinkm";
 String[] trackStrings = new String[] { mentionString }; 
 
 long lastMillis;
@@ -42,12 +42,17 @@ String lastMsg = "TwitterBlinkM!";
 void setup() {
   size(400,400);
   frameRate(5);
-  //  smooth();
 
   font = loadFont("HelveticaNeue-CondensedBold-18.vlw"); 
   textFont( font  );
   colormap = parseColorFile(colorfile);
 
+
+  if( username == null || username.equals("") ||
+      password == null || password.equals("") ) {
+    println("\n*** Must set twitter username and password!! ***\n");
+    return;
+  }
   twitterStream = new TwitterStreamFactory().getInstance(username,password); 
   twitterStream.setStatusListener(listener);
   try { 
