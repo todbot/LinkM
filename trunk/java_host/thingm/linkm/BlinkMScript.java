@@ -1,10 +1,3 @@
-/**
- *
- * This is basically just a wrapper around ArrayList<BlinkMScriptLine>
- * that is shorter to type than the above and also because Java really
- * doesn't have typedefs.
- *
- */
 
 
 package thingm.linkm;
@@ -12,6 +5,11 @@ package thingm.linkm;
 import java.util.ArrayList;
 
 
+/**
+ * Basically just a wrapper around ArrayList<BlinkMScriptLine>
+ * that is shorter to type than the above and also because Java really
+ * doesn't have typedefs.
+ */
 public class BlinkMScript {
   ArrayList<BlinkMScriptLine> scriptLines;
   
