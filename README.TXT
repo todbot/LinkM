@@ -28,13 +28,15 @@ This project contains the following directories:
 
 BUILDING THE PC-SIDE (HOST) CODE
 --------------------------------
+There is a "build_all.sh" script that should build all the host code
 
-- Host code dependencies
--- The Java library in "java_host" depends on the C library in "c_host"
--- The C library in "c_host" depends on library in "bootloadHID/commandline"
+Host code dependencies:
+- The Java library in "java_host" depends on the C library in "c_host"
+- The C library in "c_host" depends on library in "bootloadHID/commandline"
 
 On Mac OS X you will need the following free tools:
 - XCode - http://developer.apple.com/technologies/xcode.html
+- libusb - "sudo port install libusb-legacy libusb"
 
 On Windows you will need the following free tools:
 - MinGW - 
@@ -42,10 +44,22 @@ On Windows you will need the following free tools:
 - zip - http://stahlworks.com/dev/index.php?tool=zipunzip
 - Java JDK - http://java.sun.com/javase/downloads/widget/jdk6.jsp
 
-On Linux you will need the following free tools:
-- sudo apt-get
+On Ubuntu Linux you will need the following free tools:
+- libusb - "sudo apt-get install libusb libusb-dev"
 - 
 - 
 
 BUILDING THE FIRMWARE
 ---------------------
+In general you should have everything you have for the host code above, and:
+
+On Mac OS X:
+- AVR CrossPack - http://www.obdev.at/products/crosspack/
+ 
+On Windows:
+- WinAVR - http://winavr.sourceforge.net/
+
+On Ubuntu Linux:
+- "sudo apt-get install avrdude avr-libc avr-gcc avr-binutils"
+
+ 
