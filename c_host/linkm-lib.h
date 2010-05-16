@@ -21,7 +21,9 @@
 #define IDENT_VENDOR_STRING     "ThingM"
 #define IDENT_PRODUCT_STRING    "LinkM"
 
-#define REPORT1_SIZE        16
+// gotta be one more than the size, for the reportid
+#define REPORT1_SIZE        17
+//#define REPORT1_SIZE        16
 #define START_BYTE          0xDA
 
 // Command byte values for linkm_command()
