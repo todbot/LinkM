@@ -115,12 +115,15 @@ jni:
 #	cp `libusb-config --exec-prefix`/lib/libusb.a $(LIBUSBA_DIR)/$(LIBUSBA)
 
 #	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(LDFLAGS) $(OBJ)  -lc
-compile: $(OBJ)
+compile: msg $(OBJ)
 	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(OBJ) $(LDFLAGS) 
 	mkdir -p libtargets && cp $(LIBTARGET) libtargets
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o
+
+msg: 
+	@echo "building for OS=$(OS)"
 
 # packaging
 jar: javac jni compile

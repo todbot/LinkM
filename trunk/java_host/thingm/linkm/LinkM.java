@@ -427,7 +427,7 @@ public class LinkM
    * Setting these to {0,0,null,null} will open first default device found
    * Currently only one LinkM is supported
    */
-  native void open(int vid, int pid, String vstr, String pstr)
+  public native void open(int vid, int pid, String vstr, String pstr)
     throws IOException;
   
   /**
@@ -438,7 +438,7 @@ public class LinkM
    * @param buf_recv is byte array of any receive data, may be null
    * @throws linkm_command response code, 0 == success, non-zero == fail
    */
-  native synchronized void command(int cmd, byte[] buf_send, byte[] buf_recv)
+  public native synchronized void command(int cmd, byte[] buf_send, byte[] buf_recv)
     throws IOException;
 
   /**
