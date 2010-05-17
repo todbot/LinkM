@@ -95,8 +95,8 @@ int blinkmStartAddr = 9;
 // overall dimensions
 int mainWidth  = 900; // 955; //950; //860;
 int mainHeight = 490; //630;  // was 455
-int mainHeightAdjForWindows = 12; // fudge factor for Windows layout variation
-
+int mainHeightAdjForWindows = 22; // fudge factor for Windows layout variation
+int mainWidthAdjForWindows = 10;
 
 // maps loop duration in seconds to per-slice duration and fadespeed,
 // both in BlinkM ticks (1/30th of a second, 33.33 msecs)
@@ -212,9 +212,10 @@ void setup() {
   }
 
   String osname = System.getProperty("os.name");
-  if( osname.toLowerCase().startsWith("windows") ) 
+  if( !osname.toLowerCase().startsWith("mac") ) {
     mainHeight += mainHeightAdjForWindows;
-  
+    mainWidth  += mainWidthAdjForWindows;
+  }  
   p = this;
   
   setupGUI();
@@ -1192,7 +1193,7 @@ JPanel makeBottomPanel() {
  * Create the containing frame (or JDialog in this case) 
  */
 void setupMainframe() {
-  mf = new JFrame( "BlinkM Sequencer" );
+  mf = new JFrame( "BlinkMSequencer2" );
   mf.setBackground(cBgDarkGray);
   mf.setFocusable(true);
   mf.setSize( mainWidth, mainHeight);
