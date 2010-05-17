@@ -56,9 +56,10 @@ LIBTARGET = $(TARGET).dll
 LIBUSBA   = libusb-windows.a
 USBLIBS   = -lhid -lsetupapi
 
-#JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_14\\"
-#JAVANATINC = -I${JAVA_HOME}\include -I${JAVA_HOME}\include\win32
-OS_CFLAGS  =
+# this must match your Java install
+JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_20\\"
+JAVA_NATIVE_INC = -I${JAVA_HOME}\include -I${JAVA_HOME}\include\win32
+OS_CFLAGS  = $JAVA_NATIVE_INC
 OS_LDFLAGS = -s -shared -Wl,--export-all-symbols -Wl,--kill-a $(USBLIBS)
 endif
 
