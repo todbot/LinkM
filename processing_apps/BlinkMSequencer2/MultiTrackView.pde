@@ -409,7 +409,7 @@ public class MultiTrackView
   }
 
   public void changeTrack(int newtracknum) {
-    println("changeTrack "+newtracknum);
+    l.debug("changeTrack "+newtracknum);
     if( newtracknum < 0 ) newtracknum = 0;
     if( newtracknum == numTracks ) newtracknum = numTracks - 1;
     if( newtracknum != currTrack ) {

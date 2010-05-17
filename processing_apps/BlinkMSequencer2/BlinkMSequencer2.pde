@@ -81,7 +81,7 @@ JLabel currChanIdLabel;
 JLabel currChanLabel;
 
 SetChannelDialog setChannelDialog;
-GridTestDialog gridTestDialog;
+//GridTestDialog gridTestDialog;
 
 // number of slices in the timeline == number of script lines written to BlinkM
 int numSlices = 48;  
@@ -161,14 +161,13 @@ void setup() {
 
   l.setLevel( debugLevel );
 
+  /*
   l.debug("loading romscripts...");
-  println("sketchPath:"+sketchPath);
+  l.debug("sketchPath:"+sketchPath);
     java.net.URL url = getClass().getResource(".");
     println("url:"+url);
     url = getClass().getResource("romscripts.jar");
     println("url:"+url);
-
-    /*
   try {
     JarFile jarFile = new JarFile(getClass().getResource("romscripts.jar").getFile());
     Enumeration en = jarFile.entries();
@@ -178,8 +177,8 @@ void setup() {
     } catch( IOException ioe ) {
     println("ioe:" +ioe);
   }
-    */
   l.debug("done");
+    */
 
   /*
   romScriptsDir = dataPath(".");
@@ -240,24 +239,11 @@ void draw() {
       heartbeat();
     lastConnectCheck = millis;
   }
-  /*
-  if( frameCount > 5 && !connected && ((millis-lastConnectCheck) > 2000) ) {
-    if( lastConnectCheck == 0 ) {
-      connect();
-    } 
-    else {
-      if( !multitrack.playing && checkForLinkM() ) {
-        connect();
-      }
-    }
-    lastConnectCheck = millis;
-  } //if( frameCount... )
-  */
 
   float millisPerTick = (1/frameRate) * 1000;
   // tick tock
   multitrack.tick( millisPerTick );
-  // not exactly 1/frameRate, but good enough I think
+  // not exactly 1/frameRate, but good enough for now
   if( connected ) {
     if( blinkmConnected ) 
       setStatus("LinkM connected, BlinkM found");
@@ -282,9 +268,7 @@ public void showHelp() {
     */
     String helpstr = "<html><b><u>Hellow!</u></b></html>\n";
 
-    JDialog dialog = new JDialog(mf, 
-                                 "Click a button",
-                                 true);
+    JDialog dialog = new JDialog(mf, "BlinkMSequencer2 Help", false);
     
     JPanel panel = new JPanel(new BorderLayout());
     panel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
@@ -320,7 +304,7 @@ public void displayVersions() {
     }
     msg += "\n";
   } catch( IOException ioe ) {
-    msg += "-error connecting-";
+    msg += "-No BlinkM-";
   }
    
   try {
@@ -396,22 +380,85 @@ public void resetLinkM() {
  */
 public void doI2CScan() {
   l.debug("doI2CScan");
+  int start_addr = 1;
+  int end_addr = 113;
   String msg = "no devices found";
+  HashSet addrset = new HashSet();
   try {
-    byte[] addrs = linkm.i2cScan(1,113);
+    byte[] addrs = linkm.i2cScan( start_addr, end_addr);
     int cnt = addrs.length;
     if( cnt>0 ) {
       msg = "Found "+cnt+" devices:\n";
       for( int i=0; i<cnt; i++) {
         byte a = addrs[i];
+        addrset.add( new Integer(a) );
         msg += "addr: "+a;
       }
       msg += "\nDone.";
     }
   } catch( IOException ioe) {
+    JOptionPane.showMessageDialog(mf,
+                                  "No LinkM found.\n"+
+                                  "I2C Scan cancelled.\n"+
+                                  "Plug LinkM in at any time and try again.",
+                                  "LinkM Not Found",
+                                  JOptionPane.WARNING_MESSAGE);
+    return;
   }
-  JOptionPane.showMessageDialog(mf, msg, "I2C Bus Scan",
-                                JOptionPane.INFORMATION_MESSAGE);
+
+  // surely there's a better way to do this
+  int stride = (end_addr-start_addr)/4;
+  JPanel panel = new JPanel();
+  panel.setLayout( new GridLayout( 2+stride, 8, 5,5) );
+  panel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
+  panel.setBorder( BorderFactory.createEmptyBorder(20,20,20,20) );
+  JLabel lh1a = new JLabel("addr");  //lh1a.setFont(silk8font);
+  JLabel lh1b = new JLabel("dev");   //lh1b.setFont(silk8font);
+  JLabel lh2a = new JLabel("addr");  //lh2a.setFont(silk8font);
+  JLabel lh2b = new JLabel("dev");   //lh2b.setFont(silk8font);
+  JLabel lh3a = new JLabel("addr");  //lh3a.setFont(silk8font);
+  JLabel lh3b = new JLabel("dev");   //lh3b.setFont(silk8font);
+  JLabel lh4a = new JLabel("addr");  //lh4a.setFont(silk8font);
+  JLabel lh4b = new JLabel("dev");   //lh4b.setFont(silk8font);
+  panel.add( lh1a );  panel.add( lh1b );
+  panel.add( lh2a );  panel.add( lh2b );
+  panel.add( lh3a );  panel.add( lh3b );
+  panel.add( lh4a );  panel.add( lh4b );
+  int i = 0;
+  do { 
+    Integer a1 = start_addr+(stride*0) + i;
+    Integer a2 = start_addr+(stride*1) + i;
+    Integer a3 = start_addr+(stride*2) + i;
+    Integer a4 = start_addr+(stride*3) + i;
+    String r1 = (addrset.contains(a1)) ? "x" : ".";
+    String r2 = (addrset.contains(a2)) ? "x" : ".";
+    String r3 = (addrset.contains(a3)) ? "x" : ".";
+    String r4 = (addrset.contains(a4)) ? "x" : ".";
+
+    JLabel l1a = new JLabel(""+a1);    //l1a.setFont(silk8font) ;
+    JLabel l1b = new JLabel(r1);       //l1b.setFont(silk8font) ;
+    JLabel l2a = new JLabel(""+a2);    //l2a.setFont(silk8font) ;
+    JLabel l2b = new JLabel(r2);       //l2b.setFont(silk8font) ;
+    JLabel l3a = new JLabel(""+a3);    //l3a.setFont(silk8font) ;
+    JLabel l3b = new JLabel(r3);       //l3b.setFont(silk8font) ;
+    JLabel l4a = new JLabel(""+a4);    //l4a.setFont(silk8font) ;
+    JLabel l4b = new JLabel(r4);       //l4b.setFont(silk8font) ;
+    panel.add( l1a );  panel.add( l1b );
+    panel.add( l2a );  panel.add( l2b );
+    panel.add( l3a );  panel.add( l3b );
+    panel.add( l4a );  panel.add( l4b );
+    i++;
+  } while( i < stride );
+
+
+  JDialog dialog = new JDialog(mf, "I2C Bus Scan Results", false);
+  dialog.getContentPane().add(panel);
+  //dialog.setPreferredSize( new Dimension(200,400));
+  dialog.setResizable(false);
+  dialog.setLocationRelativeTo(null); // center it on the BlinkMSequencer
+  dialog.pack();
+  dialog.setVisible(true);
+  
 }
 
 /**
@@ -441,16 +488,16 @@ static int verifyCount = 0;
  */
 public boolean verifyLinkM() {
   if( multitrack.playing ) return true;  // punt if playing
-  l.debug("verifyLinkM:"+verifyCount++);
+  //l.debug("verifyLinkM:"+verifyCount++);
   if( connected ) {
     try {
       linkm.getLinkMVersion();
-      l.debug("verifyLinkM: got it");
+      l.debug("verifyLinkM: connected");
       return true;  // if above completes, we're truly connected
     } catch(IOException ioe) {
       l.debug("verifyLinkM:closing and connected");
       connected = false;
-      linkm.close();
+      //linkm.close();  // FIXME FIXME FIXME: this causes dump for i2cScan()
     }
   }
   else {  // else, we're not connected, so try a quick open and close
@@ -770,7 +817,7 @@ public void doTrackDialog(int track) {
   multitrack.reset(); // stop preview script
   
   setChannelDialog.setVisible(true);
-  gridTestDialog.setVisible(true);
+  //gridTestDialog.setVisible(true);
   
   multitrack.reset();
   multitrack.repaint();
@@ -1021,7 +1068,7 @@ void setupGUI() {
     );
   
   setChannelDialog = new SetChannelDialog(); // defaults to invisible
-  gridTestDialog = new GridTestDialog(); 
+  //gridTestDialog = new GridTestDialog(); 
   updateInfo();
 }
 
