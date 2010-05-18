@@ -81,7 +81,6 @@ JLabel currChanIdLabel;
 JLabel currChanLabel;
 
 SetChannelDialog setChannelDialog;
-//GridTestDialog gridTestDialog;
 
 // number of slices in the timeline == number of script lines written to BlinkM
 int numSlices = 48;  
@@ -89,14 +88,12 @@ int numTracks = 8;    // number of different blinkms
 
 int blinkmStartAddr = 9;
 
-// default blinkm addresses used, can change by clicking on the addresses in UI
-//int[] blinkmAddrs = {125,11,12,3, 14,15,66,17}; // numTracks big
-
 // overall dimensions
 int mainWidth  = 900; // 955; //950; //860;
 int mainHeight = 490; //630;  // was 455
-int mainHeightAdjForWindows = 22; // fudge factor for Windows layout variation
-int mainWidthAdjForWindows = 10;
+int mainHeightAdjForWindows = 30; // fudge factor for Windows layout variation
+int mainWidthAdjForWindows = 10; // fudge factor for Windows layout variation
+
 
 // maps loop duration in seconds to per-slice duration and fadespeed,
 // both in BlinkM ticks (1/30th of a second, 33.33 msecs)
@@ -157,19 +154,17 @@ Color[] setChannelColors = new Color [] {
  */
 void setup() {
   size(5, 5);   // Processing's frame, we'll turn off in a bit, must be 1st line
-  frameRate(30);   // each frame we can potentially redraw timelines
+  frameRate(25);   // each frame we can potentially redraw timelines
 
   l.setLevel( debugLevel );
 
   /*
   l.debug("loading romscripts...");
   l.debug("sketchPath:"+sketchPath);
-    java.net.URL url = getClass().getResource(".");
-    println("url:"+url);
-    url = getClass().getResource("romscripts.jar");
-    println("url:"+url);
+  String jarfile = sketchPath + "/code/romscripts.jar";
+  
   try {
-    JarFile jarFile = new JarFile(getClass().getResource("romscripts.jar").getFile());
+    JarFile jarFile = new JarFile( jarfile );
     Enumeration en = jarFile.entries();
     while (en.hasMoreElements()) {
       l.debug(en.nextElement());
@@ -178,8 +173,7 @@ void setup() {
     println("ioe:" +ioe);
   }
   l.debug("done");
-    */
-
+  */
   /*
   romScriptsDir = dataPath(".");
   File fdir = new File(romScriptsDir);
@@ -215,7 +209,8 @@ void setup() {
   if( !osname.toLowerCase().startsWith("mac") ) {
     mainHeight += mainHeightAdjForWindows;
     mainWidth  += mainWidthAdjForWindows;
-  }  
+  }
+  
   p = this;
   
   setupGUI();
@@ -228,14 +223,14 @@ void setup() {
  * Processing's draw()
  */
 void draw() {
-  if( frameCount < 4 ) {
+  if( frameCount < 9 ) {
     super.frame.setVisible(false);  // turn off Processing's frame
     super.frame.toBack();
     mf.toFront();                   // bring ours forward  
   }
   long millis = System.currentTimeMillis();
 
-  if( frameCount > 5 && ((millis-lastConnectCheck) > 1000) ) {
+  if( frameCount > 10 && ((millis-lastConnectCheck) > 1000) ) {
     if( verifyLinkM() ) 
       heartbeat();
     lastConnectCheck = millis;
@@ -261,12 +256,6 @@ void draw() {
  *
  */
 public void showHelp() {
-    /*
-  JOptionPane.showMessageDialog(mf,
-                                "Help!",
-                                "Help!",
-                                JOptionPane.INFORMATION_MESSAGE);
-    */
     String helpstr = "<html><b><u>Hellow!</u></b></html>\n";
 
     JDialog dialog = new JDialog(mf, "BlinkMSequencer2 Help", false);
@@ -305,7 +294,7 @@ public void displayVersions() {
     }
     msg += "\n";
   } catch( IOException ioe ) {
-    msg += "-No BlinkM-";
+    msg += "-No BlinkM-\n";
   }
    
   try {
@@ -315,12 +304,12 @@ public void displayVersions() {
       if( blinkmver != null ) { 
         msg += (char)blinkmver[0]+","+(char)blinkmver[1];
       } else {
-        msg += "-could not be read-";
+        msg += "-could not be read-\n";
       }
     }
-    msg += "   (trk:"+(multitrack.currTrack+1)+", addr:"+addr +")";
+    msg += "   (trk:"+(multitrack.currTrack+1)+", addr:"+addr +")\n";
   } catch( IOException ioe ) {
-    msg += "-error connecting-";
+    msg += "-No BlinkM-\n";
   }
 
   JOptionPane.showMessageDialog(mf, msg, "LinkM / BlinkM Versions",
@@ -332,10 +321,12 @@ public void displayVersions() {
  */
 public void upgradeLinkMFirmware() {
   l.debug("upgradeLinkMFirmware");
-  String msg = "-not implemented yet-";
-  //linkm.goBootload();
-  //linkm.delay(2000);
-  //linkm.bootload("link.hex",true);
+  String msg = "-disabled. please use command-line tool-";
+  /*
+  linkm.goBootload();
+  linkm.delay(2000);
+  linkm.bootload("link.hex",true);
+  */
   JOptionPane.showMessageDialog(mf, msg, "Upgrade LinkM Firmware",
                                 JOptionPane.INFORMATION_MESSAGE);
 }
@@ -399,15 +390,14 @@ public void doI2CScan() {
     }
   } catch( IOException ioe) {
     JOptionPane.showMessageDialog(mf,
-                                  "No LinkM found.\n"+
-                                  "I2C Scan cancelled.\n"+
+                                  "No LinkM found.\nI2C Scan cancelled.\n"+
                                   "Plug LinkM in at any time and try again.",
                                   "LinkM Not Found",
                                   JOptionPane.WARNING_MESSAGE);
     return;
   }
 
-  // surely there's a better way to do this
+  // ugh, surely there's a better way to do this
   int stride = (end_addr-start_addr)/4;
   JPanel panel = new JPanel();
   panel.setLayout( new GridLayout( 2+stride, 8, 5,5) );
@@ -818,7 +808,6 @@ public void doTrackDialog(int track) {
   multitrack.reset(); // stop preview script
   
   setChannelDialog.setVisible(true);
-  //gridTestDialog.setVisible(true);
   
   multitrack.reset();
   multitrack.repaint();
@@ -1069,7 +1058,6 @@ void setupGUI() {
     );
   
   setChannelDialog = new SetChannelDialog(); // defaults to invisible
-  //gridTestDialog = new GridTestDialog(); 
   updateInfo();
 }
 
@@ -1193,7 +1181,7 @@ JPanel makeBottomPanel() {
  * Create the containing frame (or JDialog in this case) 
  */
 void setupMainframe() {
-  mf = new JFrame( "BlinkMSequencer2" );
+  mf = new JFrame( "BlinkM Sequencer" );
   mf.setBackground(cBgDarkGray);
   mf.setFocusable(true);
   mf.setSize( mainWidth, mainHeight);
@@ -1230,8 +1218,10 @@ void setupMainframe() {
 ActionListener menual = new ActionListener() { 
     void actionPerformed(ActionEvent e) {
       String cmd = e.getActionCommand();
-      println("action listener: "+cmd);
-      if(        cmd.equals("Load Set") ) {  // FIXME: such a hack
+      l.debug("action listener: "+cmd);
+      if(        cmd.equals("Quit") )  {
+        System.exit(0);
+      } else if( cmd.equals("Load Set") ) {  // FIXME: such a hack
         loadAllTracks();
       } else if( cmd.equals("Save Set") ) { 
         saveAllTracks();
@@ -1300,17 +1290,21 @@ void setupMenus(Frame f) {
   Menu editMenu = new Menu("Edit");
   Menu toolMenu = new Menu("Tools");
   Menu helpMenu = new Menu("Help");
-  Menu fillMenu = new Menu("Fill Track With");
+  //Menu fillMenu = new Menu("Fill Track With");
 
   MenuItem itemf1 = new MenuItem("Load Set", new MenuShortcut(KeyEvent.VK_O));
   MenuItem itemf2 = new MenuItem("Save Set", new MenuShortcut(KeyEvent.VK_S));
+  MenuItem itemf2a= new MenuItem("-");
   MenuItem itemf3 = new MenuItem("Load One Track");
   MenuItem itemf4 = new MenuItem("Save One Track");
+  MenuItem itemf4a= new MenuItem("-");
+  MenuItem itemf5 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_S));
 
   MenuItem iteme1= new MenuItem("Cut Track",  new MenuShortcut(KeyEvent.VK_X));
   MenuItem iteme2= new MenuItem("Copy Track", new MenuShortcut(KeyEvent.VK_C));
   MenuItem iteme3= new MenuItem("Paste Track",new MenuShortcut(KeyEvent.VK_V));
   MenuItem iteme4= new MenuItem("Delete Track",new MenuShortcut(KeyEvent.VK_D));
+
   /*
   MenuItem[] fills = new MenuItem[romScripts.length];
   for( int i=0; i< romScripts.length; i++) {
@@ -1320,7 +1314,7 @@ void setupMenus(Frame f) {
   }
   */
   MenuItem itemt1 = new MenuItem("Display LinkM/BlinkM Versions");
-  MenuItem itemt2 = new MenuItem("Upgrade LinkM Firmware");
+  //MenuItem itemt2 = new MenuItem("Upgrade LinkM Firmware");
   MenuItem itemt3 = new MenuItem("Reset LinkM");
   MenuItem itemt4 = new MenuItem("BlinkM Factory Reset");
   MenuItem itemt5 = new MenuItem("Scan I2C Bus");
@@ -1333,12 +1327,13 @@ void setupMenus(Frame f) {
   itemf2.addActionListener(menual);
   itemf3.addActionListener(menual);
   itemf4.addActionListener(menual);
+  itemf5.addActionListener(menual);
   iteme1.addActionListener(menual);
   iteme2.addActionListener(menual);
   iteme3.addActionListener(menual);
   iteme4.addActionListener(menual);
   itemt1.addActionListener(menual);
-  itemt2.addActionListener(menual);
+  //itemt2.addActionListener(menual);
   itemt3.addActionListener(menual);
   itemt4.addActionListener(menual);
   itemt5.addActionListener(menual);
@@ -1347,17 +1342,20 @@ void setupMenus(Frame f) {
   
   fileMenu.add(itemf1);
   fileMenu.add(itemf2);
+  fileMenu.add(itemf2a);
   fileMenu.add(itemf3);
   fileMenu.add(itemf4);
+  fileMenu.add(itemf4a);
+  fileMenu.add(itemf5);
   
   editMenu.add(iteme1);
   editMenu.add(iteme2);
   editMenu.add(iteme3);
   editMenu.add(iteme4);
-  editMenu.add(fillMenu);
+  //editMenu.add(fillMenu);
 
   toolMenu.add(itemt1);
-  toolMenu.add(itemt2);
+  //toolMenu.add(itemt2);
   toolMenu.add(itemt3);
   toolMenu.add(itemt4);
   toolMenu.add(itemt5);
