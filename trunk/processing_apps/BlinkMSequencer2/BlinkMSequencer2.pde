@@ -1298,7 +1298,7 @@ void setupMenus(Frame f) {
   MenuItem itemf3 = new MenuItem("Load One Track");
   MenuItem itemf4 = new MenuItem("Save One Track");
   MenuItem itemf4a= new MenuItem("-");
-  MenuItem itemf5 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_S));
+  MenuItem itemf5 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_Q));
 
   MenuItem iteme1= new MenuItem("Cut Track",  new MenuShortcut(KeyEvent.VK_X));
   MenuItem iteme2= new MenuItem("Copy Track", new MenuShortcut(KeyEvent.VK_C));
