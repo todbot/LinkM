@@ -59,8 +59,8 @@ boolean connected = false;   // FIXME: verify semantics correct on this
 boolean blinkmConnected = false;
 long lastConnectCheck;
 
-String romScriptsDir;  // set to dataPath(".");
-File   romScripts[];   // list of ROM scripts that can fill a track
+//String romScriptsDir;  // set to dataPath(".");
+//File   romScripts[];   // list of ROM scripts that can fill a track
 String silkfontPath = "slkscrb.ttf";  // in "data" directory
 String textfontPath = "HelveticaNeue-CondensedBold.ttf";
 Font silk8font;
@@ -68,7 +68,6 @@ Font textBigfont;
 Font textSmallfont;
 File lastFile;  // last file (if any) used to save or load
 
-//JDialog mf;  // the main holder of the app
 JFrame mf;  // the main holder of the app
 JColorChooser colorChooser;
 MultiTrackView multitrack;
@@ -250,24 +249,49 @@ void draw() {
   }
 }
 
+/*
+ * hmm, maybe can override PApplet.handleDisplay() to get around 
+ * Processing startup weirdness
+ *
+synchronized public void handleDisplay() {
+  if( frameCount==0 ) {
+    setup();
+  }
+  else {
+    draw();
+  }
+}
+*/
+
 // ----------------------------------------------------------------------------
 
 /**
  *
  */
 public void showHelp() {
-    String helpstr = "<html><b><u>Hellow!</u></b></html>\n";
+    String helpstr = "<html>"+
+      "<h2> BlinkMSequencer2 Help </h2>"+
+      "<ul>"+
+      "<li> Tools Menu"+
+      "<ul>"+
+      "<li>Display Versions -- Show LinkM version and BlinKM version for the selected channel"+
+      "<li>Reset LinkM -- Perform complete reset of LinkM"+
+      "<li>BlinkM Factory Reset -- Reset BlinkM(s) on selected channels to factory condition"+
+      "<li>I2C Scan -- Scan I2C bus on all I2C addresses"+
+      "</ul>"+
+      "</ul>"+
+      "</html>\n";
 
     JDialog dialog = new JDialog(mf, "BlinkMSequencer2 Help", false);
     
     JPanel panel = new JPanel(new BorderLayout());
     panel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
-    panel.setBorder( BorderFactory.createEmptyBorder(20,20,20,20) );
+    panel.setBorder( BorderFactory.createEmptyBorder(10,10,10,10) );
     panel.add( new JLabel(helpstr) );
 
     dialog.getContentPane().add(panel);
 
-    dialog.setPreferredSize( new Dimension(400,500));
+    dialog.setPreferredSize( new Dimension(500,400));
     dialog.setResizable(false);
     dialog.setLocationRelativeTo(null); // center it on the BlinkMSequencer
     dialog.pack();
@@ -1237,8 +1261,6 @@ ActionListener menual = new ActionListener() {
         multitrack.pasteTrack();
       } else if( cmd.equals("Delete Track") ) {
         multitrack.deleteTrack();
-      }  else if( cmd.equals("Help") ) {
-        showHelp();
       } else if( cmd.equals("Display LinkM/BlinkM Versions") ) {
         displayVersions();
       } else if( cmd.equals("Upgrade LinkM Firmware") ) {
@@ -1249,6 +1271,10 @@ ActionListener menual = new ActionListener() {
         doFactoryReset();
       } else if( cmd.equals("Scan I2C Bus") ) {
         doI2CScan();
+      } else if( cmd.equals("Help") ) {
+        showHelp();
+      } else if( cmd.equals("Quick Start Guide") ) {
+        showHelp();
       } else {
         /*
         for( int i=0; i<romScripts.length; i++ ) {
