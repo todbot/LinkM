@@ -1,23 +1,19 @@
 //
 // BlinkMScriptTool.pde --  Load/Save BlinkM light scripts in text format
 //
-//   This Processing sketch assumes it is communicating to a BlinkM 
-//   via an Arduino "BlinkMCommunicator" sketch.
-//   
 //   You can use this download the BlinkMSequencer-creatd light scripts
 //   from a BlinkM.  Or to reset a BlinkM to its default light script.
 //
 //   Note: it only loads files with .txt extensions, so be sure to save your
 //         files as that.
 //
-// 2008, Tod E. Kurt, ThingM, http://thingm.com/
+// 2008-2010, Tod E. Kurt, ThingM, http://thingm.com/
 //
 //
 
 import java.awt.*;
 import java.awt.event.*;
-
-import javax.swing.*;  // even tho most of the stuff we're doing is AWT
+import javax.swing.*; 
 import java.util.regex.*;
 import javax.swing.border.*;      // for silly borders on buttons
 import javax.swing.plaf.metal.*;  // for look-n-feel stuff
@@ -75,7 +71,7 @@ void setup() {
   //blinkmComm = new BlinkMComm(this);
   setupGUI();
 
-  //connectLinkM();
+  //connectLinkM(); // we do it on demand
 }
 
 //
@@ -94,7 +90,7 @@ void draw() {
 }
 
 /*
- *
+ * not used
  */
 void connectLinkM() {
   try { 
@@ -180,6 +176,7 @@ boolean connectIfNeeded() {
 //
 void stopScript() {
   if( !connectIfNeeded() ) return;
+  status("stop");
   try { 
     linkm.stopScript(blinkmaddr);
   } catch(IOException ioe) {
@@ -277,7 +274,7 @@ void receiveFromBlinkM() {
 void loadFile() {
   int returnVal = fc.showOpenDialog(stf);  // this does most of the work
   if (returnVal != JFileChooser.APPROVE_OPTION) {
-    //status("Load cancelled by user.");
+    status("load file cancelled");
     return;
   }
   File file = fc.getSelectedFile();
@@ -293,23 +290,7 @@ void loadFile() {
     editArea.setCaretPosition(0);
     //scriptLines = linkm.parseScript( lines ); // and parse it
   }
-
-  /*
-  // see if it's a txt file
-  // (better to write a function and check for all supported extensions)
-  if( file!=null ) {
-    String lines[] = loadStrings(file); // loadStrings can take File obj too
-    StringBuffer sb = new StringBuffer();
-    for( int i=0; i<lines.length; i++) {
-      sb.append(lines[i]); 
-      sb.append("\n");
-    }
-    editArea.setText(sb.toString()); // copy it all to the edit textarea
-    editArea.setCaretPosition(0);
-    scriptLines = linkm.parseScript( lines ); // and parse it
-    // FIXME: should do error checking here
-  }
-  */
+  status("file "+file.getName()+" loaded");
 }
 
 // Save a text file of BlinkMScriptLines
@@ -317,15 +298,18 @@ void loadFile() {
 void saveFile() {
   int returnVal = fc.showSaveDialog(stf);  // this does most of the work
   if( returnVal != JFileChooser.APPROVE_OPTION) {
-    status("Save command cacelled by user.");
+    status("Save file cancelled");
     return;
   }
   File file = fc.getSelectedFile();
-  if (file.getName().endsWith("txt") ||
-      file.getName().endsWith("TXT")) {
-    String lines[] = editArea.getText().split("\n");
-    saveStrings(file, lines);  // actually write the file
+  String fname = file.getName();
+  if( ! (fname.endsWith("txt") || fname.endsWith("TXT")) ) {
+    file = new File( file.getAbsolutePath() +".txt");  // add .txt if the user doesn't
   }
+  String lines[] = editArea.getText().split("\n");
+  saveStrings(file, lines);  // actually write the file
+
+  status("file "+file.getName()+" saved");
 }
 
 // Utility: parse a hex or decimal integer
@@ -497,6 +481,7 @@ public class ScriptToolFrame extends JFrame {
     statusText = new JLabel("Welcome To BlinkMScriptTool");
     JPanel statusPanel = new JPanel();
     statusPanel.setLayout( new BoxLayout(statusPanel,BoxLayout.X_AXIS) );
+    statusPanel.setBorder( new EmptyBorder(5,5,5,5));
     statusPanel.add( statusText );
     statusPanel.add( Box.createGlue() );
 
