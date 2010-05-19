@@ -16,7 +16,7 @@
 TARGET = LinkM
 
 LIBUSBA_DIR = libusb-static
-PROCESSING_LIBDIR = linkm/library
+#PROCESSING_LIBDIR = linkm/library
 
 
 # try to do some autodetecting
@@ -129,14 +129,15 @@ msg:
 # packaging
 jar: javac jni compile
 	jar -cfm linkm.jar  packaging/Manifest.txt thingm/linkm/*.class
+	cp linkm.jar libtargets/library
 
 processing: processinglib
 processinglib:
 	rm -f linkm.zip
-	mkdir -p $(PROCESSING_LIBDIR)
-	cp packaging/processing-export.txt $(PROCESSING_LIBDIR)/export.txt
-	cp linkm.jar $(PROCESSING_LIBDIR)
-	cp libtargets/* $(PROCESSING_LIBDIR)
+	mkdir -p linkm/library
+	cp packaging/processing-export.txt linkm/library/export.txt
+	#cp linkm.jar $(PROCESSING_LIBDIR)
+	cp libtargets/* linkm/library
 	zip -r linkm.zip linkm
 	@echo
 	@echo "now unzip linkm.zip into ~/Documents/Processing/libraries"
