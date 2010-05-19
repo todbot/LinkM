@@ -14,6 +14,9 @@
 //
 //
 
+import java.awt.*;
+import java.awt.event.*;
+
 import javax.swing.*;  // even tho most of the stuff we're doing is AWT
 import java.util.regex.*;
 import javax.swing.border.*;      // for silly borders on buttons
@@ -23,7 +26,7 @@ import thingm.linkm.*;
 
 boolean debug = true;
 
-int bladdr = 0x09;  // we'll find the first one on the bus
+int blinkmaddr = 0x09;  // we'll find the first one on the bus
 
 String strToParse =  
   "// Edit your BlinkM light script here. \n"+
@@ -71,6 +74,8 @@ void setup() {
   size(100, 100);   // Processing's frame, we'll turn this off in a bit
   //blinkmComm = new BlinkMComm(this);
   setupGUI();
+
+  //connectLinkM();
 }
 
 //
@@ -88,8 +93,28 @@ void draw() {
   }
 }
 
+/*
+ *
+ */
+void connectLinkM() {
+  try { 
+    linkm.open();
+    linkm.i2cEnable(true);
+  } catch(IOException ioe) {
+    debug("connect: no linkm? "+ioe);
+    return;
+  }
+  debug("linkm connected.");
+}
+//
+void debug(String s) {
+  println(s);
+}
+
 void status(String s) { 
-    statusText.setText(s);
+  s = (isConnected) ? "connected to blinkm addr "+blinkmaddr+": "+s : s;
+  println(s);
+  statusText.setText(s);
 }
 
 // this class is bound to the GUI buttons below
@@ -126,14 +151,17 @@ class MyActionListener implements ActionListener{
 // open up the LinkM and set it up if it hasn't been
 boolean connectIfNeeded() {
   if( !isConnected ) {
+    println("connecting");
     try { 
       linkm.open();
       linkm.i2cEnable(true);
-      byte[] addrs = linkm.i2cScan(1,17);  // FIXME: not a full scan
+      linkm.pause(50); // wait for bus to stabilize
+      byte[] addrs = linkm.i2cScan(1,100);  // FIXME: not a full scan
       int cnt = addrs.length;
       status("found "+cnt+" blinkms");
       if( cnt>0 ) {
-        bladdr = addrs[0];
+        status("using blinkm at addr "+addrs[0]);
+        blinkmaddr = addrs[0];
       }
       else {
         status("no blinkm found!");  // FIXME: pop up dialog?
@@ -144,6 +172,7 @@ boolean connectIfNeeded() {
       return false;
     }
   }
+  linkm.pause(200);
   isConnected = true;
   return true; // connect successful
 }
@@ -152,8 +181,9 @@ boolean connectIfNeeded() {
 void stopScript() {
   if( !connectIfNeeded() ) return;
   try { 
-    linkm.stopScript(bladdr);
+    linkm.stopScript(blinkmaddr);
   } catch(IOException ioe) {
+    isConnected = false;
     status("no linkm");
   }
 }
@@ -167,9 +197,10 @@ void playScript() {
   if( pos < 0 ) pos = 0;
   status("playing at position "+pos);
   //if( !connectIfNeeded() ) return;
-  try { 
-    linkm.playScript(bladdr, 0,0,pos);
+  try {
+    linkm.playScript(blinkmaddr, 0,0,pos);
   } catch(IOException ioe) { 
+    isConnected = false;
     println("no linkm?\n"+ioe);
     status("no linkm?");
   }
@@ -198,24 +229,25 @@ void sendToBlinkM() {
   status("sending!...");
   long st = System.currentTimeMillis();
   try { 
-    linkm.writeScript( bladdr, scriptToSend );
-    linkm.setStartupParamsDefault(bladdr);
-    linkm.playScript(bladdr);
+    linkm.writeScript( blinkmaddr, scriptToSend );
+    linkm.setStartupParamsDefault(blinkmaddr);
+    linkm.playScript(blinkmaddr);
 
     // write an empty scriptLine to indicate end of script on readback
     if( len < maxScriptLength ) {  
-        linkm.writeScriptLine( bladdr, len, nullScriptLine );
+        linkm.writeScriptLine( blinkmaddr, len, nullScriptLine );
     }
-    linkm.setScriptLengthRepeats( bladdr, len, 0 );
+    linkm.setScriptLengthRepeats( blinkmaddr, len, 0 );
 
   } catch( IOException ioe ) {
+    isConnected = false;
     println("no linkm?\n"+ioe);
     status("no linkm?");
     return;
   }
   long et = System.currentTimeMillis();
-  status("done");
-  println("send elapsed "+(et-st)+" millis)");
+  status("done sending!");
+  debug("send elapsed "+(et-st)+" millis)");
 
 }
 
@@ -225,8 +257,9 @@ void receiveFromBlinkM() {
   print("receiving!...");
   String str = null;
   try { 
-    str = linkm.readScriptToString( bladdr, 0, false);
+    str = linkm.readScriptToString( blinkmaddr, 0, false);
   } catch(IOException ioe) {
+    isConnected = false;
     println("no linkm?\n"+ioe);
     status("no linkm?");
     return;
@@ -236,7 +269,7 @@ void receiveFromBlinkM() {
     editArea.setText(str); // copy it all to the edit textarea
     editArea.setCaretPosition(0);
   }
-  status("done!");
+  status("done receiving!");
 }
 
 // Load a text file containing a light script and turn it into BlinkMScriptLines
@@ -316,12 +349,14 @@ boolean watchInput;
 
 class InputWatcher implements Runnable {
   public void run() {
-    while( watchInput ) { 
+    while( watchInput && isConnected ) { 
       try { Thread.sleep(333); } catch(Exception e) {} 
       byte[] inputs = null;
       try { 
-        inputs = linkm.readInputs(bladdr);
-      } catch(IOException ioe){}
+        inputs = linkm.readInputs(blinkmaddr);
+      } catch(IOException ioe){
+        isConnected = false;
+      }
       String s = "inputs: ";
       if( inputs == null ) {
         s += "error reading";
