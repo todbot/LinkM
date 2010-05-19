@@ -129,14 +129,13 @@ msg:
 # packaging
 jar: javac jni compile
 	jar -cfm linkm.jar  packaging/Manifest.txt thingm/linkm/*.class
-	cp linkm.jar libtargets/library
 
 processing: processinglib
 processinglib:
 	rm -f linkm.zip
 	mkdir -p linkm/library
 	cp packaging/processing-export.txt linkm/library/export.txt
-	#cp linkm.jar $(PROCESSING_LIBDIR)
+	cp linkm.jar linkm/library
 	cp libtargets/* linkm/library
 	zip -r linkm.zip linkm
 	@echo
