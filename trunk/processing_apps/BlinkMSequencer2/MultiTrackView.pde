@@ -179,20 +179,20 @@ public class MultiTrackView
   /**
    * Draw enable & addr buttons on left side of timeline
    * @param g Graphics to draw on
-   * @param tnum track number (0..maxtracks)
    */
   void drawTrackButtons(Graphics2D g ) {
     g.setStroke( new BasicStroke(1.0f) );
     int ty = 2 + scrubHeight ;
     int th = trackHeight - 3;
     Point mp = mousePt;
+    l.debug("drawTrackButtons: "+mp);
     for( int tnum=0; tnum<numTracks; tnum++ ) {
+      Color outlinecolor = cBriOrange;
 
       //boolean intrack = (mp.y > tnum*trackHeight + scrubHeight) && 
       //  (mp.y < (tnum+1)*trackHeight + scrubHeight) ;
-      Color outlinecolor = cBriOrange;
-      //if( int(random(2)) == 0)
-      //  outlinecolor = cHighLight;
+      //if( intrack ) 
+      //outlinecolor = cHighLight;
 
       g.setColor( outlinecolor );
       g.drawRect(  8,ty+tnum*trackHeight, 15,th );  // enable button outline 
@@ -203,14 +203,6 @@ public class MultiTrackView
         g.fillRect(  9, ty+1+tnum*trackHeight, 14,th-1 ); // enable butt insides
         g.drawImage( checkboxImg.getImage(), 10,ty+3+tnum*trackHeight  ,null);
 
-        /*
-        g.setStroke( new BasicStroke(1.0f) );
-        g.setColor( cBlack );
-        g.drawLine(  9,    ty+1+tnum*trackHeight, 
-                     9+15, ty+1+tnum*trackHeight+18 ); // draw checkbox
-        g.drawLine(  9,    ty+1+tnum*trackHeight+18, 
-                     9+15, ty+1+tnum*trackHeight ); // draw checkbox
-        */
         int blinkmAddr = tracks[tnum].blinkmaddr; // this track's i2c address
         if( blinkmAddr != -1 ) { // if it's been set to something meaningful
           g.setStroke( new BasicStroke(1.0f) );
@@ -331,7 +323,6 @@ public class MultiTrackView
       }
 
       playHeadCurr += step;
-      repaint();
 
       // FIXME: +2
       if( playHeadCurr >= sx + trackWidth +1) {   // check for end of timeline
@@ -343,11 +334,11 @@ public class MultiTrackView
           buttonPanel.setToPlay();  // set play/stop button back to play
         }
       } //if loopend
+      repaint();
     } // if playing
     else {
       previewFadespeed = 1000;
     }
-
     //if( tv!=null) tv.tick(millisSinceLastTick);
   }
 
