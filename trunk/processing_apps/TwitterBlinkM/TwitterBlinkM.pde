@@ -27,20 +27,22 @@ HashMap colormap;  // stores String -> Color mappings of rgb.txt file
 
 TwitterStream twitterStream ;
 
-String mentionString = "blinkm";
-String[] trackStrings = new String[] { mentionString }; 
+String mentionString1 = "blinkm";
+String mentionString2 = "makerfaire";
+String[] trackStrings = new String[] { mentionString1, mentionString2 }; 
 
 long lastMillis;
-Color lastColor = Color.red;
+Color lastColor = Color.gray;
 
 LinkM linkm = new LinkM(); 
-int blinkmaddr = 0;
+int blinkm1addr = 0;
+int blinkm2addr = 0;
 
 PFont font;
 String lastMsg = "TwitterBlinkM!";
 
 void setup() {
-  size(400,400);
+  size(500,500);
   frameRate(5);
 
   font = loadFont("HelveticaNeue-CondensedBold-18.vlw"); 
@@ -74,13 +76,14 @@ void draw() {
   // make circle last tweeted color, as nice radial alpha gradient
   createGradient(width/2, width/2, width*3/4,  lc, color(0,0,0,10)  ); 
 
+
   noStroke();
   fill(0,0,0,50);
-  roundrect( 30,height-60, width-60,40, 20); // draw text background
+  roundrect( 30,height-80, width-80,50, 30); // draw text background
 
   textAlign(CENTER);
   fill(255);
-  text(lastMsg, 9, height-50, width-20,50 );  // draw text
+  text(lastMsg, 9, height-70, width-20,70 );  // draw text
 
   
   long t = millis();
@@ -97,11 +100,23 @@ void draw() {
 StatusListener listener = new StatusListener(){
     public void onStatus(Status status) {
       debug(status.getUser().getName() + " : " + status.getText());
-      boolean rc = parseColors( status.getText() );
+      String text = status.getText();
+      String lctext = text.toLowerCase();
+
+      lastMsg = "@"+status.getUser().getScreenName()+": "+text;
+
+      // flash other blinkm to show we received
+      try { 
+          linkm.playScript( blinkm2addr, 5, 2, 0);
+      } catch( IOException ioe ) {
+          println("no 2nd blinkm? ");
+      }
+     
+      // turn first blinkm color of tweet (if applicable)
+      boolean rc = parseColors( lctext );
       if( rc ) {
         try { 
-          lastMsg = "@"+status.getUser().getScreenName()+": "+status.getText();
-          linkm.fadeToRGB( blinkmaddr, lastColor);
+          linkm.fadeToRGB( blinkm1addr, lastColor);
         } catch(IOException ioe) {
           println("no linkm");
         }
@@ -126,7 +141,7 @@ boolean parseColors(String text) {
   //println("text='"+text+"'");
   text = text.replaceAll("#",""); // in case they do #ff00ff
   Color c = null;
-  String linepat = mentionString + "\\s+(.+?)\\b";
+  String linepat = mentionString1 + "\\s+(.+?)\\b";
   Pattern p = Pattern.compile(linepat);
   Matcher m = p.matcher( text );
   if(  m.find() && m.groupCount() == 1 ) { // matched 
@@ -198,6 +213,15 @@ void connectLinkM() {
   try { 
     linkm.open();
     linkm.i2cEnable(true);
+    linkm.pause(50);
+    debug("connectLinkM");
+    for( int i=0;i<2; i++ ) {
+      linkm.fadeToRGB(0, 0x22,0x22,0x22);
+      linkm.pause(100);
+      linkm.fadeToRGB(0, 0x00,0x00,0x00);
+      linkm.pause(100);
+    }
+
   } catch(IOException ioe) {
     debug("connect: no linkm?", ioe);
     return;
