@@ -19,31 +19,32 @@ import thingm.linkm.*;
 
 static final boolean debug = true;
 
-String username = "";
-String password = "";
+String username = "blinkmlive";
+String password = "redgreenblue";
 
 String colorfile = "rgb.txt";
 HashMap colormap;  // stores String -> Color mappings of rgb.txt file
 
 TwitterStream twitterStream ;
 
-String mentionString1 = "blinkm";
-String mentionString2 = "makerfaire";
+String mentionString1 = "";
+String mentionString2 = "";
 String[] trackStrings = new String[] { mentionString1, mentionString2 }; 
+int mentionCount=255;
 
 long lastMillis;
 Color lastColor = Color.gray;
 
 LinkM linkm = new LinkM(); 
-int blinkm1addr = 0;
-int blinkm2addr = 0;
+int blinkm1addr = 9;
+int blinkm2addr = 10;
 
 PFont font;
 String lastMsg = "TwitterBlinkM!";
 
 void setup() {
-  size(500,500);
-  frameRate(5);
+  size(600,600);
+  frameRate(10);
 
   font = loadFont("HelveticaNeue-CondensedBold-18.vlw"); 
   textFont( font  );
@@ -76,15 +77,16 @@ void draw() {
   // make circle last tweeted color, as nice radial alpha gradient
   createGradient(width/2, width/2, width*3/4,  lc, color(0,0,0,10)  ); 
 
-
   noStroke();
   fill(0,0,0,50);
-  roundrect( 30,height-80, width-80,50, 30); // draw text background
+  roundrect( 30,height-80, width-80,60, 30); // draw text background
 
-  textAlign(CENTER);
-  fill(255);
-  text(lastMsg, 9, height-70, width-20,70 );  // draw text
-
+  if( mentionCount>0 ) { 
+    textAlign(CENTER);
+    fill(255,255,255,mentionCount);
+    mentionCount -= 5; // fade out
+    text(lastMsg, 9, height-80, width-40,70 );  // draw text
+  }
   
   long t = millis();
   if( (t-lastMillis) > 10000 ) { 
@@ -102,7 +104,7 @@ StatusListener listener = new StatusListener(){
       debug(status.getUser().getName() + " : " + status.getText());
       String text = status.getText();
       String lctext = text.toLowerCase();
-
+      mentionCount = 255;
       lastMsg = "@"+status.getUser().getScreenName()+": "+text;
 
       // flash other blinkm to show we received
@@ -119,6 +121,7 @@ StatusListener listener = new StatusListener(){
           linkm.fadeToRGB( blinkm1addr, lastColor);
         } catch(IOException ioe) {
           println("no linkm");
+          connectLinkM();
         }
       }
     }
@@ -133,6 +136,11 @@ StatusListener listener = new StatusListener(){
     }
   };
 
+
+boolean parseColorsNew(String text) { 
+  // do something with just array of substrs
+  return true;
+}
 
 /**
  * Attempt to determine what color has been tweeted to us
