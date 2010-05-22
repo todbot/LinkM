@@ -27,8 +27,8 @@ HashMap colormap;  // stores String -> Color mappings of rgb.txt file
 
 TwitterStream twitterStream ;
 
-String mentionString1 = "";
-String mentionString2 = "";
+String mentionString1 = "blinkm";
+String mentionString2 = "makerfaire";
 String[] trackStrings = new String[] { mentionString1, mentionString2 }; 
 int mentionCount=255;
 
@@ -222,6 +222,7 @@ void connectLinkM() {
     linkm.open();
     linkm.i2cEnable(true);
     linkm.pause(50);
+    linkm.setFadeSpeed(0,8);
     debug("connectLinkM");
     for( int i=0;i<2; i++ ) {
       linkm.fadeToRGB(0, 0x22,0x22,0x22);
