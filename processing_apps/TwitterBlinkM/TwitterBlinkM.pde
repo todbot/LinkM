@@ -20,7 +20,7 @@ import thingm.linkm.*;
 static final boolean debug = true;
 
 String username = "blinkmlive";
-String password = "redgreenblue";
+String password = "";
 
 String colorfile = "rgb.txt";
 HashMap colormap;  // stores String -> Color mappings of rgb.txt file
