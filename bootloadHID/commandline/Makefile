@@ -36,13 +36,17 @@ endif
 
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
+# Mac OS X: "sudo port install libusb-legacy +universal" using MacPorts
+# If you want to build for PowerPC too, you'll need to edit 
+# /opt/local/etc/macports/macports.conf: universal_archs and add "ppc"
+# otherwise swap the OS_CFLAGS with the commented one below
 # Mac OS X: "sudo port install libusb-legacy" using MacPorts
-# Use the following 5 lines Mac OS X (and almost unix):
 USBFLAGS =   `libusb-legacy-config --cflags`
 #USBLIBS  =   `libusb-legacy-config --libs`
 USBLIBS  =    /opt/local/lib/libusb-legacy/libusb.a
 USBLIBS +=    -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
-OS_CFLAGS= -arch i386 -arch x86_64 
+OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
+#OS_CFLAGS= -arch i386 -arch x86_64
 OS_LIBS= $(OS_CFLAGS) 
 EXE_SUFFIX=
 endif
