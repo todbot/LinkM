@@ -25,6 +25,10 @@ int linkm_debug = 0;
  */
 int linkm_open(usbDevice_t **dev)
 {
+    //if( *dev != NULL ) {
+    //    linkm_close(*dev);
+    //}
+
     return usbhidOpenDevice(dev, 
                             IDENT_VENDOR_NUM,  IDENT_VENDOR_STRING,
                             IDENT_PRODUCT_NUM, IDENT_PRODUCT_STRING,
@@ -36,8 +40,7 @@ int linkm_open(usbDevice_t **dev)
  */
 void linkm_close(usbDevice_t *dev)
 {
-    if( dev != NULL )
-        usbhidCloseDevice(dev);
+    usbhidCloseDevice(dev);
 }
 
 /**
