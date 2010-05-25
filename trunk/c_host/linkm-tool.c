@@ -133,7 +133,7 @@ void usage(char *myName)
  */
 int main(int argc, char **argv)
 {
-    usbDevice_t *dev;
+    usbDevice_t *dev = NULL ;
     int err;
 
     // this needs to be a global int for getopt_long
@@ -318,7 +318,7 @@ int main(int argc, char **argv)
             hexdump("", recvbuf, 7);
         }
     }
-    else if( cmd == CMD_LINKM_EESAVE ) {   // tell linkm to save params to eeprom
+    else if( cmd == CMD_LINKM_EESAVE ) {  // tell linkm to save params to eeprom
         printf("linkm eeprom  save:\n");
         err = linkm_command(dev, LINKM_CMD_EESAVE, 0,0, NULL, NULL);
         if( err ) {
@@ -576,6 +576,7 @@ int main(int argc, char **argv)
 
  shutdown:
     linkm_close(dev);
+
     return 0;
 }
 
