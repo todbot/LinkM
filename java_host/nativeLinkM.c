@@ -17,6 +17,11 @@ static usbDevice_t* dev = NULL;   // sigh.
 // store the pointer in and then retrieve it. 
 // So for now, there's one global 'dev', so only one LinkM per system.
 
+// maybe one way to support multiple LinkMs per system is to have 
+// small array of devs (e.g "dev[8]") and then allow up to 8 devs
+// BUT, also need to change C API to support more advanced query & finding
+// of LinkMs.
+
 /**
  * Class:     LinkM
  * Method:    debug

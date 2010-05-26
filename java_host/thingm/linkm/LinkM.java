@@ -1075,7 +1075,8 @@ public class LinkM
     script.add( new BlinkMScriptLine( 50, 'c', 0xff,0x00,0x00) );
     script.add( new BlinkMScriptLine( 50, 'c', 0x00,0xff,0x00) );
     script.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0xff) );
-    for( int i=0; i< 48-4; i++ ) {  // FIXME:  make this length correct
+    script.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0x00) );
+    for( int i=0; i< 49-6; i++ ) {  // FIXME:  make this length correct
       script.add( new BlinkMScriptLine( 0, 'c', 0,0,0 ) );
     }
 
