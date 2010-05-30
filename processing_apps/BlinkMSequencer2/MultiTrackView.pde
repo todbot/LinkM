@@ -185,7 +185,7 @@ public class MultiTrackView
     int ty = 2 + scrubHeight ;
     int th = trackHeight - 3;
     Point mp = mousePt;
-    l.debug("drawTrackButtons: "+mp);
+    //l.debug("drawTrackButtons: "+mp);
     for( int tnum=0; tnum<numTracks; tnum++ ) {
       Color outlinecolor = cBriOrange;
 
