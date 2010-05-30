@@ -152,9 +152,9 @@ StatusListener listener = new StatusListener(){
       
       updateMsg( "@"+status.getUser().getScreenName()+": "+text );
 
-      // flash other blinkm to show we received
+      // flash blinkm to show we received status
       try { 
-          linkm.playScript( blinkm2addr, 5, 2, 0);
+          linkm.playScript( blinkm2addr, 5, 2, 0); // play #5 (blue) twice
       } catch( IOException ioe ) {
           println("no linkm? reconnecting to LinkM");
           connectLinkM();
