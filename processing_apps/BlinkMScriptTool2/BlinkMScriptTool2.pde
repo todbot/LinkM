@@ -68,10 +68,10 @@ Color backColor = new Color(150,150,150);
 //
 void setup() {
   size(100, 100);   // Processing's frame, we'll turn this off in a bit
-  //blinkmComm = new BlinkMComm(this);
+  frameRate(10);
+
   setupGUI();
 
-  //connectLinkM(); // we do it on demand
 }
 
 //
@@ -85,6 +85,7 @@ void draw() {
   if( frameCount < 60 ) {
     super.frame.setVisible(false);  // turn off Processing's frame
     super.frame.toBack();
+    stf.setVisible(true);
     stf.toFront();
   }
 }
@@ -399,9 +400,7 @@ void setupGUI() {
   try {  // use a Swing look-and-feel that's the same across all OSs
     MetalLookAndFeel.setCurrentTheme(new DefaultMetalTheme());
     UIManager.setLookAndFeel( new MetalLookAndFeel() );
-  } catch(Exception e) { 
-    println("drat: "+e);
-  }
+  } catch(Exception e) { }  // don't care much if it doesn't work
 
   fc = new JFileChooser( super.sketchPath ); 
   fc.setFileFilter( new javax.swing.filechooser.FileFilter() {
@@ -418,14 +417,13 @@ void setupGUI() {
       }
     }
     );
-  
+    
   stf = new ScriptToolFrame(mainWidth, mainHeight, this);
   stf.createGUI();
-
-  super.frame.setVisible(false);
-  stf.setVisible(true);
+  ///stf.setVisible(true); // no, causes weird exception on macosx
   stf.setResizable(false);
-
+  
+  println("createGUI done");
 }
 
 //
@@ -433,21 +431,20 @@ void setupGUI() {
 //
 public class ScriptToolFrame extends JFrame {
 
-  public Frame f = new Frame();
   private int width, height;
   private PApplet appletRef;     
 
   //
   public ScriptToolFrame(int w, int h, PApplet appRef) {
-    super("BlinkMScriptTool");
-    this.setBackground( backColor );
-    this.setFocusable(true);
-    this.width = w;
-    this.height = h;
-    this.appletRef = appRef;
+    setBackground( backColor );
+    setFocusable(true);
+    width = w;
+    height = h;
+    appletRef = appRef;
+    setSize(width, height);
 
     // handle window close events
-    this.addWindowListener(new WindowAdapter() {
+    addWindowListener(new WindowAdapter() {
         public void windowClosing(WindowEvent e) {
           dispose();            // close mainframe
           appletRef.destroy();  // close processing window as well
@@ -457,25 +454,22 @@ public class ScriptToolFrame extends JFrame {
       }); 
 
     // center on the screen and show it
-    this.setSize(this.width, this.height);
-    //this.pack();
     Dimension scrnSize = Toolkit.getDefaultToolkit().getScreenSize();
-    this.setLocation(scrnSize.width/2 - this.width/2, 
+    setLocation(scrnSize.width/2 - this.width/2, 
                      scrnSize.height/2 - this.height/2);
-    this.setVisible(true);
   }
 
   //
   public void createGUI() {
-    this.setLayout( new BorderLayout() );
+
     JPanel editPanel = new JPanel(new BorderLayout());
     JPanel bottPanel = new JPanel();
     JPanel ctrlPanel = new JPanel();    // contains all controls
     JPanel filePanel = new JPanel();    // contains load/save file
     JPanel blinkmPanel  = new JPanel(); // contains all blinkm ctrls
-    bottPanel.setLayout( new BoxLayout(bottPanel,BoxLayout.Y_AXIS) );
-    ctrlPanel.setLayout( new BoxLayout(ctrlPanel,BoxLayout.X_AXIS) );
-    filePanel.setLayout( new BoxLayout(filePanel,BoxLayout.X_AXIS) );
+    bottPanel.setLayout(   new BoxLayout(bottPanel,BoxLayout.Y_AXIS) );
+    ctrlPanel.setLayout(   new BoxLayout(ctrlPanel,BoxLayout.X_AXIS) );
+    filePanel.setLayout(   new BoxLayout(filePanel,BoxLayout.X_AXIS) );
     blinkmPanel.setLayout( new BoxLayout(blinkmPanel,BoxLayout.X_AXIS) );
     
     statusText = new JLabel("Welcome To BlinkMScriptTool");
@@ -485,16 +479,13 @@ public class ScriptToolFrame extends JFrame {
     statusPanel.add( statusText );
     statusPanel.add( Box.createGlue() );
 
+    ctrlPanel.setBorder(new EmptyBorder(5,5,5,5));
     ctrlPanel.add(filePanel);
     ctrlPanel.add(blinkmPanel);
 
     bottPanel.add(ctrlPanel);
     bottPanel.add(statusPanel);
 
-    this.getContentPane().add( editPanel,   BorderLayout.NORTH);
-    this.getContentPane().add( bottPanel,   BorderLayout.SOUTH);
-
-    ctrlPanel.setBorder(new EmptyBorder(5,5,5,5));
 
     filePanel.setBorder( new CompoundBorder
                          (BorderFactory.createTitledBorder("file"),
@@ -502,13 +493,13 @@ public class ScriptToolFrame extends JFrame {
     blinkmPanel.setBorder( new CompoundBorder
                            (BorderFactory.createTitledBorder("blinkm"),
                             new EmptyBorder(5,5,5,5)));
-
+    
     editArea = new JTextArea(strToParse,24,80);
     editArea.setFont( monoFont );
     editArea.setLineWrap(false);
     JScrollPane scrollPane = new JScrollPane(editArea, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
     editPanel.add( scrollPane, BorderLayout.CENTER);
-  
+    
     MyActionListener mal = new MyActionListener();
 
     JButton loadButton = addButton("Load", "loadFile", mal, filePanel);
@@ -519,13 +510,13 @@ public class ScriptToolFrame extends JFrame {
 
     blinkmPanel.add(Box.createHorizontalStrut(15));
 
-    //disconnectButton  = addButton("disconnect","disconnect", mal,blinkmPanel);
+    //disconnectButton  = addButton("disconnect","disconnect",mal,blinkmPanel);
     //disconnectButton.setEnabled(false);
     //blinkmPanel.add(Box.createRigidArea(new Dimension(5,5)));;
 
     JButton stopButton = addButton("Stop", "stopScript", mal, blinkmPanel);
     JButton playButton = addButton("Play", "playScript", mal, blinkmPanel);
-    
+
     blinkmPanel.add(Box.createHorizontalStrut(125));
     JLabel posLabel = new JLabel("<html>play <br>pos:</html>", JLabel.RIGHT);
     posText = new JTextField("0",3);
@@ -535,6 +526,13 @@ public class ScriptToolFrame extends JFrame {
     blinkmPanel.add(posText);
 
     JButton inputsButton = addButton("inputs", "inputs", mal, blinkmPanel);
+
+    JPanel p = new JPanel( new BorderLayout() );
+
+    p.add( editPanel, BorderLayout.NORTH);
+    p.add( bottPanel, BorderLayout.SOUTH);
+
+    getContentPane().add( p );
 
   }
 
