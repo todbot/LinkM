@@ -51,7 +51,7 @@ Host code dependencies:
 
 On Mac OS X you will need the following free tools:
 - XCode - http://developer.apple.com/technologies/xcode.html
-- libusb - "sudo port install libusb-legacy libusb"
+- libusb - "sudo port install libusb-legacy +universal"  (port is available from http://macports.org )
 
 On Windows you will need the following free tools:
 - MinGW - http://www.mingw.org/
@@ -79,3 +79,34 @@ On Ubuntu Linux:
 - "sudo apt-get install avrdude avr-libc avr-gcc avr-binutils"
 
  
+
+Bundling BlinkMSequencer2 for Multiple Architectures
+----------------------------------------------------
+A. Bundle for Mac OS X
+1. Open BlinkMSequencer2 in Processing
+2. Choose File -> Export Application, choose "Mac OS X"
+3. In Finder, open linkm/processing_apps/BlinkMSequencer2/application.macosx 
+4. Right-click "BlinkMSequencer2.app", choose "Compress ..."
+5. Rename resulting zip as "BlinkMSequencer2_macosx.zip"
+6. Publish to Googlecode
+
+B. Bundle for Windows:
+1. Open BlinkMSequencer2 in Processing
+2. Choose File -> Export Application, choose your "Windows"
+3. Bundle with Java with these 5 command-line commands:
+   cd linkm/processing_apps/BlinkMSequencer2/application.windows
+   unzip ../../../tools/java_from_arduino_0018_win.zip    
+   cd ..
+   mv application.windows BlinkMSequencer2_windows
+   zip -r BlinkMSequencer2_windows.zip BlinkMSequencer2_windows
+4. Publish to Googlecode
+
+C. Bundle for Linux:
+1. Open BlinkMSequencer2 in Processing
+2. Choose File -> Export Application, choose "Linux"
+3. Bundle with the following 3 command-line commands:
+   cd linkm/processing_apps/BlinkMSequencer2
+   mv application.linux BlinkMSequencer2_linux
+   tar cvzf BlinkMSequencer2_linux.tar.gz BlinkMSequencer2_linux
+4. Publish to Googlecode
+
