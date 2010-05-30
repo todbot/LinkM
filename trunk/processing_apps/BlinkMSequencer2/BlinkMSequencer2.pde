@@ -101,15 +101,15 @@ int mainWidthAdjForWindows = 10; // fudge factor for Windows layout variation
 // FIXME: something is wrong here.  is tick res really 1/30th sec?
 // fadespeed should be chosen so color hits middle of slice
 public static class Timing  {
-  public int duration;      // seconds for entire loop
-  public byte durTicks;     // ticks (1/30th of a second)
-  public byte fadeSpeed;    // ticks
+  public int  duration;     // seconds for entire loop
+  public byte durTicks;     // per cell duration in ticks (1/30th of a second) 
+  public byte fadeSpeed;    // fadespeed between cell in ticks
   public Timing(int d,byte t,byte f) { duration=d; durTicks=t; fadeSpeed=f; }
 }
 
 // the supported track durations
 public static Timing[] timings = new Timing [] {
-    new Timing(   3, (byte)  1, (byte) 100 ),
+    new Timing(   3, (byte)  2, (byte) 100 ),
     new Timing(  30, (byte) 18, (byte)  25 ),
     new Timing( 100, (byte) 25, (byte)   5 ),
     new Timing( 300, (byte) 75, (byte)   2 ),
@@ -225,6 +225,7 @@ void draw() {
   if( frameCount < 9 ) {
     super.frame.setVisible(false);  // turn off Processing's frame
     super.frame.toBack();
+    mf.setVisible(true);
     mf.toFront();                   // bring ours forward  
   }
   long millis = System.currentTimeMillis();
@@ -517,7 +518,7 @@ public boolean verifyLinkM() {
   }
   else {  // else, we're not connected, so try a quick open and close
     try {
-      l.debug("trying open,getlinkmversion");
+      l.debug("verifyLinkM: not connected, trying open");
       linkm.open();
       linkm.getLinkMVersion();
     } catch( IOException ioe ) {
@@ -526,33 +527,7 @@ public boolean verifyLinkM() {
 
     l.debug("verifyLinkM:connecting");
     connect(false);
-
   }
-  return true;
-}
-
-/**
- *
- */
-public boolean checkForLinkM() {  
-  l.debug("checkForLinkM");
-  if( connected ) {
-    try { 
-      linkm.getLinkMVersion();
-    } catch(IOException ioe) {
-      connected = false;
-      linkm.close();
-    }
-    return true;
-  }
-  
-  try { 
-    linkm.open();
-  } catch( IOException ioe ) {
-    return false;
-  }
-  linkm.close();
-  
   return true;
 }
 
@@ -586,6 +561,7 @@ public boolean connect(boolean openlinkm) {
       }
       */
       linkm.stopScript( 0 ); // stop all scripts
+      linkm.fadeToRGB(0, 0,0,0);
       blinkmConnected = true;
     }
     else {
@@ -610,6 +586,33 @@ public boolean connect(boolean openlinkm) {
   return true; // connect successful
 }
 
+
+/**
+ *
+ */
+/*
+public boolean checkForLinkM() {  
+  l.debug("checkForLinkM");
+  if( connected ) {
+    try { 
+      linkm.getLinkMVersion();
+    } catch(IOException ioe) {
+      connected = false;
+      linkm.close();
+    }
+    return true;
+  }
+  
+  try { 
+    linkm.open();
+  } catch( IOException ioe ) {
+    return false;
+  }
+  linkm.close();
+  
+  return true;
+}
+*/
 
 /**
  * FIXME: this is unused.  superceded by checkForLinkM()/connect() interaction
@@ -1067,7 +1070,7 @@ void setupGUI() {
   mainpane.add( controlsPanel );
   mainpane.add( bottomPanel );
 
-  mf.setVisible(true);
+  //mf.setVisible(true);
   mf.setResizable(false);
 
   fc = new JFileChooser( super.sketchPath ); 
@@ -1228,12 +1231,9 @@ void setupMainframe() {
     });
   
   // center MainFrame on the screen and show it
-  //mf.setSize(this.width, this.height);
   Dimension scrnSize = tk.getScreenSize();
   mf.setLocation(scrnSize.width/2 - mf.getWidth()/2, 
                  scrnSize.height/2 - mf.getHeight()/2);
-  mf.setVisible(true);
-  
   setupMenus(f);
 }
 
@@ -1532,66 +1532,3 @@ void bindKeys() {
     } 
     */
 
-
-
-/**
- * OLD, FOR REFERENCE ONLY
- *
- * Burn a list of colors to a BlinkM
- * @param blinkmAddr the address of the BlinkM to write to
- * @param colorlist an ArrayList of the Colors to burn (java Color objs)
- * @param emptyColor a color in the list that should be treated as nothing
- * @param duration  how long the entire list should last for, in seconds
- * @param loop      should the list be looped or not
- * @param progressbar if not-null, will update a progress bar
- *
-public boolean burn(int blinkmAddr, ArrayList colorlist, 
-                    Color emptyColor, int duration, boolean loop, 
-                    JProgressBar progressbar) {
-  
-  byte fadespeed = getFadeSpeed(duration);
-  byte durticks = getDurTicks(duration);
-  byte reps = (byte)((loop) ? 0 : 1);  
-  
-  Color c;
-  BlinkMScriptLine scriptLine;
-
-  l.debug("burn: addr:"+blinkmAddr+" durticks:"+durticks+" fadespeed:"+fadespeed);
-  
-  //build up the byte array to send
-  Iterator iter = colorlist.iterator();
-  int i=0;
-  try { 
-    while( iter.hasNext() ) {
-      l.debug("burn: writing script line "+i);
-      c = (Color) iter.next();
-      if( c == nullColor )
-        c = cBlk;
-      
-      scriptLine = new BlinkMScriptLine( durticks, 'c', 
-                                         c.getRed(),c.getGreen(),c.getBlue());
-      linkm.writeScriptLine( blinkmAddr, i, scriptLine);
-      
-      if( progressbar !=null) progressbar.setValue(i);  // hack
-      i++;
-    }
-    
-    // set script length     cmd   id         length         reps
-    linkm.setScriptLengthRepeats( blinkmAddr, colorlist.size(), reps);
-    
-    // set boot params   addr, mode,id,reps,fadespeed,timeadj
-    linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
-    
-    // set playback fadespeed
-    linkm.setFadeSpeed( blinkmAddr, fadespeed);
-    
-    // and play the script
-    linkm.playScript( blinkmAddr );
-    
-  } catch( IOException ioe ) {
-    l.error("couldn't burn: "+ioe);
-    return false;
-  }
-  return true;
-}
-*/
