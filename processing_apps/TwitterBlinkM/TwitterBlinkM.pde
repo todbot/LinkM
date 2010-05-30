@@ -14,18 +14,22 @@
 
 import java.awt.*;
 import java.awt.geom.*;
+import java.awt.event.*;
+import javax.swing.*;
+import javax.swing.plaf.metal.*;
 
 import thingm.linkm.*;
 
 static final boolean debug = true;
 
-String username = "blinkmlive";
+String username = "";
 String password = "";
 
 String colorfile = "rgb.txt";
 HashMap colormap;  // stores String -> Color mappings of rgb.txt file
 
 TwitterStream twitterStream ;
+boolean twitterSetupDone = false;
 
 String mentionString1 = "blinkm";
 String mentionString2 = "makerfaire";
@@ -51,24 +55,39 @@ void setup() {
   colormap = parseColorFile(colorfile);
 
 
-  if( username == null || username.equals("") ||
-      password == null || password.equals("") ) {
-    println("\n*** Must set twitter username and password!! ***\n");
-    return;
+  if( username != null && !username.equals("") &&
+      password != null && !password.equals("") ) {
+    setupTwitter();  // don't need to pop dialog box if pre-set
   }
-  twitterStream = new TwitterStreamFactory().getInstance(username,password); 
-  twitterStream.setStatusListener(listener);
-  try { 
-    twitterStream.filter( new FilterQuery(0, null, trackStrings ) );
-  } catch( TwitterException twe ) {
-    println("filter fail: "+twe);
-  }
-
-  connectLinkM();
 
   lastMillis = millis();
 }
 
+//
+void setupTwitter() {
+  println("setupTwitter with username:"+username+",password:"+password);
+  if( username != null && !username.equals("") &&
+      password != null && !password.equals("") ) {
+
+    connectLinkM();
+
+    twitterStream = new TwitterStreamFactory().getInstance(username,password); 
+    twitterStream.setStatusListener(listener);
+    try { 
+      twitterStream.filter( new FilterQuery(0, null, trackStrings ) );
+    } catch( TwitterException twe ) {
+      println("filter fail: "+twe);
+    }
+    
+  
+    twitterSetupDone = true;
+    updateMsg("TwitterBlinkM Listening!");
+  }
+  else {
+    println("TwitterBlinkM: no username or password");
+    System.exit(0);
+  }
+}
 
 void draw() {
   background(0);
@@ -89,11 +108,37 @@ void draw() {
   }
   
   long t = millis();
-  if( (t-lastMillis) > 10000 ) { 
+  if( (t-lastMillis) > 10000 ) {  // just a heartbeat
     lastMillis = t;
-    println("thump "+t);  // just a heartbeat to show we're working
+    println("listening to twitter for "+mentionString1+" & "+mentionString2); 
   }
-  
+
+  //
+  if( frameCount==1 && !twitterSetupDone ) {
+    showTwitterSetupDialog();
+  }
+
+}
+
+// update the status message at bottom of screen
+void updateMsg(String s) {
+  mentionCount = 255;
+  lastMsg = s;
+}
+
+// let you trigger random colors just to see what's what
+void keyPressed() {
+  int r = int(random(255));
+  int g = int(random(255));
+  int b = int(random(255));
+  lastColor = new Color(r,g,b);
+  println("keyPressed: "+lastColor);
+  try { 
+    linkm.fadeToRGB( 0, r,g,b );
+  } catch( IOException ioe ) {
+    println("no linkm?");
+    connectLinkM();
+  }
 }
 
 /**
@@ -104,14 +149,15 @@ StatusListener listener = new StatusListener(){
       debug(status.getUser().getName() + " : " + status.getText());
       String text = status.getText();
       String lctext = text.toLowerCase();
-      mentionCount = 255;
-      lastMsg = "@"+status.getUser().getScreenName()+": "+text;
+      
+      updateMsg( "@"+status.getUser().getScreenName()+": "+text );
 
       // flash other blinkm to show we received
       try { 
           linkm.playScript( blinkm2addr, 5, 2, 0);
       } catch( IOException ioe ) {
-          println("no 2nd blinkm? ");
+          println("no linkm? reconnecting to LinkM");
+          connectLinkM();
       }
      
       // turn first blinkm color of tweet (if applicable)
@@ -121,18 +167,20 @@ StatusListener listener = new StatusListener(){
           linkm.fadeToRGB( blinkm1addr, lastColor);
         } catch(IOException ioe) {
           println("no linkm");
-          connectLinkM();
         }
       }
     }
     public void onDeletionNotice(StatusDeletionNotice statusDeletionNotice) {
       println("********** DELETION **************");
+      updateMsg("** DELETION **");
     }
     public void onTrackLimitationNotice(int numberOfLimitedStatuses) {
       println("********** LIMITED **************");
+      updateMsg("** LIMITED **");
     }
     public void onException(Exception ex) {
       println("** EXCEPTION **"); ex.printStackTrace();
+      updateMsg("** EXCEPTION **");
     }
   };
 
@@ -225,7 +273,7 @@ void connectLinkM() {
     linkm.setFadeSpeed(0,8);
     debug("connectLinkM");
     for( int i=0;i<2; i++ ) {
-      linkm.fadeToRGB(0, 0x22,0x22,0x22);
+      linkm.setRGB(0, 0x22,0x22,0x22);
       linkm.pause(100);
       linkm.fadeToRGB(0, 0x00,0x00,0x00);
       linkm.pause(100);
@@ -309,3 +357,83 @@ void roundrect(int x, int y, int  w, int h, int r) {
  rect(x+w,y,hr, h);
 
 }
+
+
+
+void showTwitterSetupDialog()
+{
+  println("showTwitterSetupDialog");
+  javax.swing.SwingUtilities.invokeLater(new Runnable() {
+      public void run() {
+        new TwitterSetupDialog();
+      }
+    } );
+
+}
+
+//
+public class TwitterSetupDialog extends JDialog { //implements ActionListener {
+
+  JTextField userfield,passfield;
+  JTextField mention1field,mention2field;
+
+  public TwitterSetupDialog() {
+    super();
+
+    try {  // use a Swing look-and-feel that's the same across all OSs
+      MetalLookAndFeel.setCurrentTheme(new DefaultMetalTheme());
+      UIManager.setLookAndFeel( new MetalLookAndFeel() );
+    } catch(Exception e) { }  // don't really care if it doesn't work
+
+    JLabel l1 = new JLabel("Twitter username:");
+    userfield = new JTextField( username,20 );
+    JLabel l2 = new JLabel("Twitter password:");
+    passfield = new JTextField( password,20 );
+
+    JLabel l3 = new JLabel("keyword one:");
+    mention1field = new JTextField( mentionString1,15 );
+    JLabel l4 = new JLabel("keyword two:");
+    mention2field = new JTextField( mentionString2,15 );
+
+    JButton cancelbut = new JButton("CANCEL");
+    JButton okbut     = new JButton("OK");
+
+    JPanel p = new JPanel(new GridLayout( 5,2, 5,5 ) );
+    p.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+    p.add(l1); p.add(userfield);
+    p.add(l2); p.add(passfield);
+    p.add(l3); p.add(mention1field);
+    p.add(l4); p.add(mention2field);
+    p.add(cancelbut); p.add(okbut);
+
+    getContentPane().add(p);
+
+    pack();
+    setResizable(false);
+    setLocationRelativeTo(frame); // center it on screen
+    setTitle("TwitterBlinkM Setup");
+    setVisible(true);
+
+    cancelbut.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent ae) {
+          setVisible(false);  // do nothing but go away
+          //setupTwitter();
+          System.exit(0);
+        }
+      });
+    okbut.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent ae) {
+          setVisible(false);
+          username = userfield.getText();
+          password = passfield.getText();
+          mentionString1 = mention1field.getText();
+          mentionString2 = mention2field.getText();
+          trackStrings = new String[] { mentionString1, mentionString2 }; 
+          setupTwitter();
+        }
+      });
+  }
+
+}
+
