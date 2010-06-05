@@ -40,8 +40,8 @@ long lastMillis;
 Color lastColor = Color.gray;
 
 LinkM linkm = new LinkM(); 
-int blinkm1addr = 9;
-int blinkm2addr = 10;
+int blinkm1addr = 10;
+int blinkm2addr = 9;
 
 PFont font;
 String lastMsg = "TwitterBlinkM!";
@@ -359,12 +359,13 @@ void roundrect(int x, int y, int  w, int h, int r) {
 }
 
 
-
+//
 void showTwitterSetupDialog()
 {
   println("showTwitterSetupDialog");
   javax.swing.SwingUtilities.invokeLater(new Runnable() {
       public void run() {
+        try{ Thread.sleep(500); } catch(Exception e){}  // wait to avoid assert
         new TwitterSetupDialog();
       }
     } );
