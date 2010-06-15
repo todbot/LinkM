@@ -40,14 +40,14 @@ ifeq "$(OS)" "macosx"
 # If you want to build for PowerPC too, you'll need to edit 
 # /opt/local/etc/macports/macports.conf: universal_archs and add "ppc"
 # otherwise swap the OS_CFLAGS with the commented one below
-# Mac OS X: "sudo port install libusb-legacy" using MacPorts
-USBFLAGS =   `libusb-legacy-config --cflags`
-#USBLIBS  =   `libusb-legacy-config --libs`
-USBLIBS  =    /opt/local/lib/libusb-legacy/libusb.a
-USBLIBS +=    -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
-OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
+USBFLAGS =  `libusb-legacy-config --cflags`
+USBLIBS  =  /opt/local/lib/libusb-legacy/libusb.a
+USBLIBS +=  -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
+OS_CFLAGS= -arch i386 -arch ppc
+#OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
 #OS_CFLAGS= -arch i386 -arch x86_64
-OS_LIBS= $(OS_CFLAGS) 
+OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
+OS_LIBS  = $(OS_CFLAGS) 
 EXE_SUFFIX=
 endif
 
@@ -67,8 +67,6 @@ endif
 
 
 CC=		gcc
-CXX=	g++
-#CFLAGS=	$(OS_CFLAGS) -std=gnu99 -O2 -Wall $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
 CFLAGS=	$(OS_CFLAGS) -O -Wall -std=gnu99 $(USBFLAGS) -DPROGNAME=\"$(PROGNAME)\"
 LIBS=	$(OS_LIBS) $(USBLIBS)
 
