@@ -55,9 +55,11 @@ ifeq "$(OS)" "macosx"
 USBFLAGS =  `libusb-legacy-config --cflags`
 USBLIBS  =  /opt/local/lib/libusb-legacy/libusb.a
 USBLIBS +=  -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
-OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
+OS_CFLAGS= -arch i386 -arch ppc 
+#OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
 #OS_CFLAGS= -arch i386 -arch x86_64
-OS_LIBS  = $(OS_CFLAGS)
+OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
+OS_LIBS  = $(OS_CFLAGS) 
 EXE_SUFFIX=
 endif
 
@@ -77,10 +79,9 @@ EXE_SUFFIX=
 endif
 
 
-CC=				gcc
-ARCHS=          
-CFLAGS=			$(OS_CFLAGS) -O -Wall -std=gnu99  $(USBFLAGS) -DADDBOOTLOAD=$(ADDBOOTLOAD)
-LIBS=			$(OS_LIBS) $(USBLIBS) 
+CC=		gcc
+CFLAGS=	$(OS_CFLAGS) -O -Wall -std=gnu99 $(USBFLAGS) -DADDBOOTLOAD=$(ADDBOOTLOAD)
+LIBS=	$(OS_LIBS) $(USBLIBS) 
 
 ifeq ($(ADDBOOTLOAD), 1) 
 CFLAGS+=        -I../bootloadHID/commandline
