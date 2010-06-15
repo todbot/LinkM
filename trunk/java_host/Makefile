@@ -37,16 +37,22 @@ endif
 
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
+JAVA_HOME:=/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Home
+PATH:=$(JAVA_HOME)/bin:$(PATH)
+
 LIBTARGET = lib$(TARGET).jnilib
-LIBUSBA   = libusb-macosx.a
-USBFLAGS  =  -I libusb-static
-USBLIBS   =  -L$(LIBUSBA_DIR)  -lusb-macosx
+#LIBUSBA   = libusb-macosx.a
+#USBLIBS   =  -L$(LIBUSBA_DIR)  -lusb-macosx
+USBFLAGS  =  `libusb-legacy-config --cflags`
+USBLIBS   = /opt/local/lib/libusb-legacy/libusb.a
 
 JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
 JAVAINCLUDE = -I $(JAVAINCLUDEDIR)
 
-OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS)
+OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch ppc -std=gnu99  $(USBFLAGS) 
+OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
+#OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS)
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -std=gnu99  $(USBFLAGS)
 OS_LDFLAGS =  -Wl,-search_paths_first -framework JavaVM -framework IOKit -framework CoreFoundation $(USBLIBS) 
 endif
@@ -68,7 +74,7 @@ endif
 ifeq "$(OS)" "linux"
 # ???
 LIBTARGET = lib$(TARGET).so  # for linux
-LIBUSBA   = libusb-linux.a
+#LIBUSBA   = libusb-linux.a
 USBFLAGS  = `libusb-config --cflags`
 USBLIBS   = `libusb-config --libs`
 #USBLIBS   =  -L$(LIBUSBA_DIR) -lusb-linux
@@ -106,9 +112,10 @@ help:
 	@echo "make javadoc ... to make the javadoc"
 
 javac:
-	javac thingm/linkm/$(TARGET).java	
+	javac -target 1.5 thingm/linkm/$(TARGET).java	
 
 jni:
+	which javah
 	javah -jni thingm.linkm.$(TARGET)
 
 # the "libprep" is to pull out the libusb.a into its own dir, for static build
@@ -130,6 +137,7 @@ msg:
 # packaging
 jar: javac jni compile
 	jar -cfm linkm.jar  packaging/Manifest.txt thingm/linkm/*.class
+	cp linkm.jar libtargets
 
 processing: processinglib
 processinglib:
@@ -148,6 +156,8 @@ javadoc:
 
 clean:
 	rm -f thingm/linkm/*.class *.o ../c_host/*.o 
+	rm -f libtargets/linkm.jar
+	rm -f libtargets/$(LIBTARGET)
 	rm -f $(LIBTARGET) thingm_linkm_$(TARGET).h
 	rm -f linkm.jar linkm.zip
 	rm -rf linkm
