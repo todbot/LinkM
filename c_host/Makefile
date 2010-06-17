@@ -55,8 +55,8 @@ ifeq "$(OS)" "macosx"
 USBFLAGS =  `libusb-legacy-config --cflags`
 USBLIBS  =  /opt/local/lib/libusb-legacy/libusb.a
 USBLIBS +=  -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
-OS_CFLAGS= -arch i386 -arch ppc 
-#OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
+#OS_CFLAGS= -arch i386 -arch ppc 
+OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
 #OS_CFLAGS= -arch i386 -arch x86_64
 OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
 OS_LIBS  = $(OS_CFLAGS) 
