@@ -50,7 +50,7 @@ JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
 JAVAINCLUDE = -I $(JAVAINCLUDEDIR)
 
-OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch ppc -std=gnu99  $(USBFLAGS) 
+OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS) 
 OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS)
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -std=gnu99  $(USBFLAGS)
@@ -126,7 +126,7 @@ jni:
 #	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(LDFLAGS) $(OBJ)  -lc
 compile: msg $(OBJ)
 	$(CC)  -o $(LIBTARGET) $(CFLAGS) $(OBJ) $(LDFLAGS) 
-	mkdir -p libtargets && cp $(LIBTARGET) libtargets
+	mkdir -p libtargets && mv $(LIBTARGET) libtargets
 
 .c.o:
 	$(CC) $(ARCH_COMPILE) $(CFLAGS) -c $*.c -o $*.o
@@ -137,14 +137,13 @@ msg:
 # packaging
 jar: javac jni compile
 	jar -cfm linkm.jar  packaging/Manifest.txt thingm/linkm/*.class
-	cp linkm.jar libtargets
+	mv linkm.jar libtargets
 
 processing: processinglib
 processinglib:
 	rm -f linkm.zip
 	mkdir -p linkm/library
 	cp packaging/processing-export.txt linkm/library/export.txt
-	cp linkm.jar linkm/library
 	cp libtargets/* linkm/library
 	zip -r linkm.zip linkm
 	@echo
