@@ -17,6 +17,7 @@ import javax.swing.*;
 import java.util.regex.*;
 import javax.swing.border.*;      // for silly borders on buttons
 import javax.swing.plaf.metal.*;  // for look-n-feel stuff
+import javax.swing.text.*;        // copy-n-paste
 
 import thingm.linkm.*;
 
@@ -82,7 +83,7 @@ void setup() {
 //
 void draw() {
   // we can only do this after setup
-  if( frameCount < 60 ) {
+  if( frameCount < 10 ) {
     super.frame.setVisible(false);  // turn off Processing's frame
     super.frame.toBack();
     stf.setVisible(true);
@@ -393,6 +394,35 @@ void showInputs() {
 
 // ---------------------------------------------------------------------
 
+ActionListener menual = new ActionListener() { 
+    void actionPerformed(ActionEvent e) {
+      String cmd = e.getActionCommand();
+      //println("action listener: "+cmd);
+      if(        cmd.equals("Quit") )  {
+        System.exit(0);
+      } 
+      else if( cmd.equals("Load") ) {  // FIXME: such a hack
+        loadFile();
+      } 
+      else if( cmd.equals("Save") ) {
+        saveFile();
+      }
+      else if( cmd.equals("Cut") ) {
+        editArea.cut();
+      }
+      else if( cmd.equals("Copy") ) {
+        editArea.copy();
+      }
+      else if( cmd.equals("Paste") ) {
+        editArea.paste();
+      }
+      else if( cmd.equals("Select All") ) {
+        editArea.selectAll();
+      }
+    }
+  };
+
+
 //
 // do all the nasty gui stuff that's all Java and not very Processingy
 //
@@ -420,10 +450,11 @@ void setupGUI() {
     
   stf = new ScriptToolFrame(mainWidth, mainHeight, this);
   stf.createGUI();
+  stf.setupMenus();
   ///stf.setVisible(true); // no, causes weird exception on macosx
   stf.setResizable(false);
   
-  println("createGUI done");
+  //println("createGUI done");
 }
 
 //
@@ -437,7 +468,7 @@ public class ScriptToolFrame extends JFrame {
   //
   public ScriptToolFrame(int w, int h, PApplet appRef) {
     setBackground( backColor );
-    setFocusable(true);
+    //setFocusable(true); // no, want textarea to be main focus
     width = w;
     height = h;
     appletRef = appRef;
@@ -497,6 +528,13 @@ public class ScriptToolFrame extends JFrame {
     editArea = new JTextArea(strToParse,24,80);
     editArea.setFont( monoFont );
     editArea.setLineWrap(false);
+
+    // add copy-paste
+    Action actions[] = editArea.getActions();
+    Action cutAction = findAction(actions, DefaultEditorKit.cutAction);
+    Action copyAction = findAction(actions, DefaultEditorKit.copyAction);
+    Action pasteAction = findAction(actions, DefaultEditorKit.pasteAction);
+
     JScrollPane scrollPane = new JScrollPane(editArea, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
     editPanel.add( scrollPane, BorderLayout.CENTER);
     
@@ -536,7 +574,47 @@ public class ScriptToolFrame extends JFrame {
 
   }
 
-  //
+  void setupMenus() {
+    MenuBar menubar = new MenuBar();
+    
+    //create all the Menu Items and add the menuListener to check their state.
+    Menu fileMenu = new Menu("File");
+    Menu editMenu = new Menu("Edit");
+    //Menu helpMenu = new Menu("Help");
+    
+    MenuItem itemf1 = new MenuItem("Load",new MenuShortcut(KeyEvent.VK_O));
+    MenuItem itemf2 = new MenuItem("Save",new MenuShortcut(KeyEvent.VK_S));
+
+    MenuItem iteme1= new MenuItem("Cut",  new MenuShortcut(KeyEvent.VK_X));
+    MenuItem iteme2= new MenuItem("Copy", new MenuShortcut(KeyEvent.VK_C));
+    MenuItem iteme3= new MenuItem("Paste",new MenuShortcut(KeyEvent.VK_V));
+    MenuItem itemeA= new MenuItem("-");
+    MenuItem iteme4= new MenuItem("Select All",new MenuShortcut(KeyEvent.VK_A));
+
+    itemf1.addActionListener(menual);
+    itemf2.addActionListener(menual);
+    iteme1.addActionListener(menual);
+    iteme2.addActionListener(menual);
+    iteme3.addActionListener(menual);
+    iteme4.addActionListener(menual);
+    
+    fileMenu.add(itemf1);
+    fileMenu.add(itemf2);
+
+    editMenu.add(iteme1);
+    editMenu.add(iteme2);
+    editMenu.add(iteme3);
+    editMenu.add(itemeA);
+    editMenu.add(iteme4);
+
+    menubar.add(fileMenu);
+    menubar.add(editMenu);
+
+    setMenuBar(menubar);   //add the menu to the frame
+
+  }
+
+  // utility
   private JButton addButton( String text, String action, ActionListener al,
                             Container container ) {
     JButton button = new JButton(text);
@@ -547,6 +625,19 @@ public class ScriptToolFrame extends JFrame {
     container.add(button);
     return button;
   }
+
+  // utilty
+  private Action findAction(Action actions[], String key) {
+    Hashtable commands = new Hashtable();
+    for (int i = 0; i < actions.length; i++) {
+      Action action = actions[i];
+      commands.put(action.getValue(Action.NAME), action);
+    }
+    return (Action) commands.get(key);
+  }
+  
+
+
 
 } // ScriptToolFrame
 
