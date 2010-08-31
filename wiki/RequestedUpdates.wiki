@@ -1,0 +1,20 @@
+#summary Updates to LinkM, BlinkMSequencer, or other BlinkM/LinkM-related code
+
+= Introduction =
+
+Updates to LinkM, BlinkMSequencer, or other BlinkM/LinkM-related code.
+This is an unsorted to-do list, some of which may get turned into actionable issues.
+
+= Details =
+
+== BlinkMSequencer2 updates: ==
+  * find better name for it
+  * add Arduino support
+  * 
+
+== BlinkMScriptTool2 updates: ==
+  * find better name for it
+
+== LinkM updates: ==
+  * ring buffer of pending i2c commands to reduce USB latency?
+
