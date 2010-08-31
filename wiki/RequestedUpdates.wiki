@@ -3,6 +3,7 @@
 = Introduction =
 
 Updates to LinkM, BlinkMSequencer, or other BlinkM/LinkM-related code.
+
 This is an unsorted to-do list, some of which may get turned into actionable issues.
 
 = Details =
@@ -17,4 +18,3 @@ This is an unsorted to-do list, some of which may get turned into actionable iss
 
 == LinkM updates: ==
   * ring buffer of pending i2c commands to reduce USB latency?
-
