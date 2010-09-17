@@ -51,6 +51,34 @@ public class Track {
   }
 
   /**
+   * 
+   */
+  public void copySlices(Track track) {
+    int start = 0;
+    int end = numSlices;
+    int dest_start = 0;
+    int dest_end = numSlices;
+    for( int i=0; i<numSlices; i++ ) { 
+      if( track.selects[i] ) 
+        end = i;
+      if( track.selects[numSlices-i-1] )
+        start = numSlices-i-1;
+      if( this.selects[numSlices-i-1] )
+        dest_start = numSlices-i-1;
+    }
+    int range = end-start;
+    dest_end = dest_start + range;
+    if( dest_end > numSlices ) dest_end = numSlices-1;
+
+    println("copy "+start+"-"+end+" to "+dest_start+"-"+dest_end);
+        
+    for( int i=dest_start,j=start; i<dest_end+1; i++,j++ ) {
+      slices[i]  = track.slices[j];
+      selects[i] = track.selects[j];
+    }
+  }
+
+  /**
    *
    */
   public void erase() {
