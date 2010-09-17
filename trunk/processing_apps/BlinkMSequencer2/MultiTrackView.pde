@@ -436,29 +436,37 @@ public class MultiTrackView
     repaint();
   }
 
-  public void nextSlice() {
+  public void nextSlice(int modifiers) {
     int slicenum=-1;
+    Track t = getCurrTrack();
     for( int i=0; i<numSlices; i++) {
-      if( tracks[currTrack].selects[i] == true ) { 
+      if( t.selects[i] == true ) { 
+        if( modifiers==0 ) t.selects[i] = false;
         slicenum = i;
       }
     }
     if( slicenum>=0 ) {
-      selectSlice(currTrack, slicenum,false);
+      if( modifiers == 0 ) selectSlice(currTrack, slicenum,false);
       int nextslice = (slicenum==numSlices-1)?numSlices-1:slicenum+1;
       selectSlice(currTrack, nextslice,true);
     }
   }
 
-  public void prevSlice() {
+  // 
+  // FIXME: This is a hack, wrt modifiers and in general
+  //
+  public void prevSlice(int modifiers) {
     int slicenum=-1;
+    Track t = getCurrTrack();
     for( int i=0; i<numSlices; i++) {
-      if( tracks[currTrack].selects[i] == true ) { 
-        slicenum = i;
+      int j = numSlices-i-1;
+      if( t.selects[j] == true ) { 
+        if( modifiers == 0 ) t.selects[j] = false;
+        slicenum = j;
       }
     }
     if( slicenum>0 ) {
-      selectSlice(currTrack, slicenum,false);
+      if( modifiers == 0 ) selectSlice(currTrack, slicenum,false);
       int nextslice = (slicenum==0) ? 0 : slicenum-1;
       selectSlice(currTrack, nextslice,true);
     }              
@@ -531,18 +539,24 @@ public class MultiTrackView
   /** 
    * Copy current selects to buffer
    */
-  public void copyTrack() {
+  public void copy() {
+    //bufferTrack.copy( tracks[currTrack] );
     bufferTrack.copy( tracks[currTrack] );
   }
-  public void pasteTrack() {
-    tracks[currTrack].copy( bufferTrack );
+  public void paste() {
+    tracks[currTrack].copySlices( bufferTrack );
   }
-  public void cutTrack() { 
-    copyTrack();
-    deleteTrack();
+  public void cut() { 
+    copy();
+    delete();
   }
-  public void deleteTrack() {
-    tracks[currTrack].erase();
+  public void delete() {       
+    //tracks[currTrack].erase();    // this deletes whole track
+    Track t = getCurrTrack();
+    for( int i=0; i<numSlices; i++ ) {
+      if( t.selects[i] )
+        t.slices[i] = cEmpty;
+    }
   }
 
   // --------------------------------------------------------------------------

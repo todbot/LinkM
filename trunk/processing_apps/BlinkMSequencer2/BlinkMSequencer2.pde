@@ -1253,14 +1253,14 @@ ActionListener menual = new ActionListener() {
         loadTrack();
       } else if( cmd.equals("Save One Track") ) {
         saveTrack();
-      } else if( cmd.equals("Cut Track") ) {
-        multitrack.cutTrack();
-      } else if( cmd.equals("Copy Track") ) {
-        multitrack.copyTrack();
-      } else if( cmd.equals("Paste Track") ) {
-        multitrack.pasteTrack();
-      } else if( cmd.equals("Delete Track") ) {
-        multitrack.deleteTrack();
+      } else if( cmd.equals("Cut") ) {
+        multitrack.cut();
+      } else if( cmd.equals("Copy") ) {
+        multitrack.copy();
+      } else if( cmd.equals("Paste") ) {
+        multitrack.paste();
+      } else if( cmd.equals("Delete") ) {
+        multitrack.delete();
       } else if( cmd.equals("Display LinkM/BlinkM Versions") ) {
         displayVersions();
       } else if( cmd.equals("Upgrade LinkM Firmware") ) {
@@ -1326,10 +1326,10 @@ void setupMenus(Frame f) {
   MenuItem itemf4a= new MenuItem("-");
   MenuItem itemf5 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_Q));
 
-  MenuItem iteme1= new MenuItem("Cut Track",  new MenuShortcut(KeyEvent.VK_X));
-  MenuItem iteme2= new MenuItem("Copy Track", new MenuShortcut(KeyEvent.VK_C));
-  MenuItem iteme3= new MenuItem("Paste Track",new MenuShortcut(KeyEvent.VK_V));
-  MenuItem iteme4= new MenuItem("Delete Track",new MenuShortcut(KeyEvent.VK_D));
+  MenuItem iteme1= new MenuItem("Cut",  new MenuShortcut(KeyEvent.VK_X));
+  MenuItem iteme2= new MenuItem("Copy", new MenuShortcut(KeyEvent.VK_C));
+  MenuItem iteme3= new MenuItem("Paste",new MenuShortcut(KeyEvent.VK_V));
+  MenuItem iteme4= new MenuItem("Delete",new MenuShortcut(KeyEvent.VK_D));
 
   /*
   MenuItem[] fills = new MenuItem[romScripts.length];
@@ -1443,8 +1443,9 @@ void bindKeys() {
         }
         if(e.getID() != KeyEvent.KEY_PRESSED) 
           return false;
-        if(e.getModifiers() != 0)
-          return false;
+        int mod = e.getModifiers();
+        //if(e.getModifiers() != 0)  // FIXME?
+        //  return false;
 
         switch(e.getKeyCode()) {
         case KeyEvent.VK_UP:
@@ -1454,10 +1455,10 @@ void bindKeys() {
           multitrack.nextTrack();  rc = true;
           break;
         case KeyEvent.VK_LEFT:
-          multitrack.prevSlice();  rc = true;
+          multitrack.prevSlice(mod);  rc = true;
           break;
         case KeyEvent.VK_RIGHT:
-          multitrack.nextSlice();  rc = true;
+          multitrack.nextSlice(mod);  rc = true;
           break;
         case KeyEvent.VK_SPACE:
           if( multitrack.playing ) { 
