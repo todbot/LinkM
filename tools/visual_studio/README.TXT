@@ -1,4 +1,4 @@
-[this is from Yotam, a Visual Studio user --tod]
+[This is from Yotam, a Visual Studio user, I have no idea how it works --tod]
 
 Here is a zipped library BlinkM - it's a Visual Studio 2008 project,
 compling and running.
