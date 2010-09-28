@@ -58,7 +58,7 @@ public class BurnDialog extends JDialog implements ActionListener {
   // when the burn button is pressed
   public void actionPerformed(ActionEvent e) {
     burnBtn.setEnabled(true);  // seems like such a hack  (why did i do this?)
-    prepareForPreview(durationCurrent);
+    prepareForPreview();
     setVisible(false);
   }
       

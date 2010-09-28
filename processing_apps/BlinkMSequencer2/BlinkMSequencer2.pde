@@ -54,9 +54,12 @@ final static int debugLevel = 1;
 Log l = new Log();
 
 LinkM linkm = new LinkM();  // linkm obj only used in this file
+BlinkMComm2 blinkmComm = new BlinkMComm2();
 
 boolean connected = false;   // FIXME: verify semantics correct on this
 boolean blinkmConnected = false;
+boolean arduinoMode = false;  // using Arduino+BlinkMComm instead of LinkM
+
 long lastConnectCheck;
 
 //String romScriptsDir;  // set to dataPath(".");
@@ -79,10 +82,14 @@ JLabel heartbeatLabel;
 JLabel currChanIdLabel;
 JLabel currChanLabel;
 
+MenuItem itemConnect;
+
 SetChannelDialog setChannelDialog;
 
+final int maxScriptLength = 48;
+
 // number of slices in the timeline == number of script lines written to BlinkM
-int numSlices = 48;  
+int numSlices = maxScriptLength;  
 int numTracks = 8;    // number of different blinkms
 
 int blinkmStartAddr = 9;
@@ -146,7 +153,31 @@ Color[] setChannelColors = new Color [] {
   new Color( 0x80,0xff,0xff ),
   new Color( 0xff,0xff,0xff ),
 };
- 
+
+//
+// FIXME: no, should let you adjust timeadj & repeats too
+// 
+String[] startupScriptNames = new String [] {
+  "Script 0: Editable script",
+  "Script 1: Red->Green->Blue",
+  "Script 2: White flash",
+  "Script 3: Red flash",
+  "Script 4: Green flash",
+  "Script 5: Blue flash",
+  "Script 6: Cyan flash",
+  "Script 7: Magenta flash",
+  "Script 8: Yellow flash",
+  "Script 9: Black (off)",
+  "Script 10: Hue Cycle",
+  "Script 11: Mood Light",
+  "Script 12: Virtual Candle",
+  "Script 13: Water Reflections",
+  "Script 14: Old Neon",
+  "Script 15: The Seasons",
+  "Script 16: Thunderstorm",
+  "Script 17: Stop Light",
+  "Script 18: SOS",
+};
 
 /**
  * Processing's setup()
@@ -156,34 +187,6 @@ void setup() {
   frameRate(25);   // each frame we can potentially redraw timelines
 
   l.setLevel( debugLevel );
-
-  /*
-  l.debug("loading romscripts...");
-  l.debug("sketchPath:"+sketchPath);
-  String jarfile = sketchPath + "/code/romscripts.jar";
-  
-  try {
-    JarFile jarFile = new JarFile( jarfile );
-    Enumeration en = jarFile.entries();
-    while (en.hasMoreElements()) {
-      l.debug(en.nextElement());
-    }
-    } catch( IOException ioe ) {
-    println("ioe:" +ioe);
-  }
-  l.debug("done");
-  */
-  /*
-  romScriptsDir = dataPath(".");
-  File fdir = new File(romScriptsDir);
-  romScripts = fdir.listFiles( new FileFilter() {
-      public boolean accept(File f) {
-        String n = f.getName().toLowerCase();
-        if( n.startsWith("romscript") && n.endsWith("txt") ) return true;
-        return false;
-      }
-    });
-  */
 
   try { 
     // load up the lovely silkscreen font
@@ -231,8 +234,13 @@ void draw() {
   long millis = System.currentTimeMillis();
 
   if( frameCount > 10 && ((millis-lastConnectCheck) > 1000) ) {
-    if( verifyLinkM() ) 
-      heartbeat();
+    if( arduinoMode ) {
+    } 
+    else {
+      if( verifyLinkM() ) {
+        heartbeat();
+      }
+    }
     lastConnectCheck = millis;
   }
 
@@ -240,15 +248,11 @@ void draw() {
   // tick tock
   multitrack.tick( millisPerTick );
   // not exactly 1/frameRate, but good enough for now
-  if( connected ) {
-    if( blinkmConnected ) 
-      setStatus("LinkM connected, BlinkM found");
-    else 
-      setStatus("LinkM connected, no BlinkM found");
-  } else {
-    setStatus( "No LinkM, Disconnected mode" );
-  }
+
+  setStatus();
+
 }
+
 
 /*
  * hmm, maybe can override PApplet.handleDisplay() to get around 
@@ -265,6 +269,37 @@ synchronized public void handleDisplay() {
 */
 
 // ----------------------------------------------------------------------------
+
+/**
+ *
+ */
+public void setStatus()
+{
+  if( arduinoMode ) { 
+    setStatus("Arduino mode");
+    if( connected ) {
+      buttonPanel.enableButtons(true);
+      itemConnect.setLabel("Disconnect from Arduino");
+    } 
+    return;
+  }
+  
+  itemConnect.setLabel("Connect to Arduino");
+
+  if( connected ) {
+    if( blinkmConnected ) {
+      setStatus("LinkM connected, BlinkM found");
+      buttonPanel.enableButtons(true);
+    }
+    else {
+      setStatus("LinkM connected, no BlinkM found");
+      buttonPanel.enableButtons(false);
+    }
+  } else {
+    setStatus( "No LinkM, Disconnected mode" );
+    buttonPanel.enableButtons(false);
+  }
+}
 
 /**
  *
@@ -562,6 +597,7 @@ public boolean connect(boolean openlinkm) {
       */
       linkm.stopScript( 0 ); // stop all scripts
       linkm.fadeToRGB(0, 0,0,0);
+     
       blinkmConnected = true;
     }
     else {
@@ -587,52 +623,6 @@ public boolean connect(boolean openlinkm) {
 }
 
 
-/**
- *
- */
-/*
-public boolean checkForLinkM() {  
-  l.debug("checkForLinkM");
-  if( connected ) {
-    try { 
-      linkm.getLinkMVersion();
-    } catch(IOException ioe) {
-      connected = false;
-      linkm.close();
-    }
-    return true;
-  }
-  
-  try { 
-    linkm.open();
-  } catch( IOException ioe ) {
-    return false;
-  }
-  linkm.close();
-  
-  return true;
-}
-*/
-
-/**
- * FIXME: this is unused.  superceded by checkForLinkM()/connect() interaction
- * Verifies connetion to LinkM and at least one BlinkM
- * Also clears out any I2C bus errors that may be present
- */
-/*
-public boolean verifyConnection() {
-  try { 
-    // FIXME: what to do here
-    // 0. do i2c bus reset ?
-    // 1. verify linkm connection          (need new cmd?)
-    // 2. verify connection to 1st blinkm  (get version?)
-    // 3. verify all blinkms?
-    linkm.getVersion(0);
-  } catch( IOException ioe ) {
-  }
-  return true;
-}
-*/
 
 /**
  * Sends a single color to a single BlinkM, using the "Fade to RGB" function
@@ -640,40 +630,50 @@ public boolean verifyConnection() {
  * @param blinkmAddr  i2c address of a blinkm
  * @param c color to send
  */
-public boolean sendBlinkMColor( int blinkmAddr, Color c ) {
+public void sendBlinkMColor( int blinkmAddr, Color c ) {
   //l.debug("sendBlinkMColor: "+blinkmAddr+" - "+c);
-  if( !connected ) return true;
+  if( c == cEmpty ) c = Color.BLACK;  // empty is off
+  if( !connected ) return;
+
   try { 
-    if( c == cEmpty ) c = Color.BLACK;  // empty is off
-    linkm.fadeToRGB( blinkmAddr, c);  // FIXME:  which track 
+    if( arduinoMode ) {
+      blinkmComm.fadeToRGB( blinkmAddr, c );
+    } else { 
+      linkm.fadeToRGB( blinkmAddr, c);  // FIXME:  which track 
+    }
   } catch( IOException ioe) {        // hmm, what to do here
     connected = false;
-    return false;
   }
-  return true;
+  return;
 }
 
 /**
  *
  */
-public boolean sendBlinkMColors( int addrs[], Color colors[], int send_count ) {
+public void sendBlinkMColors( int addrs[], Color colors[], int send_count ) {
   //l.debug("sendBlinkMColors "+send_count);
-  if( !connected ) return true;
+  if( !connected ) return;
   long st = System.currentTimeMillis();
+
   try { 
     for( int i=0; i<send_count; i++) {
-      if( addrs[i]!=-1 ) 
-        linkm.fadeToRGB( addrs[i], colors[i] );
+      if( addrs[i]!=-1 ) {
+        if( arduinoMode ) { 
+          blinkmComm.fadeToRGB( addrs[i], colors[i] );
+        } else { 
+          linkm.fadeToRGB( addrs[i], colors[i] );
+        }
+      }
     }
     //linkm.fadeToRGB( addrs, colors, send_count );
   } catch( IOException ioe ) {
     connected = false;
-    return false;
+    return;
   }
   long et = System.currentTimeMillis();
-  l.debug("time to SendBlinkMColors: "+(et-st)+" millisecs");
-  
-  return true;
+  if( debugLevel>2) l.debug("time to SendBlinkMColors: "+(et-st)+" millisecs");
+  // FIXME: bad debug logic here
+  return;
 }
 
 /**
@@ -690,14 +690,19 @@ public void prepareForPreview() {
 public void prepareForPreview(int loopduration) {
   byte fadespeed = getFadeSpeed(loopduration);
   l.debug("prepareForPreview: fadespeed:"+fadespeed);
-  //if( !connected ) return;
+  if( !connected ) return;
   //if( !connected ) connect(); // no, fails for case of unplug
-  //if( checkForLinkM() ) connect();  // hmm gives weird no-playing failure modes
+  //if( checkForLinkM() ) connect(); // hmm gives weird no-playing failure modes
 
   int blinkmAddr = 0x00;  // FIXME: ????
   try { 
-    linkm.stopScript( blinkmAddr );
-    linkm.setFadeSpeed( blinkmAddr, fadespeed );
+    if( arduinoMode ) { 
+      blinkmComm.stopScript( blinkmAddr );
+      blinkmComm.setFadeSpeed( blinkmAddr, fadespeed );
+    } else { 
+      linkm.stopScript( blinkmAddr );
+      linkm.setFadeSpeed( blinkmAddr, fadespeed );
+    }
   } catch(IOException ioe ) {
     // FIXME: hmm, what to do here
     println("prepareForPreview: "+ioe);
@@ -718,7 +723,11 @@ public boolean doDownload() {
     if( !active ) continue; 
     blinkmAddr = multitrack.tracks[j].blinkmaddr;
     try { 
-      script = linkm.readScript( blinkmAddr, 0, true );  // read all
+      if( arduinoMode ) {
+        script = blinkmComm.readScript( blinkmAddr, 0, true );
+      } else {
+        script = linkm.readScript( blinkmAddr, 0, true );  // read all
+      }
       int len = (script.length() < numSlices) ? script.length() : numSlices;
       for( int i=0; i< len; i++) {
         scriptLine = script.get(i);
@@ -767,18 +776,29 @@ public boolean doUpload(JProgressBar progressbar) {
         
         scriptLine = new BlinkMScriptLine( durticks, 'c', c.getRed(),
                                            c.getGreen(),c.getBlue());
-        linkm.writeScriptLine( blinkmAddr, i, scriptLine);
+        if( arduinoMode ) {
+          blinkmComm.writeScriptLine( blinkmAddr, i, scriptLine);
+        } else { 
+          linkm.writeScriptLine( blinkmAddr, i, scriptLine);
+        }
         if( progressbar !=null) progressbar.setValue(i);  // hack
       }
       
-      // set script length     cmd   id         length         reps
-      linkm.setScriptLengthRepeats( blinkmAddr, numSlices, reps);
-      
-      // set boot params   addr, mode,id,reps,fadespeed,timeadj
-      linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
-      
-      // set playback fadespeed
-      linkm.setFadeSpeed( blinkmAddr, fadespeed);
+      if( arduinoMode ) { 
+        blinkmComm.setScriptLengthRepeats( blinkmAddr, numSlices, reps );
+        blinkmComm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
+        blinkmComm.setFadeSpeed( blinkmAddr, fadespeed);
+      }
+      else { 
+        // set script length     cmd   id         length         reps
+        linkm.setScriptLengthRepeats( blinkmAddr, numSlices, reps);
+        
+        // set boot params   addr, mode,id,reps,fadespeed,timeadj
+        linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
+        
+        // set playback fadespeed
+        linkm.setFadeSpeed( blinkmAddr, fadespeed);
+      }
     } catch( IOException ioe ) { 
       println("upload error for blinkm addr "+blinkmAddr+ " : "+ioe);
     }
@@ -787,7 +807,11 @@ public boolean doUpload(JProgressBar progressbar) {
   
   try { 
     // and play the script on all blinkms
-    linkm.playScript( 0 );  // FIXME:  use LinkM to syncM
+    if( arduinoMode ) {
+      blinkmComm.playScript( 0 );
+    } else { 
+      linkm.playScript( 0 );  // FIXME:  use LinkM to syncM
+    }
     rc = true;
   } catch( IOException ioe ) { 
     println("upload error: "+ioe);
@@ -1147,23 +1171,11 @@ JPanel makeControlsPanel() {
 /**
  * Makes and sets up the colorChooserPanel
  */
-JPanel makeColorChooserPanel() {
-  MouseListener ml = new java.awt.event.MouseListener() { 
-          public void mouseClicked(MouseEvent e) {
-              println(" mouseclicked!");
-          }
-          public void mouseEntered(MouseEvent e) {}
-          public void mouseExited(MouseEvent e) {}
-          public void mousePressed(MouseEvent e) {}
-          public void mouseReleased(MouseEvent e) {}
-  };
-  colorChooser = new JColorChooser();
-  //AbstractColorChooserPanel[] cpanels = colorChooser.getChooserPanels();
-  //for( int i=0; i< cpanels.length; i++) {
-  //    println( cpanels[i] );
-  //    //    cpanels[i].setFont(textBigfont);
-  //    cpanels[i].addMouseListener(ml);
-  //}
+JPanel makeColorChooserPanel() { 
+  FixedColorSelectionModel fixedModel = new FixedColorSelectionModel();
+
+  colorChooser = new JColorChooser(fixedModel);
+
   colorChooser.setBackground(cBgDarkGray);
   colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
       public void stateChanged(ChangeEvent e) {
@@ -1176,10 +1188,10 @@ JPanel makeColorChooserPanel() {
   colorChooser.setColor( cEmpty );
 
   JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
-  //colorChooserPanel.addMouseListener();
   colorChooserPanel.setBackground(cBgDarkGray);  
   colorChooserPanel.add( Box.createVerticalStrut(5) );
   colorChooserPanel.add( colorChooser );
+
   return colorChooserPanel;
 }
 
@@ -1245,6 +1257,10 @@ ActionListener menual = new ActionListener() {
       l.debug("action listener: "+cmd);
       if(        cmd.equals("Quit") )  {
         System.exit(0);
+      } else if( cmd.equals("Connect to Arduino") ) {
+        blinkmComm.connectDialog();
+      } else if( cmd.equals("Disconnect from Arduino") ) {
+        blinkmComm.disconnectDialog();
       } else if( cmd.equals("Load Set") ) {  // FIXME: such a hack
         loadAllTracks();
       } else if( cmd.equals("Save Set") ) { 
@@ -1276,13 +1292,6 @@ ActionListener menual = new ActionListener() {
       } else if( cmd.equals("Quick Start Guide") ) {
         showHelp();
       } else {
-        /*
-        for( int i=0; i<romScripts.length; i++ ) {
-          if( romScripts[i].getName().equals(cmd+".txt") ) {
-            loadTrack( romScripts[i] );
-          }
-        }
-        */
       }
       multitrack.repaint();
     } // actionPerformed
@@ -1316,7 +1325,6 @@ void setupMenus(Frame f) {
   Menu editMenu = new Menu("Edit");
   Menu toolMenu = new Menu("Tools");
   Menu helpMenu = new Menu("Help");
-  //Menu fillMenu = new Menu("Fill Track With");
 
   MenuItem itemf1 = new MenuItem("Load Set", new MenuShortcut(KeyEvent.VK_O));
   MenuItem itemf2 = new MenuItem("Save Set", new MenuShortcut(KeyEvent.VK_S));
@@ -1324,26 +1332,30 @@ void setupMenus(Frame f) {
   MenuItem itemf3 = new MenuItem("Load One Track");
   MenuItem itemf4 = new MenuItem("Save One Track");
   MenuItem itemf4a= new MenuItem("-");
-  MenuItem itemf5 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_Q));
+
+  itemConnect     = new MenuItem("Connect to Arduino");
+
+  MenuItem itemf5a= new MenuItem("-");
+  MenuItem itemf6 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_Q));
 
   MenuItem iteme1= new MenuItem("Cut",  new MenuShortcut(KeyEvent.VK_X));
   MenuItem iteme2= new MenuItem("Copy", new MenuShortcut(KeyEvent.VK_C));
   MenuItem iteme3= new MenuItem("Paste",new MenuShortcut(KeyEvent.VK_V));
   MenuItem iteme4= new MenuItem("Delete",new MenuShortcut(KeyEvent.VK_D));
 
-  /*
-  MenuItem[] fills = new MenuItem[romScripts.length];
-  for( int i=0; i< romScripts.length; i++) {
-    fills[i] = new MenuItem( romScripts[i].getName().replace(".txt","") );
-    fills[i].addActionListener(menual);
-    fillMenu.add(fills[i]);
-  }
-  */
   MenuItem itemt1 = new MenuItem("Display LinkM/BlinkM Versions");
   //MenuItem itemt2 = new MenuItem("Upgrade LinkM Firmware");
-  MenuItem itemt3 = new MenuItem("Reset LinkM");
   MenuItem itemt4 = new MenuItem("BlinkM Factory Reset");
+
+  Menu startupMenu = new Menu("Set BlinkM Startup Script to...");
+  for( int i=0; i< startupScriptNames.length; i++) {
+    MenuItem mi = new MenuItem(startupScriptNames[i]);
+    mi.addActionListener(menual);
+    startupMenu.add( mi );
+  }
+
   MenuItem itemt5 = new MenuItem("Scan I2C Bus");
+  MenuItem itemt3 = new MenuItem("Reset LinkM");
 
   MenuItem itemh1 = new MenuItem("Help");
   MenuItem itemh2 = new MenuItem("Quick Start Guide");
@@ -1353,7 +1365,8 @@ void setupMenus(Frame f) {
   itemf2.addActionListener(menual);
   itemf3.addActionListener(menual);
   itemf4.addActionListener(menual);
-  itemf5.addActionListener(menual);
+  itemConnect.addActionListener(menual);
+  itemf6.addActionListener(menual);
   iteme1.addActionListener(menual);
   iteme2.addActionListener(menual);
   iteme3.addActionListener(menual);
@@ -1372,19 +1385,22 @@ void setupMenus(Frame f) {
   fileMenu.add(itemf3);
   fileMenu.add(itemf4);
   fileMenu.add(itemf4a);
-  fileMenu.add(itemf5);
+  fileMenu.add(itemConnect);
+  fileMenu.add(itemf5a);
+  fileMenu.add(itemf6);
   
   editMenu.add(iteme1);
   editMenu.add(iteme2);
   editMenu.add(iteme3);
   editMenu.add(iteme4);
-  //editMenu.add(fillMenu);
+
 
   toolMenu.add(itemt1);
   //toolMenu.add(itemt2);
   toolMenu.add(itemt3);
   toolMenu.add(itemt4);
   toolMenu.add(itemt5);
+  toolMenu.add(startupMenu);
 
   helpMenu.add(itemh1);
   helpMenu.add(itemh2);
@@ -1421,6 +1437,10 @@ public byte getFadeSpeed(int loopduration) {
       return timings[i].fadeSpeed;
   }
   return timings[0].fadeSpeed; // failsafe
+}
+
+public void setDurationByIndex( int idx) {
+  durationCurrent = timings[idx].duration;
 }
 
 
@@ -1505,7 +1525,93 @@ void bindKeys() {
 
 
 
+/**
+ *
+ */
+/*
+public boolean checkForLinkM() {  
+  l.debug("checkForLinkM");
+  if( connected ) {
+    try { 
+      linkm.getLinkMVersion();
+    } catch(IOException ioe) {
+      connected = false;
+      linkm.close();
+    }
+    return true;
+  }
+  
+  try { 
+    linkm.open();
+  } catch( IOException ioe ) {
+    return false;
+  }
+  linkm.close();
+  
+  return true;
+}
+*/
 
+/**
+ * FIXME: this is unused.  superceded by checkForLinkM()/connect() interaction
+ * Verifies connetion to LinkM and at least one BlinkM
+ * Also clears out any I2C bus errors that may be present
+ */
+/*
+public boolean verifyConnection() {
+  try { 
+    // FIXME: what to do here
+    // 0. do i2c bus reset ?
+    // 1. verify linkm connection          (need new cmd?)
+    // 2. verify connection to 1st blinkm  (get version?)
+    // 3. verify all blinkms?
+    linkm.getVersion(0);
+  } catch( IOException ioe ) {
+  }
+  return true;
+}
+*/
+
+
+/* from processing/arduino
+
+static public File getContentFile(String name) {
+  String path = System.getProperty("user.dir");
+  
+  // Get a path to somewhere inside the .app folder
+  if (isMacOS()) {
+    //      <key>javaroot</key>
+    //      <string>$JAVAROOT</string>
+    String javaroot = System.getProperty("javaroot");
+    if (javaroot != null) {
+      path = javaroot;
+    }
+  }
+  File working = new File(path);
+  return new File(working, name);
+}
+
+**
+ * returns true if Processing is running on a Mac OS X machine.
+ *
+static public boolean isMacOS() {
+  return System.getProperty("os.name").indexOf("Mac") != -1;
+}
+
+**
+ * returns true if running on windows.
+ *
+static public boolean isWindows() {
+  return System.getProperty("os.name").indexOf("Windows") != -1;
+}
+
+**
+ * true if running on linux.
+ *
+static public boolean isLinux() {
+  return System.getProperty("os.name").indexOf("Linux") != -1;
+}
+*/
 
 /*
 --  OLD doTrackDialog --
