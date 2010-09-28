@@ -44,6 +44,7 @@ public class ButtonPanel extends JPanel {
                                       "Upload to BlinkMs", cBgDarkGray);
     uploadBtn.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent ae) {
+          if( !connected ) return;
           new BurnDialog(uploadBtn);
         }
       });
@@ -145,9 +146,9 @@ public class ButtonPanel extends JPanel {
     durChoice.addItemListener(new ItemListener() {
         public void itemStateChanged(ItemEvent ie) {
           if( ie.getStateChange() == ItemEvent.SELECTED ) {
-            int indx = durChoice.getSelectedIndex();  // FIXME
-            durationCurrent = timings[indx].duration;
-            prepareForPreview(durationCurrent);
+            int idx = durChoice.getSelectedIndex();  // FIXME
+            setDurationByIndex(idx); //durationCurrent = timings[indx].duration;
+            prepareForPreview();//durationCurrent);
           }
         }        
       }
@@ -197,7 +198,7 @@ public class ButtonPanel extends JPanel {
           // if we are going from not playing to playing, start timeline
           if( !multitrack.playing ) {
             // stop playing uploaded script, prep for preview playing
-            prepareForPreview(durationCurrent);  // global func
+            prepareForPreview();
             multitrack.play();
           }
           else {
@@ -235,6 +236,17 @@ public class ButtonPanel extends JPanel {
     playBtn.setIcon(iconPlay);
     playBtn.setRolloverIcon(iconPlayHov); 
     //isPlaying = false;
+  }
+
+  public void enableButtons(boolean b) {
+    if( b ) {
+      uploadBtn.setEnabled(true);
+      downloadBtn.setEnabled(true);
+    }
+    else {
+      uploadBtn.setEnabled(false);
+      downloadBtn.setEnabled(false);
+    }
   }
 
 }

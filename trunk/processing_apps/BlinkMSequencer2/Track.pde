@@ -70,7 +70,7 @@ public class Track {
     dest_end = dest_start + range;
     if( dest_end > numSlices ) dest_end = numSlices-1;
 
-    println("copy "+start+"-"+end+" to "+dest_start+"-"+dest_end);
+    //println("copy "+start+"-"+end+" to "+dest_start+"-"+dest_end);
         
     for( int i=dest_start,j=start; i<dest_end+1; i++,j++ ) {
       slices[i]  = track.slices[j];
