@@ -379,6 +379,18 @@ public class MultiTrackView
       deselectTrack( i );
     }
   }
+  public void selectAllinTrack() {
+      selectAll( currTrack );
+  }
+  /**
+   *
+   */
+  public void selectAll( int trackindex ) {
+    println("selectAll: "+trackindex);
+    for( int i=0; i<numSlices; i++) {
+      tracks[ trackindex ].selects[i] = true;
+    }
+  }
   /**
    * Sets all timeslices for a particular track to be not selected
    */

@@ -46,7 +46,7 @@ import java.util.jar.*;
 
 import thingm.linkm.*;
 
-final static String VERSION = "002";
+final static String VERSION = "003";
 final static String versionInfo="version "+VERSION+" \u00a9 ThingM Corporation";
 
 final static int debugLevel = 1;
@@ -235,6 +235,7 @@ void draw() {
 
   if( frameCount > 10 && ((millis-lastConnectCheck) > 1000) ) {
     if( arduinoMode ) {
+      heartbeat();
     } 
     else {
       if( verifyLinkM() ) {
@@ -276,7 +277,7 @@ synchronized public void handleDisplay() {
 public void setStatus()
 {
   if( arduinoMode ) { 
-    setStatus("Arduino mode");
+    setStatus("Connected to Arduino");
     if( connected ) {
       buttonPanel.enableButtons(true);
       itemConnect.setLabel("Disconnect from Arduino");
@@ -296,7 +297,7 @@ public void setStatus()
       buttonPanel.enableButtons(false);
     }
   } else {
-    setStatus( "No LinkM, Disconnected mode" );
+    setStatus( "Disconnected. Plug in LinkM or choose File->Connect for Arduino" );
     buttonPanel.enableButtons(false);
   }
 }
@@ -372,6 +373,9 @@ public void displayVersions() {
     msg += "-No BlinkM-\n";
   }
 
+  if( arduinoMode ) {
+    msg = "Display Versions only supported with LinkM.";
+  }
   JOptionPane.showMessageDialog(mf, msg, "LinkM / BlinkM Versions",
                                 JOptionPane.INFORMATION_MESSAGE);
 }
@@ -436,8 +440,14 @@ public void doI2CScan() {
   int end_addr = 113;
   String msg = "no devices found";
   HashSet addrset = new HashSet();
+  byte[] addrs  = null;
   try {
-    byte[] addrs = linkm.i2cScan( start_addr, end_addr);
+    if( arduinoMode ) {
+      addrs = blinkmComm.i2cScan( start_addr, end_addr );
+    } else { 
+      addrs = linkm.i2cScan( start_addr, end_addr);
+    }
+
     int cnt = addrs.length;
     if( cnt>0 ) {
       msg = "Found "+cnt+" devices:\n";
@@ -522,7 +532,13 @@ public void doFactoryReset() {
   String msg = "No BlinkM selected!";
   if( addr != -1 ) {
     try { 
-      linkm.doFactoryReset(addr);
+      if( arduinoMode ) {
+        blinkmComm.doFactoryReset(addr);
+        blinkmComm.playScript(addr);
+      } else {
+        linkm.doFactoryReset(addr);
+        linkm.playScript(addr);
+      }
       msg = "BlinkM reset to factory defaults";
     } catch(IOException ioe ) {
       msg = "Error talking to BlinkM";
@@ -530,6 +546,58 @@ public void doFactoryReset() {
   }
   JOptionPane.showMessageDialog(mf, msg, "LinkM Factory Reset",
                                 JOptionPane.INFORMATION_MESSAGE);
+  try {
+    if( arduinoMode ) {
+      blinkmComm.off(addr);
+    } else { 
+      linkm.off(addr);
+    }
+  } catch(IOException ioe) {}
+
+}
+
+/**
+ *
+ */
+public void setBootScript( int scriptnum ) {
+  int fadespeed = 8; // default in blinkm_nonvol.h
+  if( !connected ) return;
+
+  int addr = multitrack.getCurrTrack().blinkmaddr;
+  String msg = "No BlinkM selected!";
+  if( addr != -1 ) {
+    try { 
+      if( arduinoMode ) { 
+        blinkmComm.setStartupParams( addr, 1, scriptnum, 0, fadespeed, 0);
+        blinkmComm.setFadeSpeed( addr, fadespeed);
+        blinkmComm.playScript( addr, scriptnum, 0,0 );
+      }
+      else { 
+        // set boot params   addr, mode,script_id,reps,fadespeed,timeadj
+        linkm.setStartupParams( addr, 1, scriptnum, 0, fadespeed, 0 );
+        linkm.setFadeSpeed( addr, fadespeed);
+        linkm.playScript( addr, scriptnum, 0,0 );
+      }
+
+      msg = "BlinkM at addr#"+addr+" set to light script #"+scriptnum;
+
+    } catch(IOException ioe ) {
+      msg = "Error talking to BlinkM";
+    }
+  } // good addr
+
+  JOptionPane.showMessageDialog(mf, msg, "BlinkM Script Set",
+                                JOptionPane.INFORMATION_MESSAGE);
+
+  try {
+    if( arduinoMode ) {
+      blinkmComm.off(addr);
+    } else { 
+      linkm.off(addr);
+    }
+  } catch(IOException ioe) {}
+
+  
 }
 
 static int verifyCount = 0;
@@ -792,10 +860,8 @@ public boolean doUpload(JProgressBar progressbar) {
       else { 
         // set script length     cmd   id         length         reps
         linkm.setScriptLengthRepeats( blinkmAddr, numSlices, reps);
-        
         // set boot params   addr, mode,id,reps,fadespeed,timeadj
         linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
-        
         // set playback fadespeed
         linkm.setFadeSpeed( blinkmAddr, fadespeed);
       }
@@ -851,6 +917,7 @@ public boolean doAddressChange() {
   }
   return true;
 }
+
 
 /**
  *
@@ -931,7 +998,8 @@ void loadTrackWithFile(int tracknum, File file) {
  */
 void loadAllTracks() {
   multitrack.deselectAllTracks();
-  int returnVal = fc.showOpenDialog(mf);  // this does most of the work
+  fc.setSelectedFile(lastFile);
+  int returnVal = fc.showOpenDialog(mf); 
   if (returnVal != JFileChooser.APPROVE_OPTION) {
     println("Open command cancelled by user.");
     return;
@@ -1016,6 +1084,13 @@ void saveAllTracks() {
     return;  // FIXME: need to deal with no .txt name no file saving
   }
   File file = fc.getSelectedFile();
+  // hack to make sure file always ends in .txt
+  String fnameabs = file.getAbsolutePath();
+  if( !(fnameabs.endsWith("txt") || fnameabs.endsWith("TXT")) ) {
+    fnameabs = fnameabs + ".txt";
+    file = new File( fnameabs );
+  }
+
   lastFile = file;
   if (file.getName().endsWith("txt") ||
       file.getName().endsWith("TXT")) {
@@ -1097,7 +1172,7 @@ void setupGUI() {
   //mf.setVisible(true);
   mf.setResizable(false);
 
-  fc = new JFileChooser( super.sketchPath ); 
+  fc = new JFileChooser( System.getProperty("user.home")  ); 
   fc.setFileFilter( new javax.swing.filechooser.FileFilter() {
       public boolean accept(File f) {
         if(f.isDirectory()) return true;
@@ -1199,15 +1274,15 @@ JPanel makeColorChooserPanel() {
  * Make the bottom panel, it contains version & copyright info and status line
  */
 JPanel makeBottomPanel() {
-  JLabel botLabel = new JLabel(versionInfo, JLabel.LEFT);
+  JLabel versionLabel = new JLabel(versionInfo, JLabel.LEFT);
   statusLabel = new JLabel("status");
-  heartbeatLabel = new JLabel(".");
-  botLabel.setHorizontalAlignment(JLabel.LEFT);
+  heartbeatLabel = new JLabel(" ");
+  versionLabel.setHorizontalAlignment(JLabel.LEFT);
   JPanel bp = new JPanel();
   bp.setBackground(cBgMidGray);
   bp.setLayout( new BoxLayout( bp, BoxLayout.X_AXIS) );
   bp.add( Box.createHorizontalStrut(10) );
-  bp.add( botLabel );
+  bp.add( versionLabel );
   bp.add( Box.createHorizontalGlue() );
   bp.add( heartbeatLabel );
   bp.add( Box.createHorizontalStrut(5) );
@@ -1277,6 +1352,8 @@ ActionListener menual = new ActionListener() {
         multitrack.paste();
       } else if( cmd.equals("Delete") ) {
         multitrack.delete();
+      } else if( cmd.equals("Select All in Track") ) {
+        multitrack.selectAllinTrack();
       } else if( cmd.equals("Display LinkM/BlinkM Versions") ) {
         displayVersions();
       } else if( cmd.equals("Upgrade LinkM Firmware") ) {
@@ -1291,7 +1368,13 @@ ActionListener menual = new ActionListener() {
         showHelp();
       } else if( cmd.equals("Quick Start Guide") ) {
         showHelp();
+      } else if( cmd.startsWith("Script ") ) { // predef script
+        int scriptnum = 0;
+        String snum = cmd.substring("Script ".length(),cmd.indexOf(':'));
+        scriptnum = Integer.parseInt(snum);
+        setBootScript( scriptnum );
       } else {
+
       }
       multitrack.repaint();
     } // actionPerformed
@@ -1329,11 +1412,14 @@ void setupMenus(Frame f) {
   MenuItem itemf1 = new MenuItem("Load Set", new MenuShortcut(KeyEvent.VK_O));
   MenuItem itemf2 = new MenuItem("Save Set", new MenuShortcut(KeyEvent.VK_S));
   MenuItem itemf2a= new MenuItem("-");
-  MenuItem itemf3 = new MenuItem("Load One Track");
-  MenuItem itemf4 = new MenuItem("Save One Track");
+  MenuItem itemf3 = new MenuItem("Load One Track",
+                                 new MenuShortcut(KeyEvent.VK_O, true));
+  MenuItem itemf4 = new MenuItem("Save One Track",
+                                 new MenuShortcut(KeyEvent.VK_S, true));
   MenuItem itemf4a= new MenuItem("-");
 
-  itemConnect     = new MenuItem("Connect to Arduino");
+  itemConnect     = new MenuItem("Connect to Arduino", 
+                                 new MenuShortcut(KeyEvent.VK_C,true));
 
   MenuItem itemf5a= new MenuItem("-");
   MenuItem itemf6 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_Q));
@@ -1342,20 +1428,21 @@ void setupMenus(Frame f) {
   MenuItem iteme2= new MenuItem("Copy", new MenuShortcut(KeyEvent.VK_C));
   MenuItem iteme3= new MenuItem("Paste",new MenuShortcut(KeyEvent.VK_V));
   MenuItem iteme4= new MenuItem("Delete",new MenuShortcut(KeyEvent.VK_D));
+  MenuItem iteme4a=new MenuItem("-");
+  MenuItem iteme5= new MenuItem("Select All in Track", new MenuShortcut(KeyEvent.VK_A));
 
-  MenuItem itemt1 = new MenuItem("Display LinkM/BlinkM Versions");
   //MenuItem itemt2 = new MenuItem("Upgrade LinkM Firmware");
-  MenuItem itemt4 = new MenuItem("BlinkM Factory Reset");
-
+  MenuItem itemt1 = new MenuItem("BlinkM Factory Reset");
   Menu startupMenu = new Menu("Set BlinkM Startup Script to...");
   for( int i=0; i< startupScriptNames.length; i++) {
     MenuItem mi = new MenuItem(startupScriptNames[i]);
     mi.addActionListener(menual);
     startupMenu.add( mi );
   }
+  MenuItem itemt3 = new MenuItem("Scan I2C Bus");
+  MenuItem itemt4 = new MenuItem("Display LinkM/BlinkM Versions");
 
-  MenuItem itemt5 = new MenuItem("Scan I2C Bus");
-  MenuItem itemt3 = new MenuItem("Reset LinkM");
+  MenuItem itemt5 = new MenuItem("Reset LinkM");
 
   MenuItem itemh1 = new MenuItem("Help");
   MenuItem itemh2 = new MenuItem("Quick Start Guide");
@@ -1371,6 +1458,7 @@ void setupMenus(Frame f) {
   iteme2.addActionListener(menual);
   iteme3.addActionListener(menual);
   iteme4.addActionListener(menual);
+  iteme5.addActionListener(menual);
   itemt1.addActionListener(menual);
   //itemt2.addActionListener(menual);
   itemt3.addActionListener(menual);
@@ -1393,14 +1481,16 @@ void setupMenus(Frame f) {
   editMenu.add(iteme2);
   editMenu.add(iteme3);
   editMenu.add(iteme4);
+  editMenu.add(iteme4a);
+  editMenu.add(iteme5);
 
 
   toolMenu.add(itemt1);
+  toolMenu.add(startupMenu);
   //toolMenu.add(itemt2);
   toolMenu.add(itemt3);
   toolMenu.add(itemt4);
   toolMenu.add(itemt5);
-  toolMenu.add(startupMenu);
 
   helpMenu.add(itemh1);
   helpMenu.add(itemh2);
