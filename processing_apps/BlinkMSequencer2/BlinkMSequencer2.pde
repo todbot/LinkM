@@ -277,8 +277,8 @@ synchronized public void handleDisplay() {
 public void setStatus()
 {
   if( arduinoMode ) { 
-    setStatus("Connected to Arduino");
     if( connected ) {
+      setStatus("Connected to Arduino");
       buttonPanel.enableButtons(true);
       itemConnect.setLabel("Disconnect from Arduino");
     } 
@@ -438,7 +438,7 @@ public void doI2CScan() {
   l.debug("doI2CScan");
   int start_addr = 1;
   int end_addr = 113;
-  String msg = "no devices found";
+  //String msg = "no devices found";
   HashSet addrset = new HashSet();
   byte[] addrs  = null;
   try {
@@ -450,13 +450,13 @@ public void doI2CScan() {
 
     int cnt = addrs.length;
     if( cnt>0 ) {
-      msg = "Found "+cnt+" devices:\n";
+      //msg = "Found "+cnt+" devices:\n";
       for( int i=0; i<cnt; i++) {
         byte a = addrs[i];
         addrset.add( new Integer(a) );
-        msg += "addr: "+a;
+        //msg += "addr: "+a;
       }
-      msg += "\nDone.";
+      //msg += "\nDone.";
     }
   } catch( IOException ioe) {
     JOptionPane.showMessageDialog(mf,
@@ -520,7 +520,7 @@ public void doI2CScan() {
   dialog.pack();
   dialog.setVisible(true);
   
-}
+} // doI2Cscan
 
 /**
  *
