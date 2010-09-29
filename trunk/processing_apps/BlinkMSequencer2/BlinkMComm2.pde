@@ -454,12 +454,8 @@ public class BlinkMComm2 {
             delay(1500); // FIXME: wait for diecimila
 
             stopScript( 0 );
-            //delay(40);
-
             setRGB( 0, Color.BLACK );
-            //delay(40);
 
-            prepareForPreview();
           } 
           catch( Exception ex ) {
             ex.printStackTrace(); //l.debug(ex);
