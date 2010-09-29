@@ -1,5 +1,0 @@
-//
-// BlinkM ROM script #5 -- "blue blink"
-// 
-{ 20, {'c', 0x00,0x00,0xff}},  // blue
-{ 20, {'c', 0x00,0x00,0x00}},  // black
