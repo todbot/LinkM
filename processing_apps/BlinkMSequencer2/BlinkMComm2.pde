@@ -1,6 +1,10 @@
 /*
+ * BlinkMComm2.pde -- Talk to BlinkMs via Arduino+BlinkMCommunicator sketch
+ *                    Very similar api to LinkM.java
  *
+ * Note: uses global 'linkm' object for script parsing (bad tod)
  *
+ * 2010 Tod E. Kurt, ThingM, http://thingm.com/
  *
  */
 
@@ -114,37 +118,116 @@ public class BlinkMComm2 {
     }
     port.write(cmdfull);
 
+    if( resplen == 0 ) return null;  // no response so get out
+
     long start_time = millis();
     while( port.available() < resplen ) { // wait
       if( (millis() - start_time) > 1000 ) { 
         return null; // FIXME: better error handling
       }
     }
-
+    
     byte[] respbuf = new byte[resplen];
     port.readBytes(respbuf);
-
+    
     return respbuf;
   }
 
-  public void stopScript( int blinkmAddr ) {
+  /**
+   *
+   */
+  public byte[] i2cScan( int startAddr, int endAddr ) {
+    byte[] cmd = {(byte)startAddr, (byte)endAddr}; 
+
+    sendCommand( (byte)128, cmd); // 128 == i2cscan cmd
+    delay(100);
+
+    byte[] buh = new byte[endAddr-startAddr];
+    int i=0;
+
+    long start_time = millis();
+    while( port.available() > 0 ) { // wait
+      if( (millis() - start_time) > 1000 ) { 
+        return buh; // FIXME: better error handling
+      }
+      byte addr   = (byte)port.read();
+      byte result = (byte)port.read();
+      if( result==0 ) {
+        buh[i++] = addr;
+      }
+    }
+    byte[] duh = new byte[i];
+    System.arraycopy( buh, 0, duh, 0, i);
+     
+    return duh;
+  }
+
+  /**
+   *
+   */
+  public void stopScript( int addr ) {
     byte[] cmd = {'o'};
-    sendCommand( (byte)blinkmAddr, cmd );
+    sendCommand( (byte)addr, cmd );
   }
 
-  public void setFadeSpeed( int blinkmAddr, int fadespeed ) {
+  public void setFadeSpeed( int addr, int fadespeed ) {
     byte[] cmd = {'f', (byte)fadespeed};
-    sendCommand( (byte)blinkmAddr, cmd );
+    sendCommand( (byte)addr, cmd );
   }
 
-  public void setRGB( int blinkmAddr, Color c ) {
+  /**
+   * Set the blinkm at 'addr' to the specified RGB color 
+   *
+   * @param addr the i2c address of blinkm
+   * @param r red component, 8-bit
+   * @param g green component, 8-bit
+   * @param b blue component, 8-bit
+   */
+  public void setRGB(int addr, int r, int g, int b) {
+    byte[] cmd = { 'n', (byte)r, (byte)g, (byte)b };
+    sendCommand( (byte)addr, cmd );
+  }
+
+  public void setRGB( int addr, Color c ) {
     byte[] cmd = {'n', (byte)c.getRed(),(byte)c.getGreen(),(byte)c.getBlue() };
-    sendCommand( (byte)blinkmAddr, cmd );
+    sendCommand( (byte)addr, cmd );
   }
 
-  public void fadeToRGB( int blinkmAddr, Color c ) {
+  public void fadeToRGB( int addr, Color c ) {
     byte[] cmd = {'c', (byte)c.getRed(),(byte)c.getGreen(),(byte)c.getBlue() };
-    sendCommand( (byte)blinkmAddr, cmd );
+    sendCommand( (byte)addr, cmd );
+  }
+
+  /**
+   * Turn BlinkM at address addr off.
+   * @param addr the i2c address of blinkm
+   */
+  public void off(int addr) {
+    stopScript(addr);
+    setRGB(addr, 0,0,0 );
+  }
+
+  /**
+   * Get the version of a BlinkM at a specific address
+   * @param addr the i2c address
+   * @returns 2 bytes of version info
+   */
+  public byte[] getVersion(int addr) {
+    byte[] cmd = { 'Z' };
+    byte[] respbuf = sendCommand( (byte)addr, cmd, 2);
+    return respbuf;
+  }
+
+  /**
+   * Sets the I2C address of a BlinkM
+   * @param addr old address, can be 0 to change all connected BlinkMs
+   * @param newaddr new address
+   //* @throws IOException on transmit or receive error
+   */
+  public void setAddress(int addr, int newaddr) {
+    byte[] cmd = { (byte)'A', (byte)newaddr, 
+                   (byte)0xD0, (byte)0x0D, (byte)newaddr };
+    sendCommand( (byte)addr, cmd );
   }
 
   /**
@@ -189,9 +272,38 @@ public class BlinkMComm2 {
   }
 
   /**
+   * Write an entire light script contained in a string
+   * @param addr the i2c address of blinkm
+   */
+  public void writeScript( int addr, String scriptstr ) {
+    BlinkMScript script = linkm.parseScript( scriptstr );
+    writeScript( addr, script );
+  }
+
+  /**
+   * Write an entire BlinkM light script as a BlinkMScript
+   * to blinkm at address 'addr'.
+   * NOTE: for a 48-line script, this takes about 858 msecs because of 
+   *       enforced 10 msec delay and HID overhead from small report size
+   * FIXME: speed this up by implementing second report size 
+   * @param addr the i2c address of blinkm
+   * @param script BlinkMScript object of script lines
+   */
+  public void writeScript( int addr,  BlinkMScript script) {
+    int len = script.length();
+    
+    for( int i=0; i< len; i++ ) {
+      writeScriptLine( addr, i, script.get(i) );
+    }
+    
+    setScriptLengthRepeats( addr, len, 0);    
+  }
+
+
+  /**
    * Set boot params   cmd,mode,id,reps,fadespeed,timeadj
    * @param addr the i2c address of blinkm
-   * @throws IOException on transmit or receive error
+   //* @throws IOException on transmit or receive error
    */
   public void setStartupParams( int addr, int mode, int script_id, int reps, 
                                 int fadespeed, int timeadj ) {
@@ -204,9 +316,9 @@ public class BlinkMComm2 {
   /**
    * Default values for startup params
    * @param addr the i2c address of blinkm
-   * @throws IOException on transmit or receive error
+   //* @throws IOException on transmit or receive error
    */
-  public void setStartupParamsDefault(int addr) throws IOException {
+  public void setStartupParamsDefault(int addr) {
     setStartupParams( addr, 1, 0, 0, 8, 0 );
   }
 
@@ -214,10 +326,8 @@ public class BlinkMComm2 {
    * Set light script default length and repeats.
    * reps == 0 means infinite repeats
    * @param addr the i2c address of blinkm
-   * @throws IOException on transmit or receive error
    */
-  public void setScriptLengthRepeats( int addr, int len, int reps)
-    throws IOException {
+  public void setScriptLengthRepeats( int addr, int len, int reps) {
     byte[] cmd = { 'L', 0, (byte)len, (byte)reps };
     sendCommand( (byte)addr, cmd );
     delay( writePauseMillis );  // enforce wait for EEPROM write
@@ -270,6 +380,34 @@ public class BlinkMComm2 {
     return script;
   }
 
+
+  /**
+   * Set a BlinkM back to factory settings
+   * Sets the i2c address to 0x09
+   * Writes a new light script and sets the startup paramters
+   * @param addr the i2c address of blinkm
+   * @throws IOException on transmit or receive error
+   */
+  public void doFactoryReset( int addr ) throws IOException {
+    setAddress( addr, 0x09 );
+    addr = 0x09;
+
+    setStartupParamsDefault(addr);
+
+    BlinkMScript script = new BlinkMScript();
+    script.add( new BlinkMScriptLine(  1, 'f',   10,   0,   0) );
+    script.add( new BlinkMScriptLine(100, 'c', 0xff,0xff,0xff) );
+    script.add( new BlinkMScriptLine( 50, 'c', 0xff,0x00,0x00) );
+    script.add( new BlinkMScriptLine( 50, 'c', 0x00,0xff,0x00) );
+    script.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0xff) );
+    script.add( new BlinkMScriptLine( 50, 'c', 0x00,0x00,0x00) );
+    for( int i=0; i< 49-6; i++ ) {  // FIXME:  make this length correct
+      script.add( new BlinkMScriptLine( 0, 'c', 0,0,0 ) );
+    }
+
+    writeScript( addr, script);
+
+  }
 
   // ------------------------------------------------------------------------
 
