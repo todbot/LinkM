@@ -689,24 +689,15 @@ public class MultiTrackView
         // FIXME this is somewhat unreadable
         if( (e.getModifiers() & InputEvent.CTRL_MASK) !=0) {
           int sliceClicked = sliceClicked(mouseClickedPt.x);
-          if( sliceClicked != -1 ) {
-            for( int i=0; i<numSlices; i++ ) { 
-              if( tracks[currTrack].selects[i] ) {
-                int d = sliceClicked - i;
-                if( d==0 ) return;
-                Color sc = tracks[currTrack].slices[i];
-                Color ec  = tracks[currTrack].slices[sliceClicked];
-                int dr = ec.getRed()   - sc.getRed();
-                int dg = ec.getGreen() - sc.getGreen();
-                int db = ec.getBlue()  - sc.getBlue();
-                for( int k=i; k<=sliceClicked; k++ ) {
-                  int r = sc.getRed()   + (dr*(k-i)/d);
-                  int g = sc.getGreen() + (dg*(k-i)/d);
-                  int b = sc.getBlue()  + (db*(k-i)/d);
-                  tracks[currTrack].slices[k] = new Color(r,g,b);
-                }
-              }
+          int firstSlice = -1;
+          for( int i=0; i<numSlices; i++ ) { 
+            if( tracks[currTrack].selects[i] ) {
+              firstSlice = i;
+              break;
             }
+          }
+          if( firstSlice != -1 && sliceClicked != -1 ) {
+            makeGradient( currTrack, firstSlice, sliceClicked );
           }
           return;
         }
@@ -720,10 +711,49 @@ public class MultiTrackView
         }
 
 
-      }
-    }
+      } // if(intrack)
+
+    } // for all tracks
     
     //repaint();
+  }
+
+  /**
+   * make a gradient on the current track, 
+   * based on the colors of the start & end of the selection
+   */
+  public void makeGradient() {
+    int start = -1;
+    int end = -1;
+    for( int i=0; i<numSlices; i++ ) {
+      if( tracks[currTrack].selects[i] ) { 
+        if( start == -1 ) {
+          start = i;
+        } else {
+          end = i;
+        }
+      }
+    }
+    makeGradient( currTrack, start, end );
+  }
+
+  /*
+   *
+   */
+  public void makeGradient( int tracknum, int sliceStart, int sliceEnd ) {
+    int d = sliceEnd - sliceStart;
+    if( d==0 ) return;
+    Color sc = tracks[tracknum].slices[sliceStart];
+    Color ec  = tracks[tracknum].slices[sliceEnd];
+    int dr = ec.getRed()   - sc.getRed();
+    int dg = ec.getGreen() - sc.getGreen();
+    int db = ec.getBlue()  - sc.getBlue();
+    for( int i=sliceStart; i<=sliceEnd; i++ ) {
+      int r = sc.getRed()   + (dr*(i-sliceStart)/d);
+      int g = sc.getGreen() + (dg*(i-sliceStart)/d);
+      int b = sc.getBlue()  + (db*(i-sliceStart)/d);
+      tracks[tracknum].slices[i] = new Color(r,g,b);
+    }
   }
 
   // returns non-zero index of slice clicked
