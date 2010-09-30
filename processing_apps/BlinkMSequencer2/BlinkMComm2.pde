@@ -472,7 +472,7 @@ public class BlinkMComm2 {
     chooserPanel.add(portChoices);
     chooserPanel.add(connectButton);
 
-    JLabel msgtop = new JLabel("Please select a port");
+    JLabel msgtop = new JLabel("Please select serial port of Arduino with BlinkMCommunicator");
     panel.add( msgtop, BorderLayout.NORTH );
     panel.add( chooserPanel, BorderLayout.CENTER );
 

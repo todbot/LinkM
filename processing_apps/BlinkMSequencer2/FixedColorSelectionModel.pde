@@ -35,8 +35,8 @@ public class FixedColorSelectionModel implements ColorSelectionModel {
     /**
      * @param color the new <code>Color</code>
      */
-    public FixedColorSelectionModel(Color color) {
-        selectedColor = color;
+    public FixedColorSelectionModel(Color c) {
+        selectedColor = c;
     }
 
     /**
@@ -60,9 +60,9 @@ public class FixedColorSelectionModel implements ColorSelectionModel {
      *
      * @param color the new <code>Color</code>
      */
-    public void setSelectedColor(Color color) {
-      if (color != null ) {// && !selectedColor.equals(color)) {
-            selectedColor = color;
+    public void setSelectedColor(Color c) {
+      if (c != null ) {// && !selectedColor.equals(color)) {
+            selectedColor = c;
             fireStateChanged();
         }
     }

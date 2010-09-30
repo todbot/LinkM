@@ -280,13 +280,10 @@ public void setStatus()
     if( connected ) {
       setStatus("Connected to Arduino");
       buttonPanel.enableButtons(true);
-      itemConnect.setLabel("Disconnect from Arduino");
     } 
     return;
   }
   
-  itemConnect.setLabel("Connect to Arduino");
-
   if( connected ) {
     if( blinkmConnected ) {
       setStatus("LinkM connected, BlinkM found");
@@ -307,30 +304,38 @@ public void setStatus()
  */
 public void showHelp() {
     String helpstr = "<html>"+
-      "<h2> BlinkMSequencer2 Help </h2>"+
+      "<table border=0 cellpadding=10 cellspacing=10><tr><td>"+
+      "<h2> BlinkMSequencer Help </h2>"+
+      "<h3> Tools Menu </h3>"+
       "<ul>"+
-      "<li> Tools Menu"+
-      "<ul>"+
-      "<li>Display Versions -- Show LinkM version and BlinKM version for the selected channel"+
-      "<li>Reset LinkM -- Perform complete reset of LinkM"+
-      "<li>BlinkM Factory Reset -- Reset BlinkM(s) on selected channels to factory condition"+
-      "<li>I2C Scan -- Scan I2C bus on all I2C addresses"+
+      "<li>BlinkM Factory Reset <br/> "+
+      "-- Reset BlinkM(s) on selected channels to factory condition"+
+      "<li>Set BlinkM Startup Script to... <br/>"+
+      "-- Set BlinkM to play a built-in ROM script instead of the programmable one"+
+      "<li>Scan I2C Bus <br/> "+
+      "-- Scan I2C bus on all I2C addresses, looking for devices"+
+      "<li>Display Versions <br/>"+
+      "-- Show LinkM version and BlinKM version for the selected channel"+
+      "<li>Reset LinkM <br/>"+
+      "-- Perform complete reset of LinkM"+
       "</ul>"+
       "</ul>"+
+      "</td></tr></table>"+
       "</html>\n";
 
-    JDialog dialog = new JDialog(mf, "BlinkMSequencer2 Help", false);
+    JDialog dialog = new JDialog(mf, "BlinkMSequencer Help", false);
     
     JPanel panel = new JPanel(new BorderLayout());
-    panel.setBackground(cBgDarkGray); //sigh, gotta do this on every panel
-    panel.setBorder( BorderFactory.createEmptyBorder(10,10,10,10) );
+    panel.setBackground(cBgLightGray); //sigh, gotta do this on every panel
+    panel.setBorder( BorderFactory.createMatteBorder(10,10,10,10, cBgDarkGray));
+    JLabel help = new JLabel(helpstr);
     panel.add( new JLabel(helpstr) );
 
     dialog.getContentPane().add(panel);
 
-    dialog.setPreferredSize( new Dimension(500,400));
+    dialog.setPreferredSize( new Dimension(600,400));
     dialog.setResizable(false);
-    dialog.setLocationRelativeTo(null); // center it on the BlinkMSequencer
+    dialog.setLocationRelativeTo(mf); // center it on the BlinkMSequencer
     dialog.pack();
     dialog.setVisible(true);
 
@@ -669,11 +674,11 @@ public boolean connect(boolean openlinkm) {
       blinkmConnected = true;
     }
     else {
-      println("no blinkm found!"); 
+      l.debug("no blinkm found!"); 
       blinkmConnected = false;
     }
   } catch(IOException ioe) {
-    println("connect: no linkm?  "+ioe);
+    l.debug("connect: no linkm?  "+ioe);
     /*
     JOptionPane.showMessageDialog(mf,
                                   "No LinkM found.\n"+
@@ -773,7 +778,7 @@ public void prepareForPreview(int loopduration) {
     }
   } catch(IOException ioe ) {
     // FIXME: hmm, what to do here
-    println("prepareForPreview: "+ioe);
+    l.debug("prepareForPreview: "+ioe);
     connected = false;
   }
 }
@@ -809,7 +814,7 @@ public boolean doDownload() {
       }
       multitrack.repaint();
     } catch( IOException ioe ) {
-      println("doDownload: on track #"+j+",addr:"+blinkmAddr+"  "+ioe);
+      l.error("doDownload: on track #"+j+",addr:"+blinkmAddr+"  "+ioe);
       connected = false;
     }
   }
@@ -866,7 +871,7 @@ public boolean doUpload(JProgressBar progressbar) {
         linkm.setFadeSpeed( blinkmAddr, fadespeed);
       }
     } catch( IOException ioe ) { 
-      println("upload error for blinkm addr "+blinkmAddr+ " : "+ioe);
+      l.error("upload error for blinkm addr "+blinkmAddr+ " : "+ioe);
     }
     
   } // for numTracks
@@ -880,42 +885,12 @@ public boolean doUpload(JProgressBar progressbar) {
     }
     rc = true;
   } catch( IOException ioe ) { 
-    println("upload error: "+ioe);
+    l.error("upload error: "+ioe);
     rc = false;
     connected = false;
   }
 
   return rc;
-}
-
-/**
- * FIXME: this is deprecated!
- * Do address change dialog -- this might be deprecated
- */
-public boolean doAddressChange() {
-  int newaddr = multitrack.getCurrTrack().blinkmaddr;
-  Object[] options = {"Do nothing",
-                      "Readdress BlinkM to addres 10"  };
-  String question = 
-    "Would you like to readdress your BlinkM"+
-    "from address 9 to address "+ newaddr +"?";
-  int n = JOptionPane.showOptionDialog(mf, question, 
-                                       "BlinkM Readdressing",
-                                       JOptionPane.YES_NO_OPTION,
-                                       JOptionPane.QUESTION_MESSAGE,
-                                       null,
-                                       options, options[1] );
-  if( n == 1 ) { 
-    try { 
-      linkm.setAddress( 0x09, newaddr );  // FIXME:
-    } catch( IOException ioe ) {
-      JOptionPane.showMessageDialog(mf,
-                                    "Could not set BlinkM addres.\n"+ioe,
-                                    "BlinkM Readdress failure",
-                                    JOptionPane.WARNING_MESSAGE);
-    }
-  }
-  return true;
 }
 
 
@@ -956,7 +931,6 @@ void loadTrack(File file) {
 void loadTrack(int tracknum) {
   int returnVal = fc.showOpenDialog(mf);  // this does most of the work
   if (returnVal != JFileChooser.APPROVE_OPTION) {
-    println("Open command cancelled by user.");
     return;
   }
   File file = fc.getSelectedFile();
@@ -973,7 +947,7 @@ void loadTrackWithFile(int tracknum, File file) {
     String[] lines = LinkM.loadFile( file );
     BlinkMScript script = LinkM.parseScript( lines );
     if( script == null ) {
-      System.err.println("loadTrack: bad format in file");
+      l.error("loadTrack: bad format in file");
       return;
     }
     script = script.trimComments(); 
@@ -1001,7 +975,6 @@ void loadAllTracks() {
   fc.setSelectedFile(lastFile);
   int returnVal = fc.showOpenDialog(mf); 
   if (returnVal != JFileChooser.APPROVE_OPTION) {
-    println("Open command cancelled by user.");
     return;
   }
   File file = fc.getSelectedFile();
@@ -1052,7 +1025,6 @@ void saveTrack(int tracknum) {
   if( lastFile!=null ) fc.setSelectedFile(lastFile);
   int returnVal = fc.showSaveDialog(mf);  // this does most of the work
   if( returnVal != JFileChooser.APPROVE_OPTION) {
-    l.debug("Save command cacelled by user.");
     return;  // FIXME: need to deal with no .txt name no file saving
   }
   File file = fc.getSelectedFile();
@@ -1080,7 +1052,6 @@ void saveAllTracks() {
   if( lastFile!=null ) fc.setSelectedFile(lastFile);
   int returnVal = fc.showSaveDialog(mf);  // this does most of the work
   if( returnVal != JFileChooser.APPROVE_OPTION) {
-    println("Save command cacelled by user.");
     return;  // FIXME: need to deal with no .txt name no file saving
   }
   File file = fc.getSelectedFile();
@@ -1157,6 +1128,7 @@ void setupGUI() {
   mainpane.setLayout(layout);
 
   JPanel chtop     = makeChannelsTopPanel();
+
   multitrack       = new MultiTrackView( mainWidth,300 );
 
   // controlsPanel contains colorpicker and all buttons
@@ -1207,6 +1179,12 @@ JPanel makeChannelsTopPanel() {
   currChanLabelText.setFont(textBigfont);
   currChanLabel = new JLabel("-nuh-");
   currChanLabel.setFont(textBigfont);
+
+  p.addMouseListener(new MouseAdapter() {
+      public void mouseClicked(MouseEvent me) {
+        doTrackDialog(0);  // open up change track functionality
+      }
+    });
 
   p.add( Box.createRigidArea(new Dimension(25,0) ) );
   p.add(chLabel);
@@ -1267,6 +1245,11 @@ JPanel makeColorChooserPanel() {
   colorChooserPanel.add( Box.createVerticalStrut(5) );
   colorChooserPanel.add( colorChooser );
 
+  colorChooser.addMouseListener( new MouseAdapter() {
+      public void mouseClicked(MouseEvent e) {
+        println("CLICKY");
+      }
+    });
   return colorChooserPanel;
 }
 
@@ -1325,7 +1308,9 @@ void setupMainframe() {
 }
 
 
-
+/**
+ * The main menu and hotkey listener
+ */
 ActionListener menual = new ActionListener() { 
     void actionPerformed(ActionEvent e) {
       String cmd = e.getActionCommand();
@@ -1334,8 +1319,10 @@ ActionListener menual = new ActionListener() {
         System.exit(0);
       } else if( cmd.equals("Connect to Arduino") ) {
         blinkmComm.connectDialog();
+        itemConnect.setLabel("Disconnect from Arduino");        
       } else if( cmd.equals("Disconnect from Arduino") ) {
         blinkmComm.disconnectDialog();
+        itemConnect.setLabel("Connect to Arduino");
       } else if( cmd.equals("Load Set") ) {  // FIXME: such a hack
         loadAllTracks();
       } else if( cmd.equals("Save Set") ) { 
@@ -1367,7 +1354,7 @@ ActionListener menual = new ActionListener() {
       } else if( cmd.equals("Help") ) {
         showHelp();
       } else if( cmd.equals("Quick Start Guide") ) {
-        showHelp();
+        p.link("http://blog.thingm.com/2010/05/blinkm-hello-video-guides-example-code/", "_blank"); 
       } else if( cmd.startsWith("Script ") ) { // predef script
         int scriptnum = 0;
         String snum = cmd.substring("Script ".length(),cmd.indexOf(':'));
@@ -1380,23 +1367,7 @@ ActionListener menual = new ActionListener() {
     } // actionPerformed
   };
 
-/*
-public static class MenuInfo { 
-  public MenuItem item;
-  public String cmd;
-  public ActionListener actionl;
-  // how to do functors?
-  public MenuInfo(String c,MenuShortcut ms, ActionListener al) {
-    cmd = c;
-    item = new MenuItem(cmd, ms);
-    actionl = al;
-  }
-}
-public static MenuInfo[] editMenus = new MenuInfo[] {
-  new MenuInfo("Load Set", new MenuShortcut(KeyEvent.VK_O), menual ),
-  new MenuInfo("Save Set", new MenuShortcut(KeyEvent.VK_S), menual ),
-};
-*/
+
 /**
  * Create all the application menus
  */
@@ -1662,6 +1633,36 @@ public boolean verifyConnection() {
 }
 */
 
+/**
+ * FIXME: this is deprecated!
+ * Do address change dialog -- this might be deprecated
+ *
+public boolean doAddressChange() {
+  int newaddr = multitrack.getCurrTrack().blinkmaddr;
+  Object[] options = {"Do nothing",
+                      "Readdress BlinkM to addres 10"  };
+  String question = 
+    "Would you like to readdress your BlinkM"+
+    "from address 9 to address "+ newaddr +"?";
+  int n = JOptionPane.showOptionDialog(mf, question, 
+                                       "BlinkM Readdressing",
+                                       JOptionPane.YES_NO_OPTION,
+                                       JOptionPane.QUESTION_MESSAGE,
+                                       null,
+                                       options, options[1] );
+  if( n == 1 ) { 
+    try { 
+      linkm.setAddress( 0x09, newaddr );  // FIXME:
+    } catch( IOException ioe ) {
+      JOptionPane.showMessageDialog(mf,
+                                    "Could not set BlinkM addres.\n"+ioe,
+                                    "BlinkM Readdress failure",
+                                    JOptionPane.WARNING_MESSAGE);
+    }
+  }
+  return true;
+}
+*/
 
 /* from processing/arduino
 

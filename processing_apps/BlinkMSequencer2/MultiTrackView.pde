@@ -91,6 +91,8 @@ public class MultiTrackView
     tracks[ currTrack ].active = true;
     tracks[ currTrack ].selects[0] =  true;
 
+    setToolTipText(""); // register for tooltips, so getToolTipText(e) works
+
     reset();
   }
 
@@ -386,7 +388,6 @@ public class MultiTrackView
    *
    */
   public void selectAll( int trackindex ) {
-    println("selectAll: "+trackindex);
     for( int i=0; i<numSlices; i++) {
       tracks[ trackindex ].selects[i] = true;
     }
@@ -602,6 +603,28 @@ public class MultiTrackView
       return (mx2 < (slicex + slicew ) && mx1 >= slicex);
   }
 
+  /**
+   * give color vals on tooltip
+   */
+  public String getToolTipText(MouseEvent e) {
+    Point mp = e.getPoint();
+    for( int j=0; j<numTracks; j++) {
+      boolean intrack = 
+        (mp.y > j*trackHeight + scrubHeight) && 
+        (mp.y < (j+1)*trackHeight + scrubHeight) ;
+      if( intrack ) {
+        for( int i=0; i<numSlices; i++) {
+          if( isSliceHit( mp.x, i) ) {
+            Color c = tracks[j].slices[i];
+            if( c == cEmpty ) return "";
+            return ""+c.getRed()+","+c.getGreen()+","+c.getBlue();
+          }
+        }
+      }
+    }
+    return "";
+  }
+
 
   public void mouseClicked(MouseEvent e) {
     //l.debug("MultiTrack.mouseClicked");
@@ -627,12 +650,11 @@ public class MultiTrackView
 
     return p.contains(mp);  // check if mouseclick on playhead
   }
-  
-  
+    
   
   //
   public void mousePressed(MouseEvent e) {
-    //l.debug("MultiTrackView.mousePressed: "+e.getPoint());
+    //l.debug("MultiTrackView.mousePressed: "+e);
     Point mp = e.getPoint();
     mouseClickedPt = mp;
     requestFocus();
@@ -647,6 +669,7 @@ public class MultiTrackView
     
     // check for enable or address button hits
     for( int j=0; j<numTracks; j++) {
+
       boolean intrack = 
         (mp.y > j*trackHeight + scrubHeight) && 
         (mp.y < (j+1)*trackHeight + scrubHeight) ;
@@ -661,17 +684,58 @@ public class MultiTrackView
           deselectTrack( currTrack );
           changeTrack( j );
         }
+
+        // make a gradient, from first selected color to ctrl-clicked color
+        // FIXME this is somewhat unreadable
+        if( (e.getModifiers() & InputEvent.CTRL_MASK) !=0) {
+          int sliceClicked = sliceClicked(mouseClickedPt.x);
+          if( sliceClicked != -1 ) {
+            for( int i=0; i<numSlices; i++ ) { 
+              if( tracks[currTrack].selects[i] ) {
+                int d = sliceClicked - i;
+                if( d==0 ) return;
+                Color sc = tracks[currTrack].slices[i];
+                Color ec  = tracks[currTrack].slices[sliceClicked];
+                int dr = ec.getRed()   - sc.getRed();
+                int dg = ec.getGreen() - sc.getGreen();
+                int db = ec.getBlue()  - sc.getBlue();
+                for( int k=i; k<=sliceClicked; k++ ) {
+                  int r = sc.getRed()   + (dr*(k-i)/d);
+                  int g = sc.getGreen() + (dg*(k-i)/d);
+                  int b = sc.getBlue()  + (db*(k-i)/d);
+                  tracks[currTrack].slices[k] = new Color(r,g,b);
+                }
+              }
+            }
+          }
+          return;
+        }
+
+        // change selection
         for( int i=0; i<numSlices; i++) {
           if( isSliceHit( mouseClickedPt.x, i) ) 
             selectSlice(currTrack, i,true);
           else if((e.getModifiers() & InputEvent.META_MASK) ==0) //meta not
             selectSlice(currTrack, i,false);
         }
+
+
       }
     }
     
     //repaint();
   }
+
+  // returns non-zero index of slice clicked
+  public int sliceClicked( int x ) {
+    for( int i=0; i<numSlices; i++ ) {
+      if( isSliceHit( x,i) ) {
+        return i;
+      }
+    }
+    return -1;
+  }
+    
 
   public void mouseReleased(MouseEvent e) {
     Point mouseReleasedPt = e.getPoint();
@@ -684,7 +748,7 @@ public class MultiTrackView
       (mouseClickedPt.y < (currTrack+1)*trackHeight + scrubHeight) ;
 
     if( clickCnt >= 2 && intrack ) {   // double-click to set color
-      println("doublclick!");
+      l.debug("mouseReleased:doublclick!");
       //colorPreview.setColors(  getColorsAtColumn(i) );
       for( int i=0; i<numSlices; i++ ) {
         if( isSliceHit( mouseReleasedPt.x,i) ) {
