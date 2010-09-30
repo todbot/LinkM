@@ -1341,6 +1341,8 @@ ActionListener menual = new ActionListener() {
         multitrack.delete();
       } else if( cmd.equals("Select All in Track") ) {
         multitrack.selectAllinTrack();
+      } else if( cmd.equals("Make Gradient") ) {
+        multitrack.makeGradient();
       } else if( cmd.equals("Display LinkM/BlinkM Versions") ) {
         displayVersions();
       } else if( cmd.equals("Upgrade LinkM Firmware") ) {
@@ -1401,6 +1403,8 @@ void setupMenus(Frame f) {
   MenuItem iteme4= new MenuItem("Delete",new MenuShortcut(KeyEvent.VK_D));
   MenuItem iteme4a=new MenuItem("-");
   MenuItem iteme5= new MenuItem("Select All in Track", new MenuShortcut(KeyEvent.VK_A));
+  MenuItem iteme5a=new MenuItem("-");
+  MenuItem iteme6= new MenuItem("Make Gradient");
 
   //MenuItem itemt2 = new MenuItem("Upgrade LinkM Firmware");
   MenuItem itemt1 = new MenuItem("BlinkM Factory Reset");
@@ -1430,6 +1434,7 @@ void setupMenus(Frame f) {
   iteme3.addActionListener(menual);
   iteme4.addActionListener(menual);
   iteme5.addActionListener(menual);
+  iteme6.addActionListener(menual);
   itemt1.addActionListener(menual);
   //itemt2.addActionListener(menual);
   itemt3.addActionListener(menual);
@@ -1454,6 +1459,8 @@ void setupMenus(Frame f) {
   editMenu.add(iteme4);
   editMenu.add(iteme4a);
   editMenu.add(iteme5);
+  editMenu.add(iteme5a);
+  editMenu.add(iteme6);
 
 
   toolMenu.add(itemt1);
