@@ -306,6 +306,13 @@ public void showHelp() {
     String helpstr = "<html>"+
       "<table border=0 cellpadding=10 cellspacing=10><tr><td>"+
       "<h2> BlinkMSequencer Help </h2>"+
+      "<h3> Edit Menu </h3>"+
+      "<ul>"+
+      "<li>Make Gradient <br/>"+
+      "-- create a smooth gradient between start & and colors of a selection"+
+      "<li>Edit Channel IDs <br/>"+
+      "-- Edit the label and I2C address a channel sends on"+
+      "</ul>"+
       "<h3> Tools Menu </h3>"+
       "<ul>"+
       "<li>BlinkM Factory Reset <br/> "+
@@ -314,6 +321,8 @@ public void showHelp() {
       "-- Set BlinkM to play a built-in ROM script instead of the programmable one"+
       "<li>Scan I2C Bus <br/> "+
       "-- Scan I2C bus on all I2C addresses, looking for devices"+
+      "<li>Change BlinkM I2C Address <br/>"+
+      "-- Change the I2C address of the currently selected BlinkM"+
       "<li>Display Versions <br/>"+
       "-- Show LinkM version and BlinKM version for the selected channel"+
       "<li>Reset LinkM <br/>"+
@@ -333,7 +342,7 @@ public void showHelp() {
 
     dialog.getContentPane().add(panel);
 
-    dialog.setPreferredSize( new Dimension(600,400));
+    dialog.setPreferredSize( new Dimension(600,450));
     dialog.setResizable(false);
     dialog.setLocationRelativeTo(mf); // center it on the BlinkMSequencer
     dialog.pack();
@@ -895,7 +904,7 @@ public boolean doUpload(JProgressBar progressbar) {
 
 
 /**
- *
+ * Open the edit chanel id and label dialog
  */
 public void doTrackDialog(int track) {
   multitrack.reset(); // stop preview script
@@ -906,6 +915,50 @@ public void doTrackDialog(int track) {
   multitrack.repaint();
 
 }
+
+
+/**
+ * Change the I2C address of the currently selected BlinkM
+ */
+public void doAddressChange() {
+  int curraddr = multitrack.getCurrTrack().blinkmaddr;
+
+  String question = 
+    "Change address of current BlinkM \n"+
+    "from address '"+curraddr+"' to :";
+  String s = (String)JOptionPane.showInputDialog(mf, 
+                                                 question, 
+                                                 "BlinkM Readdressing",
+                                                 JOptionPane.PLAIN_MESSAGE,
+                                                 null,
+                                                 null, new Integer(curraddr));
+  if( s == null || s.length()==0 ) {  // no selection
+    return;
+  }
+  int newaddr = Integer.parseInt(s);
+  if( newaddr <= 0 && newaddr > 113 ) {  // bad value
+    return;
+  }
+
+  try { 
+    if( arduinoMode ) { 
+      //blinkmComm.setAddress( curraddr, newaddr );
+    } else {
+      linkm.setAddress( curraddr, newaddr ); 
+    }
+    multitrack.getCurrTrack().blinkmaddr = newaddr;
+  } catch( IOException ioe ) {
+    JOptionPane.showMessageDialog(mf,
+                                  "Could not set BlinkM addres.\n"+ioe,
+                                  "BlinkM Readdress failure",
+                                  JOptionPane.WARNING_MESSAGE);
+  }
+  
+}
+
+
+
+
 
 // ----------------------------------------------------------------------------
 
@@ -1088,8 +1141,6 @@ void saveAllTracks() {
   }
 }
 
-// ------------------------------------------------
-
 // ---------------------------------------------------------------------------
 
 /**
@@ -1098,6 +1149,9 @@ void saveAllTracks() {
 void setStatus(String status) {
     statusLabel.setText( status );
 }
+/**
+ * Toggle a little dot on the bottom bar to indicate aliveness
+ */
 void heartbeat() {
   String s = heartbeatLabel.getText();
   s = (s.equals(".")) ? " " : "."; // toggle
@@ -1343,6 +1397,8 @@ ActionListener menual = new ActionListener() {
         multitrack.selectAllinTrack();
       } else if( cmd.equals("Make Gradient") ) {
         multitrack.makeGradient();
+      } else if( cmd.equals("Edit Channel IDs") ) {
+        doTrackDialog(0);
       } else if( cmd.equals("Display LinkM/BlinkM Versions") ) {
         displayVersions();
       } else if( cmd.equals("Upgrade LinkM Firmware") ) {
@@ -1353,6 +1409,8 @@ ActionListener menual = new ActionListener() {
         doFactoryReset();
       } else if( cmd.equals("Scan I2C Bus") ) {
         doI2CScan();
+      } else if( cmd.equals("Change BlinkM I2C Address") ) {
+        doAddressChange();
       } else if( cmd.equals("Help") ) {
         showHelp();
       } else if( cmd.equals("Quick Start Guide") ) {
@@ -1404,7 +1462,9 @@ void setupMenus(Frame f) {
   MenuItem iteme4a=new MenuItem("-");
   MenuItem iteme5= new MenuItem("Select All in Track", new MenuShortcut(KeyEvent.VK_A));
   MenuItem iteme5a=new MenuItem("-");
-  MenuItem iteme6= new MenuItem("Make Gradient");
+  MenuItem iteme6= new MenuItem("Make Gradient", new MenuShortcut(KeyEvent.VK_G));
+  MenuItem iteme6a=new MenuItem("-");
+  MenuItem iteme7= new MenuItem("Edit Channel IDs");
 
   //MenuItem itemt2 = new MenuItem("Upgrade LinkM Firmware");
   MenuItem itemt1 = new MenuItem("BlinkM Factory Reset");
@@ -1415,9 +1475,10 @@ void setupMenus(Frame f) {
     startupMenu.add( mi );
   }
   MenuItem itemt3 = new MenuItem("Scan I2C Bus");
-  MenuItem itemt4 = new MenuItem("Display LinkM/BlinkM Versions");
+  MenuItem itemt4= new MenuItem("Change BlinkM I2C Address");
+  MenuItem itemt5 = new MenuItem("Display LinkM/BlinkM Versions");
 
-  MenuItem itemt5 = new MenuItem("Reset LinkM");
+  MenuItem itemt6 = new MenuItem("Reset LinkM");
 
   MenuItem itemh1 = new MenuItem("Help");
   MenuItem itemh2 = new MenuItem("Quick Start Guide");
@@ -1435,11 +1496,13 @@ void setupMenus(Frame f) {
   iteme4.addActionListener(menual);
   iteme5.addActionListener(menual);
   iteme6.addActionListener(menual);
+  iteme7.addActionListener(menual);
   itemt1.addActionListener(menual);
   //itemt2.addActionListener(menual);
   itemt3.addActionListener(menual);
   itemt4.addActionListener(menual);
   itemt5.addActionListener(menual);
+  itemt6.addActionListener(menual);
   itemh1.addActionListener(menual);
   itemh2.addActionListener(menual);
   
@@ -1461,6 +1524,8 @@ void setupMenus(Frame f) {
   editMenu.add(iteme5);
   editMenu.add(iteme5a);
   editMenu.add(iteme6);
+  editMenu.add(iteme6a);
+  editMenu.add(iteme7);
 
 
   toolMenu.add(itemt1);
@@ -1469,6 +1534,7 @@ void setupMenus(Frame f) {
   toolMenu.add(itemt3);
   toolMenu.add(itemt4);
   toolMenu.add(itemt5);
+  toolMenu.add(itemt6);
 
   helpMenu.add(itemh1);
   helpMenu.add(itemh2);
@@ -1635,37 +1701,6 @@ public boolean verifyConnection() {
     // 3. verify all blinkms?
     linkm.getVersion(0);
   } catch( IOException ioe ) {
-  }
-  return true;
-}
-*/
-
-/**
- * FIXME: this is deprecated!
- * Do address change dialog -- this might be deprecated
- *
-public boolean doAddressChange() {
-  int newaddr = multitrack.getCurrTrack().blinkmaddr;
-  Object[] options = {"Do nothing",
-                      "Readdress BlinkM to addres 10"  };
-  String question = 
-    "Would you like to readdress your BlinkM"+
-    "from address 9 to address "+ newaddr +"?";
-  int n = JOptionPane.showOptionDialog(mf, question, 
-                                       "BlinkM Readdressing",
-                                       JOptionPane.YES_NO_OPTION,
-                                       JOptionPane.QUESTION_MESSAGE,
-                                       null,
-                                       options, options[1] );
-  if( n == 1 ) { 
-    try { 
-      linkm.setAddress( 0x09, newaddr );  // FIXME:
-    } catch( IOException ioe ) {
-      JOptionPane.showMessageDialog(mf,
-                                    "Could not set BlinkM addres.\n"+ioe,
-                                    "BlinkM Readdress failure",
-                                    JOptionPane.WARNING_MESSAGE);
-    }
   }
   return true;
 }
