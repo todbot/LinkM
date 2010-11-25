@@ -80,7 +80,7 @@ public class LinkM
 "Usage: LinkM <cmd> [options]\n" +
 "\n"+
 "where <cmd> is one of:\n" +
-"  --cmd <blinkmcmd> Send a blinkm command  \n" +
+"  --cmd <blinkmcmd> Send a blinkm/i2c command (no spaces in blinkmcmd!) \n" +
 "  --off             Turn off blinkm at specified address (or all) \n" +
 "  --on              Play startup script at address (or all) \n" +
 "  --play <n>        Play light script N \n" +
@@ -123,13 +123,13 @@ public class LinkM
     byte[] argbuf = null;
     
     // argument processing
-    int ac=0;
-    while( ac< args.length ) {
+    int argc=0;
+    while( argc< args.length ) {
       //for( int i=0; i< args.length; i++ ) {
-      String rawa = args[ac];
+      String rawa = args[argc];
       String a = rawa.replaceAll("-","");
       if( a.equals("addr") || a.equals("a") ) {
-        addr = parseHexDecInt( getArg(args,++ac,"") );
+        addr = parseHexDecInt( getArg(args,++argc,"") );
       }
       //else if( a.equals("--color") || a.equals("-c") ) {
       //  color = parseHexDecInt( getArg(args,++ac,"") );
@@ -139,43 +139,43 @@ public class LinkM
         debug++;
       }
       else if( a.equals("millis") || a.equals("m") ) {
-        pausemillis = parseHexDecInt( getArg(args,++ac,"") );
+        pausemillis = parseHexDecInt( getArg(args,++argc,"") );
       }
       else if( a.equals("statled") ) {
-        arg = parseHexDecInt( getArg(args,++ac,"") );
+        arg = parseHexDecInt( getArg(args,++argc,"") );
         cmd = "statled";
       }
       else if( a.equals("i2cscan") ) {
         cmd = "i2cscan";
       }
       else if( a.equals("i2cenable") ) {
-        arg = parseHexDecInt( getArg(args,++ac,"") );
+        arg = parseHexDecInt( getArg(args,++argc,"") );
         cmd = "i2cenable";
       }
       else if( a.equals("cmd")) {
-        argbuf = parseArgBuf( args[++ac] );  // blinkm cmd, c,0xff,0x33,0xdd
+        argbuf = parseArgBuf( args[++argc] );  // blinkm cmd, c,0xff,0x33,0xdd
         cmd = "cmd";
       }
       else if( a.equals("off") ) { 
-        addr = parseHexDecInt( getArg(args,++ac,"") );
+        addr = parseHexDecInt( getArg(args,++argc,"") );
         cmd = "off";
       }
       else if( a.equals("on") ) { 
         cmd = "on";
       }
       else if( a.equals("play")) { 
-        arg = parseHexDecInt( getArg(args,++ac,"") );  // script num to play
+        arg = parseHexDecInt( getArg(args,++argc,"") );  // script num to play
         cmd = "play";
       }
       else if( a.equals("stop")) {
         cmd = "stop";
       }
       else if( a.equals("random")) {
-        arg = parseHexDecInt( getArg(args,++ac,"") );  // number of rand colors
+        arg = parseHexDecInt( getArg(args,++argc,"") );  // number of rand colors
         cmd = "random";
       }
       else if( a.equals("upload")) {
-        file = args[++ac];
+        file = args[++argc];
         cmd = "upload";
       }
       else if( a.equals("download")) {
@@ -185,7 +185,7 @@ public class LinkM
         cmd = "getversion";
       }
       else if( a.equals("setaddr")) { 
-        arg = parseHexDecInt( getArg(args,++ac,"") );  // new addr
+        arg = parseHexDecInt( getArg(args,++argc,"") );  // new addr
         cmd = "setaddr";
       }
       else if( a.equals("readinputs")) { 
@@ -210,9 +210,9 @@ public class LinkM
         cmd = "bootloadreset";
       }
       else { 
-        file = args[ac];
+        file = args[argc];
       }
-      ac++;
+      argc++;
     } // while
     
     if( cmd == null || cmd.equals("help") ) {
@@ -346,11 +346,15 @@ public class LinkM
           cmdbuf[0] = (byte)addr;
           for(int i=1; i<cmdbuf.length; i++) 
             cmdbuf[i] = argbuf[i-1];
+          printHexString("cmdbuf:", cmdbuf); // ctrlm debug
           int rsize = respSizeForCommand( argbuf[0] );
-          byte[] respbuf = new byte[ rsize ];
-          linkm.commandi2c( cmdbuf, respbuf );
-          if( rsize > 0 ) 
+          if( rsize == 0 ) {
+            linkm.commandi2c( cmdbuf, null );
+          } else {
+            byte[] respbuf = new byte[ rsize ];
+            linkm.commandi2c( cmdbuf, respbuf );
             printHexString( "response: ", respbuf );
+          }
         }
       }
       else if( cmd.equals("getversion") ) { 
@@ -654,7 +658,76 @@ public class LinkM
    */
   public void cmd(int addr, int cmd, int arg1, int arg2, int arg3 )
     throws IOException {
-    byte[] cmdbuf = { (byte)addr, (byte)cmd, (byte)arg1,(byte)arg2,(byte)arg3};
+    byte[] cmdbuf = { (byte)addr, (byte)cmd, 
+                      (byte)arg1, (byte)arg2, (byte)arg3 };
+    commandi2c( cmdbuf, null );     // do i2c transaction with no recv
+  }
+
+  //public void ctrlmSendFreeMCmd(int addr, )
+
+  /**
+   * @param addr
+   * @param freem_addr
+   * @param blinkm_addr
+   * @throws IOException on transmit or receive error
+   */
+  public void ctrlmSetSendAddress(int addr, int freem_addr, int blinkm_addr)
+    throws IOException {
+    byte[] cmdbuf = { (byte)addr, (byte)'@', 
+                      (byte)freem_addr, (byte)blinkm_addr, (byte)0 };
+    commandi2c( cmdbuf, null );     // do i2c transaction with no recv
+  }
+
+  /**
+   * @param addr i2c address of CtrlM
+   * @param freem_addr address of FreeM to write
+   * @throws IOException on transmit or receive error
+   */
+  public void ctrlmWriteFreeMAddress(int addr, int freem_addr ) 
+    throws IOException {
+    //byte chksum = 0x55 + 
+    //  (byte)freem_addr + (byte)0xff + (byte)0xff + 
+    //  (byte)0x00 + (byte)0x00 + (byte)0x00;
+    byte[] cmdbuf = {
+      (byte)addr,       // 0- i2c addr
+      (byte)'!',        // 1- '!' means general CtrlM data pkt
+      
+      (byte)0x55,       // 2- 8 bytes of CtrlM IR data proto.to FreeM
+      (byte)freem_addr, // 3- freem addr
+      (byte)0xff,       // 4- 0xff  (blinkmaddr)
+      (byte)0xff,       // 5- 0xff  (cmd)
+      
+      (byte)0x00,       // 6- 0x00  (arg1)
+      (byte)0x00,       // 7- 0x00  (arg2)
+      (byte)0x00,       // 8- 0x00  (arg3)
+      (byte)0x00        // 9- chksum
+    };
+    int chk = 0;
+    for( int i=2; i< 2+8; i++) {
+      chk += cmdbuf[i];
+    }
+    cmdbuf[9] = (byte)chk;
+
+    commandi2c( cmdbuf, null );     // do i2c transaction with no recv
+  }
+
+  /**
+   *
+   */
+  public void ctrlmSetFreeMColorSpot(int addr, int colorspot,int r,int g,int b) 
+    throws IOException {
+    byte[] cmdbuf = { (byte)addr, (byte)'^', 
+                      (byte)colorspot, (byte)r, (byte)g, (byte)b };
+    commandi2c( cmdbuf, null );     // do i2c transaction with no recv
+  }
+
+  /**
+   *
+   */
+  public void ctrlmPlayFreeMColorSpot(int addr, int colorNum, int cmd)
+    throws IOException {
+    byte[] cmdbuf = { (byte)addr, (byte)'*', 
+                      (byte)colorNum, (byte)cmd, (byte)0x00 };
     commandi2c( cmdbuf, null );     // do i2c transaction with no recv
   }
 
@@ -896,8 +969,8 @@ public class LinkM
   public void setStartupParams( int addr, int mode, int script_id, int reps, 
                                 int fadespeed, int timeadj )
     throws IOException {
-    byte cmdbuf[] = { (byte)addr, 'B', 1, (byte)script_id, (byte)reps, 
-                      (byte)fadespeed, (byte)timeadj };
+    byte cmdbuf[] = { (byte)addr, 'B', (byte)mode, (byte)script_id, 
+                      (byte)reps, (byte)fadespeed, (byte)timeadj };
     commandi2c( cmdbuf, null );
     pause(20);  // enforce wait for EEPROM write
   }
@@ -1067,6 +1140,7 @@ public class LinkM
   public void doFactoryReset( int addr ) throws IOException {
     setAddress( addr, 0x09 );
     addr = 0x09;
+
     setStartupParamsDefault(addr);
 
     BlinkMScript script = new BlinkMScript();
@@ -1081,7 +1155,9 @@ public class LinkM
     }
 
     writeScript( addr, script);
+
   }
+
 
   /**
    * simple debug facilty
