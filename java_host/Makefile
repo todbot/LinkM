@@ -43,14 +43,17 @@ PATH:=$(JAVA_HOME)/bin:$(PATH)
 LIBTARGET = lib$(TARGET).jnilib
 #LIBUSBA   = libusb-macosx.a
 #USBLIBS   =  -L$(LIBUSBA_DIR)  -lusb-macosx
-USBFLAGS  =  `libusb-legacy-config --cflags`
-USBLIBS   = /opt/local/lib/libusb-legacy/libusb.a
+#USBFLAGS  =  `libusb-legacy-config --cflags`
+#USBLIBS   = /opt/local/lib/libusb-legacy/libusb.a
+USBFLAGS = `libusb-config --cflags`
+USBLIBS = `libusb-config --libs | cut -d' ' -f1 | cut -c3- `/libusb.a
 
 JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
 JAVAINCLUDE = -I $(JAVAINCLUDEDIR)
 
-OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS) 
+#OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS) 
+OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch ppc -std=gnu99  $(USBFLAGS) 
 OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS)
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -std=gnu99  $(USBFLAGS)
@@ -148,7 +151,7 @@ processinglib:
 	zip -r linkm.zip linkm
 	@echo
 	@echo "now unzip linkm.zip into ~/Documents/Processing/libraries"
-	@echo "or maybe just: cp -r linkm ~/Documents/Processing/libraries"
+	@echo "or maybe just:\ncp -r linkm ~/Documents/Processing/libraries"
 
 javadoc:
 	cd doc && javadoc -sourcepath .. thingm.linkm && cd ..
