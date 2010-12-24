@@ -1,19 +1,40 @@
 # Makefile for "linkm-lib" and "linkm-tool"
 # should work on Mac OS X, Windows, and Linux
 #  
-# Dependencies: "../bootloadHID/commandline/linkmbootload" must be compiled beforehand if using bootload functionality
+# Build arguments:
+# - "OS=macosx"  -- build Mac version on Mac OS X
+# - "OS=windows" -- build Windows version on Windows
+# - "OS=linux"   -- build Linux version on Linux
+# - "OS=wrt"     -- build OpenWrt/DD-WRT version on Linux
+# - "ADDBOOTLOAD=1" -- add ability to linkm-lib and linkm-tool to use bootloader
+# - "ADDBOOTLOAD=0" -- to disable ability to use bootloader
+#
+# Dependencies: 
+# - libusb is required
+# - if "make ADDBOOTLOAD=1", then
+#    "../bootloadHID/commandline/linkmbootload" 
+#  must be compiled beforehand if using bootload functionality
+# - Or, if "make ADDBOATLOAD=0", then no other dependencies other than OS-specific ones below.
 #
 # Platform-specific notes:
 #
 # Mac OS X 
 #   - Install Xcode with Unix Dev Support 
 #   - Install 'make' from macports (or similar)
+#
 # Windows XP/7  
 #   - Install MinGW and MSYS (http://www.tdragon.net/recentgcc/ )
+#
 # Linux (Ubuntu) 
 #   - apt-get install gcc-avr avr-libc avrdude java librxtx-java
 #
+# OpenWrt / DD-WRT
+#   - Download the OpenWrt SDK for Linux (only for Linux now, I think)
+#   - set WRT_SDK_HOME environment variable
+#   - type "make OS=wrt" to build
 #
+#
+# -----
 # Based off of obdev hid-data "hidtool":
 # Name: Makefile
 # Project: hid-data example
@@ -28,7 +49,7 @@
 TARGET=linkm-tool
 
 # set to 1 to include bootloading functionality
-ADDBOOTLOAD=1
+ADDBOOTLOAD := 1
 
 # try to do some autodetecting
 UNAME := $(shell uname -s)
@@ -78,8 +99,20 @@ USBLIBS  =   `libusb-config --libs`
 EXE_SUFFIX=
 endif
 
+#################  OpenWrt / DD-WRT #########################################
+ifeq "$(OS)" "wrt"
 
-CC=		gcc
+WRT_SDK_HOME := $(HOME)/OpenWrt-SDK-Linux-i686-1
+
+CC = $(WRT_SDK_HOME)/staging_dir_mipsel/bin/mipsel-linux-gcc
+LD = $(WRT_SDK_HOME)/staging_dir_mipsel/bin/mipsel-linux-ld
+USBFLAGS = "-I$(WRT_SDK_HOME)/staging_dir_mipsel/usr/include"
+USBLIBS  = "$(WRT_SDK_HOME)/staging_dir_mipsel/usr/lib/libusb.a"
+
+endif
+
+
+#CC=		gcc
 CFLAGS=	$(OS_CFLAGS) -O -Wall -std=gnu99 $(USBFLAGS) -DADDBOOTLOAD=$(ADDBOOTLOAD)
 LIBS=	$(OS_LIBS) $(USBLIBS) 
 
