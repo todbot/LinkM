@@ -46,10 +46,10 @@ import java.util.jar.*;
 
 import thingm.linkm.*;
 
-final static String VERSION = "003";
-final static String versionInfo="version "+VERSION+" \u00a9 ThingM Corporation";
 
-final static int debugLevel = 1;
+String VERSION = "003";
+String versionInfo="version "+VERSION+" \u00a9 ThingM Corporation";
+int debugLevel = 1;
 
 Log l = new Log();
 
