@@ -73,11 +73,16 @@ ifeq "$(OS)" "macosx"
 # If you want to build for PowerPC too, you'll need to edit 
 # /opt/local/etc/macports/macports.conf: universal_archs and add "ppc"
 # otherwise swap the OS_CFLAGS with the commented one below
-USBFLAGS =  `libusb-legacy-config --cflags`
-USBLIBS  =  /opt/local/lib/libusb-legacy/libusb.a
+USBFLAGS = `/opt/local/bin/libusb-config --cflags`
+USBLIBS = `/opt/local/bin/libusb-config --libs | cut -d' ' -f1 | cut -c3- `/libusb.a
 USBLIBS +=  -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
-#OS_CFLAGS= -arch i386 -arch ppc 
-OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
+
+USBFLAGS = `/opt/local/bin/libusb-legacy-config --cflags`
+USBLIBS = `/opt/local/bin/libusb-legacy-config --libs | cut -d' ' -f1 | cut -c3- `/libusb-legacy.a
+USBLIBS +=  -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
+
+OS_CFLAGS= -arch i386 -arch ppc 
+#OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
 #OS_CFLAGS= -arch i386 -arch x86_64
 OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
 OS_LIBS  = $(OS_CFLAGS) 
