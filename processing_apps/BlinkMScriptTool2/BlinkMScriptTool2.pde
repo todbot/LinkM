@@ -58,7 +58,8 @@ JTextField posText;
 JLabel statusText;
 
 int mainWidth = 740;
-int mainHeight = 480;
+int mainHeight = 480; 
+int mainHeightWindows = 640;
 Font monoFont  = new Font("Monospaced", Font.PLAIN, 14); // all hail fixed width
 Font monoFontSm = new Font("Monospaced", Font.PLAIN, 9); 
 Color backColor = new Color(150,150,150);
@@ -153,7 +154,7 @@ boolean connectIfNeeded() {
     try { 
       linkm.open();
       linkm.i2cEnable(true);
-      linkm.pause(50); // wait for bus to stabilize
+      linkm.pause(2000); // wait for bus to stabilize // bigger delay for CtrlM
       byte[] addrs = linkm.i2cScan(1,100);  // FIXME: not a full scan
       int cnt = addrs.length;
       status("found "+cnt+" blinkms");
@@ -169,9 +170,9 @@ boolean connectIfNeeded() {
       status("no linkm found");
       return false;
     }
+    linkm.pause(200);  // FIXME: do we need this? 
+    isConnected = true;
   }
-  linkm.pause(200);
-  isConnected = true;
   return true; // connect successful
 }
 
@@ -447,7 +448,10 @@ void setupGUI() {
       }
     }
     );
-    
+
+  if( platform == WINDOWS ) { // a Processing PApplet variable
+    mainHeight = mainHeightWindows;
+  }
   stf = new ScriptToolFrame(mainWidth, mainHeight, this);
   stf.createGUI();
   stf.setupMenus();
