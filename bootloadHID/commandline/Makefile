@@ -46,8 +46,10 @@ ifeq "$(OS)" "macosx"
 #USBLIBS = `libusb-config --libs | cut -d' ' -f1 | cut -c3- `/libusb.a
 
 USBFLAGS = `/opt/local/bin/libusb-legacy-config --cflags`
+# get just the path to the static lib
 USBLIBS = `/opt/local/bin/libusb-legacy-config --libs | cut -d' ' -f1 | cut -c3- `/libusb-legacy.a
-USBLIBS +=  -Wl,-framework -Wl,IOKit -Wl,-framework -Wl,CoreFoundation -Wl,-prebind
+# get everything else in --libs
+USBLIBS +=  `libusb-legacy-config --libs | cut -d' ' -f 3- `
 
 #OS_CFLAGS= -arch i386 
 #OS_CFLAGS= -arch i386 -arch ppc
