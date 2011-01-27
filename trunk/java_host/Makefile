@@ -45,8 +45,14 @@ LIBTARGET = lib$(TARGET).jnilib
 #USBLIBS   =  -L$(LIBUSBA_DIR)  -lusb-macosx
 #USBFLAGS  =  `libusb-legacy-config --cflags`
 #USBLIBS   = /opt/local/lib/libusb-legacy/libusb.a
-USBFLAGS = `libusb-config --cflags`
-USBLIBS = `libusb-config --libs | cut -d' ' -f1 | cut -c3- `/libusb.a
+#USBFLAGS = `libusb-config --cflags`
+#USBLIBS = `libusb-config --libs | cut -d' ' -f1 | cut -c3- `/libusb.a
+USBFLAGS = `/opt/local/bin/libusb-legacy-config --cflags`
+# get just the path to the static lib
+USBLIBS = `/opt/local/bin/libusb-legacy-config --libs | cut -d' ' -f1 | cut -c3- `/libusb-legacy.a
+# get everything else in --libs
+USBLIBS +=  `libusb-legacy-config --libs | cut -d' ' -f 3- `
+
 
 JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
