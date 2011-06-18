@@ -71,14 +71,13 @@ ifeq "$(UNAME)" "Linux"
 	OS=linux
 endif
 
-
+CC=gcc
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
 # Mac OS X: "sudo port install libusb-legacy +universal" using MacPorts
 # If you want to build for PowerPC too, you'll need to edit 
 # /opt/local/etc/macports/macports.conf: universal_archs and add "ppc"
 # otherwise swap the OS_CFLAGS with the commented one below
-
 USBFLAGS = `/opt/local/bin/libusb-legacy-config --cflags`
 # get just the path to the static lib
 USBLIBS = `/opt/local/bin/libusb-legacy-config --libs | cut -d' ' -f1 | cut -c3- `/libusb-legacy.a
