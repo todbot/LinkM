@@ -51,7 +51,11 @@ Host code dependencies:
 
 On Mac OS X you will need the following free tools:
 - XCode - http://developer.apple.com/technologies/xcode.html
-- libusb - "sudo port install libusb-legacy +universal"  (port is available from http://macports.org )
+- libusb - "sudo port install libusb-legacy +universal"  
+   ('port' is available from http://macports.org/ )
+   (you may wait to add "universal_archs x86_64 i386 ppc" in 
+    /opt/local/etc/macports/macports.conf and add "+universal" to 
+    /opt/local/etc/macports/variants.conf) 
 
 On Windows you will need the following free tools:
 - MinGW - http://www.mingw.org/

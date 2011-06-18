@@ -47,7 +47,7 @@ import java.util.jar.*;
 import thingm.linkm.*;
 
 
-String VERSION = "003";
+String VERSION = "004";
 String versionInfo="version "+VERSION+" \u00a9 ThingM Corporation";
 int debugLevel = 1;
 
@@ -59,6 +59,11 @@ BlinkMComm2 blinkmComm = new BlinkMComm2();
 boolean connected = false;   // FIXME: verify semantics correct on this
 boolean blinkmConnected = false;
 boolean arduinoMode = false;  // using Arduino+BlinkMComm instead of LinkM
+
+boolean ctrlmMode = false;
+int ctrlmAddr = 9;
+int freemAddr = 0;
+boolean reconnectMode = false;
 
 long lastConnectCheck;
 
@@ -82,7 +87,7 @@ JLabel heartbeatLabel;
 JLabel currChanIdLabel;
 JLabel currChanLabel;
 
-MenuItem itemConnect;
+MenuItem connectItem;
 
 SetChannelDialog setChannelDialog;
 
@@ -115,6 +120,7 @@ public static class Timing  {
 }
 
 // the supported track durations
+// FIXME: some firmwares (maxm) have slightly different timing at the low end
 public static Timing[] timings = new Timing [] {
     new Timing(   3, (byte)  2, (byte) 100 ),
     new Timing(  30, (byte) 18, (byte)  25 ),
@@ -233,7 +239,7 @@ void draw() {
   }
   long millis = System.currentTimeMillis();
 
-  if( frameCount > 10 && ((millis-lastConnectCheck) > 1000) ) {
+  if( frameCount > 10 && ((millis-lastConnectCheck) > 1500) ) {
     if( arduinoMode ) {
       heartbeat();
     } 
@@ -620,7 +626,8 @@ static int verifyCount = 0;
  * @return true if LinkM is present, regardless of 'connected' status
  */
 public boolean verifyLinkM() {
-  if( multitrack.playing ) return true;  // punt if playing
+  //if( multitrack.playing ) return true;  // punt if playing
+  if( multitrack.playing && reconnectMode == false ) return true;
   //l.debug("verifyLinkM:"+verifyCount++);
   if( connected ) {
     try {
@@ -677,6 +684,13 @@ public boolean connect(boolean openlinkm) {
         multitrack.repaint();
       }
       */
+      linkm.pause(1500);
+
+      ctrlmAddr = 9;
+      freemAddr = 0;
+
+      linkm.ctrlmSetSendAddress( ctrlmAddr, freemAddr, 0 );
+
       linkm.stopScript( 0 ); // stop all scripts
       linkm.fadeToRGB(0, 0,0,0);
      
@@ -721,7 +735,12 @@ public void sendBlinkMColor( int blinkmAddr, Color c ) {
     if( arduinoMode ) {
       blinkmComm.fadeToRGB( blinkmAddr, c );
     } else { 
-      linkm.fadeToRGB( blinkmAddr, c);  // FIXME:  which track 
+      if( ctrlmMode ) { 
+        linkm.ctrlmSetSendAddress( ctrlmAddr, freemAddr, blinkmAddr );
+        linkm.fadeToRGB( ctrlmAddr, c );
+      } else { 
+        linkm.fadeToRGB( blinkmAddr, c);  // FIXME:  which track 
+      }
     }
   } catch( IOException ioe) {        // hmm, what to do here
     connected = false;
@@ -743,7 +762,12 @@ public void sendBlinkMColors( int addrs[], Color colors[], int send_count ) {
         if( arduinoMode ) { 
           blinkmComm.fadeToRGB( addrs[i], colors[i] );
         } else { 
-          linkm.fadeToRGB( addrs[i], colors[i] );
+          if( ctrlmMode ) {
+            linkm.ctrlmSetSendAddress( ctrlmAddr, freemAddr, addrs[i] );
+            linkm.fadeToRGB( ctrlmAddr, colors[i] );
+          } else { 
+            linkm.fadeToRGB( addrs[i], colors[i] );
+          }
         }
       }
     }
@@ -861,7 +885,12 @@ public boolean doUpload(JProgressBar progressbar) {
         if( arduinoMode ) {
           blinkmComm.writeScriptLine( blinkmAddr, i, scriptLine);
         } else { 
-          linkm.writeScriptLine( blinkmAddr, i, scriptLine);
+          if( ctrlmMode ) { 
+            linkm.ctrlmSetSendAddress( ctrlmAddr, freemAddr, blinkmAddr );
+            linkm.writeScriptLine( ctrlmAddr, i, scriptLine);
+          } else { 
+            linkm.writeScriptLine( blinkmAddr, i, scriptLine);
+          }
         }
         if( progressbar !=null) progressbar.setValue(i);  // hack
       }
@@ -872,12 +901,19 @@ public boolean doUpload(JProgressBar progressbar) {
         blinkmComm.setFadeSpeed( blinkmAddr, fadespeed);
       }
       else { 
-        // set script length     cmd   id         length         reps
-        linkm.setScriptLengthRepeats( blinkmAddr, numSlices, reps);
-        // set boot params   addr, mode,id,reps,fadespeed,timeadj
-        linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
-        // set playback fadespeed
-        linkm.setFadeSpeed( blinkmAddr, fadespeed);
+        if( ctrlmMode ) {
+          linkm.ctrlmSetSendAddress( ctrlmAddr, freemAddr, blinkmAddr );
+          linkm.setScriptLengthRepeats( ctrlmAddr, numSlices, reps);
+          linkm.setStartupParams( ctrlmAddr, 1, 0, 0, fadespeed, 0 );
+          linkm.setFadeSpeed( ctrlmAddr, fadespeed);
+        } else { 
+          // set script length     cmd   id         length         reps
+          linkm.setScriptLengthRepeats( blinkmAddr, numSlices, reps);
+          // set boot params   addr, mode,id,reps,fadespeed,timeadj
+          linkm.setStartupParams( blinkmAddr, 1, 0, 0, fadespeed, 0 );
+          // set playback fadespeed
+          linkm.setFadeSpeed( blinkmAddr, fadespeed);
+        }
       }
     } catch( IOException ioe ) { 
       l.error("upload error for blinkm addr "+blinkmAddr+ " : "+ioe);
@@ -946,7 +982,7 @@ public void doAddressChange() {
     } else {
       linkm.setAddress( curraddr, newaddr ); 
     }
-    multitrack.getCurrTrack().blinkmaddr = newaddr;
+    //multitrack.getCurrTrack().blinkmaddr = newaddr;  
   } catch( IOException ioe ) {
     JOptionPane.showMessageDialog(mf,
                                   "Could not set BlinkM addres.\n"+ioe,
@@ -1373,10 +1409,10 @@ ActionListener menual = new ActionListener() {
         System.exit(0);
       } else if( cmd.equals("Connect to Arduino") ) {
         blinkmComm.connectDialog();
-        itemConnect.setLabel("Disconnect from Arduino");        
+        connectItem.setLabel("Disconnect from Arduino");        
       } else if( cmd.equals("Disconnect from Arduino") ) {
         blinkmComm.disconnectDialog();
-        itemConnect.setLabel("Connect to Arduino");
+        connectItem.setLabel("Connect to Arduino");
       } else if( cmd.equals("Load Set") ) {  // FIXME: such a hack
         loadAllTracks();
       } else if( cmd.equals("Save Set") ) { 
@@ -1427,6 +1463,27 @@ ActionListener menual = new ActionListener() {
     } // actionPerformed
   };
 
+ItemListener menuil = new ItemListener() { 
+    void itemStateChanged(ItemEvent e) {
+      String s = (String)e.getItem();
+      if( s.equals("CtrlM Mode") ) {
+        ctrlmMode = ( e.getStateChange() == ItemEvent.SELECTED);
+        l.debug("ctrlmMode: "+ctrlmMode);
+        if( ctrlmMode == false ) { // turn off ctrlmMode
+          try { 
+            linkm.ctrlmSetSendAddress( ctrlmAddr, 0,9 );
+          } catch(IOException ioe) { 
+            l.debug("ctrlmMode err: "+ioe);
+          }
+        }
+      } 
+      else if( s.equals("Reconnect on Disconnect") ) {
+        l.debug("reconnectModeItem");
+        reconnectMode = (e.getStateChange() == ItemEvent.SELECTED);
+      }
+    }
+  };
+
 
 /**
  * Create all the application menus
@@ -1449,8 +1506,11 @@ void setupMenus(Frame f) {
                                  new MenuShortcut(KeyEvent.VK_S, true));
   MenuItem itemf4a= new MenuItem("-");
 
-  itemConnect     = new MenuItem("Connect to Arduino", 
+  connectItem     = new MenuItem("Connect to Arduino", 
                                  new MenuShortcut(KeyEvent.VK_C,true));
+
+  MenuItem itemf4b= new MenuItem("-");
+  CheckboxMenuItem itemf5 = new CheckboxMenuItem("CtrlM Mode");
 
   MenuItem itemf5a= new MenuItem("-");
   MenuItem itemf6 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_Q));
@@ -1474,21 +1534,27 @@ void setupMenus(Frame f) {
     mi.addActionListener(menual);
     startupMenu.add( mi );
   }
-  MenuItem itemt3 = new MenuItem("Scan I2C Bus");
-  MenuItem itemt4= new MenuItem("Change BlinkM I2C Address");
-  MenuItem itemt5 = new MenuItem("Display LinkM/BlinkM Versions");
+  MenuItem itemt1a = new MenuItem("-");
+  MenuItem itemt3  = new MenuItem("Scan I2C Bus");
+  MenuItem itemt4  = new MenuItem("Change BlinkM I2C Address");
+  MenuItem itemt4a = new MenuItem("-");
 
-  MenuItem itemt6 = new MenuItem("Reset LinkM");
+  MenuItem itemt5  = new MenuItem("Display LinkM/BlinkM Versions");
 
-  MenuItem itemh1 = new MenuItem("Help");
-  MenuItem itemh2 = new MenuItem("Quick Start Guide");
+  MenuItem itemt5a = new MenuItem("-");
+  MenuItem itemt6  = new MenuItem("Reset LinkM");
+  CheckboxMenuItem itemt7 = new CheckboxMenuItem("Reconnect on Disconnect");
+
+  MenuItem itemh1  = new MenuItem("Help");
+  MenuItem itemh2  = new MenuItem("Quick Start Guide");
 
 
   itemf1.addActionListener(menual);
   itemf2.addActionListener(menual);
   itemf3.addActionListener(menual);
   itemf4.addActionListener(menual);
-  itemConnect.addActionListener(menual);
+  connectItem.addActionListener(menual);
+  itemf5.addItemListener(menuil);
   itemf6.addActionListener(menual);
   iteme1.addActionListener(menual);
   iteme2.addActionListener(menual);
@@ -1503,6 +1569,7 @@ void setupMenus(Frame f) {
   itemt4.addActionListener(menual);
   itemt5.addActionListener(menual);
   itemt6.addActionListener(menual);
+  itemt7.addItemListener(menuil);
   itemh1.addActionListener(menual);
   itemh2.addActionListener(menual);
   
@@ -1512,7 +1579,8 @@ void setupMenus(Frame f) {
   fileMenu.add(itemf3);
   fileMenu.add(itemf4);
   fileMenu.add(itemf4a);
-  fileMenu.add(itemConnect);
+  fileMenu.add(connectItem);
+  fileMenu.add(itemf5);
   fileMenu.add(itemf5a);
   fileMenu.add(itemf6);
   
@@ -1530,11 +1598,14 @@ void setupMenus(Frame f) {
 
   toolMenu.add(itemt1);
   toolMenu.add(startupMenu);
-  //toolMenu.add(itemt2);
+  toolMenu.add(itemt1a);
   toolMenu.add(itemt3);
   toolMenu.add(itemt4);
+  toolMenu.add(itemt4a);
   toolMenu.add(itemt5);
+  toolMenu.add(itemt5a);
   toolMenu.add(itemt6);
+  toolMenu.add(itemt7);
 
   helpMenu.add(itemh1);
   helpMenu.add(itemh2);
