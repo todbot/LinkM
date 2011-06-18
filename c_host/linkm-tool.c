@@ -312,7 +312,7 @@ int main(int argc, char **argv)
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
-        printf("done");
+        printf("done\n");
     }
     else if( cmd == CMD_LINKM_PLAYGET ) {   // read LinkM's state machine
         printf("linkm play get: ");
@@ -325,14 +325,14 @@ int main(int argc, char **argv)
         }
     }
     else if( cmd == CMD_LINKM_EESAVE ) {  // tell linkm to save params to eeprom
-        printf("linkm eeprom  save:\n");
+        printf("linkm eeprom save: done\n");
         err = linkm_command(dev, LINKM_CMD_EESAVE, 0,0, NULL, NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
         }
     }
     else if( cmd == CMD_LINKM_EELOAD ) {  // tell linkm to load params to eeprom
-        printf("linkm eeprom load:\n");
+        printf("linkm eeprom load: done\n");
         err = linkm_command(dev, LINKM_CMD_EELOAD, 0,0, NULL, NULL);
         if( err ) {
             fprintf(stderr,"error on linkm cmd: %s\n",linkm_error_msg(err));
