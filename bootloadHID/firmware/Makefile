@@ -15,8 +15,8 @@
 #     make lock    # to protect the boot loader from overwriting
 
 #DEVICE = atmega8
-DEVICE = atmega88
-#DEVICE = atmega88p
+#DEVICE = atmega88
+DEVICE = atmega88p
 BOOTLOADER_ADDRESS = 1800
 F_CPU = 12000000
 #F_CPU = 16000000
