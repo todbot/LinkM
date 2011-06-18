@@ -68,6 +68,7 @@ enum {
     CMD_BLINKM_SETADDR,
     CMD_BLINKM_GETVERSION,
     CMD_BLINKM_RANDOM,
+    CMD_BLINKM_FLASH,
 };
 
 uint32_t stampstart();
@@ -91,6 +92,7 @@ void usage(char *myName)
 "  --getversion       Gets BlinkM version \n"
 "  --setaddr <newa>   Set address of blinkm at address 'addr' to 'newa' \n"
 "  --random <n>       Send N random colors to blinkm\n"
+"  --flash            Flash full-on to full-off N times\n"
 "  --i2cscan          Scan I2c bus for devices  \n"
 "  --i2enable <0|1>   Enable or disable the I2C bus (for connecting devices) \n"
 "  --upload           Upload a light script to blinkm (reqs addr & file) \n"
@@ -186,8 +188,9 @@ int main(int argc, char **argv)
         {"color",      required_argument, &cmd,   CMD_BLINKM_COLOR },
         {"upload",     required_argument, &cmd,   CMD_BLINKM_UPLOAD },
         {"download",   required_argument, &cmd,   CMD_BLINKM_DOWNLOAD },
-        {"readinputs", no_argument,       &cmd,   CMD_BLINKM_READINPUTS },
+        {"readinputs", optional_argument, &cmd,   CMD_BLINKM_READINPUTS },
         {"random",     required_argument, &cmd,   CMD_BLINKM_RANDOM },
+        {"flash",      optional_argument, &cmd,   CMD_BLINKM_FLASH },
         {"setaddr",    required_argument, &cmd,   CMD_BLINKM_SETADDR },
         {"getversion", no_argument,       &cmd,   CMD_BLINKM_GETVERSION },
         {"playset",    required_argument, &cmd,   CMD_LINKM_PLAYSET },
@@ -216,10 +219,13 @@ int main(int argc, char **argv)
             case CMD_LINKM_STATLEDSET:
             case CMD_LINKM_I2CENABLE:
             case CMD_BLINKM_RANDOM:
+            case CMD_BLINKM_FLASH:
             case CMD_BLINKM_SETADDR:
             case CMD_BLINKM_PLAY:
             case CMD_BLINKM_FADESPEED:
-                arg = strtol(optarg,NULL,0);   // cmd w/ number arg
+            case CMD_BLINKM_READINPUTS:
+                if( optarg ) 
+                    arg = strtol(optarg,NULL,0);   // cmd w/ number arg
                 break;
             case CMD_LINKM_BOOTLOAD:
                 strcpy(file,optarg);
@@ -450,6 +456,38 @@ int main(int argc, char **argv)
         }
         stampstop(start);
     }
+    else if( cmd == CMD_BLINKM_FLASH  ) {
+        printf("addr %d: %d flashing every %d millis\n", addr,arg,millis);
+        uint8_t r,g,b;
+        if( arg == 0 ) arg = 10000;
+        for( int j=0; j< arg; j++ ) {
+            r = 255; g = 255; b = 255;
+            cmdbuf[0] = addr;
+            cmdbuf[1] = 'n';    // go to color now
+            cmdbuf[2] = r;
+            cmdbuf[3] = g;
+            cmdbuf[4] = b;
+            err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL );
+            if( err ) {
+                fprintf(stderr,"error on rand cmd: %s\n",linkm_error_msg(err));
+                break;
+            }
+            usleep(millis * 1000 ); // sleep milliseconds
+
+            r = 0; g = 0; b = 0;
+            cmdbuf[0] = addr;
+            cmdbuf[1] = 'n';    // go to color now
+            cmdbuf[2] = r;
+            cmdbuf[3] = g;
+            cmdbuf[4] = b;
+            err = linkm_command(dev, LINKM_CMD_I2CTRANS, 5,0, cmdbuf, NULL );
+            if( err ) {
+                fprintf(stderr,"error on rand cmd: %s\n",linkm_error_msg(err));
+                break;
+            }
+            usleep(millis * 1000 ); // sleep milliseconds
+        }
+    }
     else if( cmd == CMD_BLINKM_PLAY  ) {
         printf("addr %d: playing script #%d\n", addr,arg);
         cmdbuf[0] = addr; 
@@ -528,14 +566,18 @@ int main(int argc, char **argv)
             printf("Must specify non-zero address for readinputs\n");
             goto shutdown;
         }
-        cmdbuf[0] = addr;
-        cmdbuf[1] = 'i';
-        err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,4, cmdbuf, recvbuf );
-        if( err ) {
-            fprintf(stderr,"error on readinputs: %s\n", linkm_error_msg(err));
-        }
-        else { 
-            hexdump("inputs: ", recvbuf, 5);
+        arg = (arg==0) ? 1 : arg;
+        for( uint8_t i = 0; i< arg; i++ ) {
+            cmdbuf[0] = addr + i;
+            cmdbuf[1] = 'i';
+            err = linkm_command(dev, LINKM_CMD_I2CTRANS, 2,4, cmdbuf, recvbuf );
+            if( err ) {
+                fprintf(stderr,"error readinputs: %s\n",linkm_error_msg(err));
+            }
+            else { 
+                hexdump("inputs: ", recvbuf, 5);
+            }
+            usleep(millis * 1000 ); // sleep milliseconds
         }
     }
     // low-level linkm cmd
