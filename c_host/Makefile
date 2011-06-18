@@ -49,7 +49,12 @@
 TARGET=linkm-tool
 
 # set to 1 to include bootloading functionality
+# e.g. "make ADDBOOTLOAD=0" to disable bootloader support  (i think)
 ADDBOOTLOAD := 1
+
+# set to 1 to enable macosx single architecture compiling 
+# (whatever your arch is, otherwise compile for x86_64, i386, and ppc )
+SINGLEARCH := 0
 
 # try to do some autodetecting
 UNAME := $(shell uname -s)
@@ -80,9 +85,12 @@ USBLIBS = `/opt/local/bin/libusb-legacy-config --libs | cut -d' ' -f1 | cut -c3-
 # get everything else in --libs
 USBLIBS +=  `libusb-legacy-config --libs | cut -d' ' -f 3- `
 
+ifeq ($(SINGLEARCH), 0) 
 #OS_CFLAGS= -arch i386 -arch ppc 
 OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
 #OS_CFLAGS= -arch i386 -arch x86_64
+#OS_CFLAGS= -arch x86_64
+endif
 OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
 OS_LIBS  = $(OS_CFLAGS) 
 EXE_SUFFIX=
