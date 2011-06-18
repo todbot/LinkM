@@ -1,3 +1,16 @@
+#
+# To package for production, do:
+# - pushd ../bootloadHID/firmware && make clean && make && popd
+# - make clean
+# - make 
+# - make combined  -- combines bootloadHID firmware with this one
+# - make packaging
+#
+#
+#
+#
+#
+# BASED ON:
 # Name: Makefile
 # Project: hid-data example
 # Author: Christian Starkjohann
@@ -10,8 +23,8 @@
 
 TARGET = linkm
 
-MCU  = atmega88
-#MCU  = atmega88p
+#MCU  = atmega88
+MCU  = atmega88p
 #MCU  = atmega168
 F_CPU   = 12000000	# in Hz
 #F_CPU   = 16000000	# in Hz
@@ -19,9 +32,10 @@ F_CPU   = 12000000	# in Hz
 # for atmega88  (from arduino diecimila)
 FUSE_L = 0xFF
 FUSE_H = 0xDD
-FUSE_E = 0x00
+FUSE_E = 0x00    
 FUSE_LOCK = 0x0F
 FUSE_UNLOCK = 0x3F
+# in avrstudio, reads as ff,dd,f8, cf (lockbit)
 
 #for atmega88 (no!)
 #FUSE_L=0xdf
@@ -32,8 +46,13 @@ FUSE_UNLOCK = 0x3F
 #FUSE_L=0xdf # see below for fuse values for particular devices
 #FUSE_H=0xdd 
 
+PKGTARGET = $(TARGET)v1
+PKGDATE = `date +%Y%m%d`
+
 #AVRDUDE = avrdude -c usbasp -p $(MCU) # edit this line for your programmer
 AVRDUDE = avrdude -c avrispmkii -P usb -p $(MCU) -F
+#AVRDUDE = avrdude -c stk600 -P usb -p $(MCU) 
+# stk600 used for testing of programmed chips
 
 CFLAGS  = -Iusbdrv -I. -I../c_host -DDEBUG_LEVEL=0
 OBJECTS = twimaster.c uart.c
@@ -75,13 +94,27 @@ help:
 	@echo "make flash ..... to flash the firmware" 
 	@echo "make clean ..... to delete objects and hex file"
 
+packaging:
+	echo "making $(PKGTARGET)_$(PKGDATE)"
+	mkdir -p $(PKGTARGET)_$(PKGDATE)
+	cp -f $(TARGET).hex $(PKGTARGET)_$(PKGDATE)/$(PKGTARGET)_$(PKGDATE).hex
+	cp -f $(TARGET).eep $(PKGTARGET)_$(PKGDATE)/$(PKGTARGET)_$(PKGDATE).eep
+	cp -f $(PKGTARGET)_$(MCU)_fuses.txt $(PKGTARGET)_$(PKGDATE)
+	zip -r $(PKGTARGET)_$(PKGDATE).zip $(PKGTARGET)_$(PKGDATE)
+# build: elf hex eep lss sym
+
+
 hex: $(TARGET).hex
 eep: $(TARGET).eep
 
 combined: hex
+	cp $(TARGET).hex $(TARGET)_withoutbootload.hex
 	srec_cat $(TARGET).hex -Intel ../bootloadHID/firmware/main.hex -Intel -o $(TARGET)_withbootload.hex -Intel
 
 program: flash
+
+erase:
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -e -U lfuse:w:$(FUSE_L):m -U hfuse:w:$(FUSE_H):m -U efuse:w:$(FUSE_E):m
 
 # rule for programming fuse bits:
 fuse:
