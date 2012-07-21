@@ -33,6 +33,14 @@
 #   - set WRT_SDK_HOME environment variable
 #   - type "make OS=wrt" to build
 #
+# BeagleBone / BeagleBoard (on Angstrom Linux)
+#   - Install USB dev support 
+#      "opkg install libusb-0.1-4-dev"
+#   - May need to symlink libusb 
+#      "cd /lib; ln -s libusb-0.1.so.4 libusb.so"
+#   - Build "linkm-tool" command-line app
+#      "make ADDBOOTLOAD=0"
+#
 #
 # -----
 # Based off of obdev hid-data "hidtool":
@@ -72,6 +80,7 @@ ifeq "$(UNAME)" "Linux"
 endif
 
 CC=gcc
+
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
 # Mac OS X: "sudo port install libusb-legacy +universal" using MacPorts
@@ -86,11 +95,12 @@ USBLIBS +=  `libusb-legacy-config --libs | cut -d' ' -f 3- `
 
 ifeq ($(SINGLEARCH), 0) 
 #OS_CFLAGS= -arch i386 -arch ppc 
-OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
-#OS_CFLAGS= -arch i386 -arch x86_64
+#OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
+OS_CFLAGS= -arch i386 -arch x86_64
 #OS_CFLAGS= -arch x86_64
 endif
-OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
+#OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
+#OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.6.sdk -mmacosx-version-min=10.6 -no_compact_linkedit
 OS_LIBS  = $(OS_CFLAGS) 
 EXE_SUFFIX=
 endif
