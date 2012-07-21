@@ -53,14 +53,15 @@ USBLIBS = `/opt/local/bin/libusb-legacy-config --libs | cut -d' ' -f1 | cut -c3-
 # get everything else in --libs
 USBLIBS +=  `libusb-legacy-config --libs | cut -d' ' -f 3- `
 
-
+#
 JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
 JAVAINCLUDE = -I $(JAVAINCLUDEDIR)
 
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS) 
-OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch ppc -std=gnu99  $(USBFLAGS) 
-OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
+#OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch ppc -std=gnu99  $(USBFLAGS) 
+OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -std=gnu99  $(USBFLAGS) 
+#OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS)
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -std=gnu99  $(USBFLAGS)
 OS_LDFLAGS =  -Wl,-search_paths_first -framework JavaVM -framework IOKit -framework CoreFoundation $(USBLIBS) 
@@ -73,7 +74,8 @@ LIBUSBA   = libusb-windows.a
 USBLIBS   = -lhid -lsetupapi
 
 # this must match your Java install
-JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_20\\"
+JAVA_HOME = "C:\\Program Files\\Java\\jdk1.7.0_05\\"
+#JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_20\\"
 JAVA_NATIVE_INC = -I${JAVA_HOME}/include -I${JAVA_HOME}/include/win32
 OS_CFLAGS  = ${JAVA_NATIVE_INC}
 OS_LDFLAGS = -s -shared -Wl,--export-all-symbols -Wl,--kill-a $(USBLIBS)
@@ -121,6 +123,7 @@ help:
 	@echo "make javadoc ... to make the javadoc"
 
 javac:
+#	javac -target 1.7 thingm/linkm/$(TARGET).java	
 	javac -target 1.5 thingm/linkm/$(TARGET).java	
 
 jni:

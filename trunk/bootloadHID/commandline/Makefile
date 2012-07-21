@@ -53,9 +53,10 @@ USBLIBS +=  `libusb-legacy-config --libs | cut -d' ' -f 3- `
 
 #OS_CFLAGS= -arch i386 
 #OS_CFLAGS= -arch i386 -arch ppc
-OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
-#OS_CFLAGS= -arch i386 -arch x86_64
-OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
+#OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
+OS_CFLAGS= -arch i386 -arch x86_64
+#OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
+#OS_CFLAGS += -no_compact_linkedit
 OS_LIBS  = $(OS_CFLAGS) 
 EXE_SUFFIX=
 endif
