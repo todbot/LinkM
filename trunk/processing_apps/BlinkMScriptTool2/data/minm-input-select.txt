@@ -1,9 +1,11 @@
 // MinM script -- "input selects between two scripts"
+//
 //  A two-mode light script 
 //   mode 1 is a slow red-green-blue fading loop 
 //   mode 2 is a flash to bright white, then fade to black 
 //   a button or switch on input #1 (aka the 'd' pin) chooses between the two
-//  
+//   MinM inputs are 0x40 = 'd' pin, 0x41 = 'c' pin
+//
 {0, {'I',0x40,160,6}},	    //  line 0: set global test: if #1 > 0xA0, jmp +6
 {0, {'f',20,0,0}},          //  line 1: set fade speed to 20 
 {15, {'c',0xff,0x00,0x00}},	//  line 2: fade to red 
