@@ -92,7 +92,7 @@
 /* ----------------------------- USB interface ----------------------------- */
 /* ------------------------------------------------------------------------- */
 
-#define REPORT1_COUNT 16
+#define REPORT1_COUNT 8
 #define REPORT2_COUNT 131
 
 PROGMEM char usbHidReportDescriptor[33] = {
@@ -108,10 +108,6 @@ PROGMEM char usbHidReportDescriptor[33] = {
     0x09, 0x00,                    //   USAGE (Undefined)
     0xb2, 0x02, 0x01,              //   FEATURE (Data,Var,Abs,Buf)
 
-    0x85, 0x02,                    //   REPORT_ID (2)
-    0x95, REPORT2_COUNT,           //   REPORT_COUNT (131)
-    0x09, 0x00,                    //   USAGE (Undefined)
-    0xb2, 0x02, 0x01,              //   FEATURE (Data,Var,Abs,Buf)
     0xc0                           // END_COLLECTION
 };
 
