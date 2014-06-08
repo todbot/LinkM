@@ -1,3 +1,7 @@
 # copy this udev with "sudo cp 51-linkm.rules /etc/udev/rules.d/"
 # and do "sudo udevadm control --reload-rules"
-SYSFS{idVendor}=="20a0", SYSFS{idProduct}=="4110", MODE="666"
+# older, do not use in modern Ubuntu
+#SYSFS{idVendor}=="20a0", SYSFS{idProduct}=="4110", MODE="666"
+# use the below instead
+# and reload with: "sudo service udev reload"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="20a0", ATTRS{idProduct}=="4110", MODE="666" 
