@@ -1,7 +1,13 @@
+## LinkM -- USB to I2C adapter for BlinkM Smart LEDs
 
-README for "linkm" project
-==========================
-2010 Tod E. Kurt, ThingM
+![](https://raw.githubusercontent.com/todbot/LinkM/master/docs/linkm1.jpg)![](https://raw.githubusercontent.com/todbot/LinkM/master/docs/linkm2.jpg)
+![](https://raw.githubusercontent.com/todbot/LinkM/master/docs/linkm3.jpg)![](https://raw.githubusercontent.com/todbot/LinkM/master/docs/linkm4.jpg)
+
+LinkM datasheet: https://github.com/todbot/LinkM/raw/master/docs/LinkM_datasheet.pdf
+
+
+### README for LinkM
+2010-2015 Tod E. Kurt, ThingM
 
 Hosted on Github at https://github.com/todbot/LinkM/
 
