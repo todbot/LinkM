@@ -75,7 +75,8 @@ LIBUSBA   = libusb-windows.a
 USBLIBS   = -lhid -lsetupapi
 
 # this must match your Java install
-JAVA_HOME = "C:\\Program Files\\Java\\jdk1.7.0_05\\"
+JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_45\\"
+#JAVA_HOME = "C:\\Program Files\\Java\\jdk1.7.0_05\\"
 #JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_20\\"
 JAVA_NATIVE_INC = -I${JAVA_HOME}/include -I${JAVA_HOME}/include/win32
 OS_CFLAGS  = ${JAVA_NATIVE_INC}
@@ -124,8 +125,9 @@ help:
 	@echo "make javadoc ... to make the javadoc"
 
 javac:
-#	javac -target 1.7 thingm/linkm/$(TARGET).java	
-	javac -target 1.5 thingm/linkm/$(TARGET).java	
+	javac  thingm/linkm/$(TARGET).java	
+#	javac -target 1.5 -source 1.5 thingm/linkm/$(TARGET).java	
+#	javac -target 1.5 thingm/linkm/$(TARGET).java	
 
 jni:
 	which javah
