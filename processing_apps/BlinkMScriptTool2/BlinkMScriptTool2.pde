@@ -12,12 +12,18 @@
 //
 
 import java.awt.*;
-import java.awt.event.*;
+//import java.awt.event.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import javax.swing.*; 
 import java.util.regex.*;
 import javax.swing.border.*;      // for silly borders on buttons
 import javax.swing.plaf.metal.*;  // for look-n-feel stuff
 import javax.swing.text.*;        // copy-n-paste
+import java.util.*;
 
 import thingm.linkm.*;
 
@@ -58,7 +64,7 @@ JTextField posText;
 JLabel statusText;
 
 int mainWidth = 740;
-int mainHeight = 480; 
+int mainHeight = 540; 
 int mainHeightWindows = 640;
 Font monoFont  = new Font("Monospaced", Font.PLAIN, 14); // all hail fixed width
 Font monoFontSm = new Font("Monospaced", Font.PLAIN, 9); 
@@ -100,13 +106,13 @@ void connectLinkM() {
     linkm.open();
     linkm.i2cEnable(true);
   } catch(IOException ioe) {
-    debug("connect: no linkm? "+ioe);
+    dbg("connect: no linkm? "+ioe);
     return;
   }
-  debug("linkm connected.");
+  dbg("linkm connected.");
 }
 //
-void debug(String s) {
+void dbg(String s) {
   println(s);
 }
 
@@ -118,7 +124,7 @@ void status(String s) {
 
 // this class is bound to the GUI buttons below
 // it triggers the four main functions
-class MyActionListener implements ActionListener{
+class MyActionListener implements ActionListener {
   public void actionPerformed(ActionEvent e) {
     String cmd = e.getActionCommand();
     if( cmd == null ) return;
@@ -247,7 +253,7 @@ void sendToBlinkM() {
   }
   long et = System.currentTimeMillis();
   status("done sending!");
-  debug("send elapsed "+(et-st)+" millis)");
+  dbg("send elapsed "+(et-st)+" millis)");
 
 }
 
