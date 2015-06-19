@@ -58,9 +58,10 @@ JAVAINCLUDEDIR = /System/Library/Frameworks/JavaVM.framework/Headers
 JAVANATINC = -I $(JAVAINCLUDEDIR)/./
 JAVAINCLUDE = -I $(JAVAINCLUDEDIR)
 
+OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64  -std=gnu99  $(USBFLAGS) 
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS) 
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch ppc -std=gnu99  $(USBFLAGS) 
-OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -std=gnu99  $(USBFLAGS) 
+#OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -std=gnu99  $(USBFLAGS) 
 #OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -arch ppc -std=gnu99  $(USBFLAGS)
 #OS_CFLAGS = -g -O2 -D_BSD_SOURCE -bundle -arch i386 -arch x86_64 -std=gnu99  $(USBFLAGS)
