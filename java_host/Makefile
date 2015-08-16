@@ -91,7 +91,7 @@ LIBTARGET = lib$(TARGET).so  # for linux
 USBFLAGS  = `libusb-config --cflags`
 USBLIBS   = `libusb-config --libs`
 #USBLIBS   =  -L$(LIBUSBA_DIR) -lusb-linux
-OS_CFLAGS  = $(USBFLAGS) -shared -I/usr/lib/jvm/java-6-sun/include -I/usr/lib/jvm/java-6-sun/include/linux
+OS_CFLAGS  = $(USBFLAGS) -shared -fPIC -I/usr/lib/jvm/java-6-sun/include -I/usr/lib/jvm/java-6-sun/include/linux -I/usr/lib/jvm/default-java/include
 OS_LDFLAGS = $(USBLIBS) 
 endif
 
@@ -100,7 +100,7 @@ endif
 INCLUDES = -I. -I../c_host $(JAVAINCLUDE) $(JAVANATINC) 
 OBJ = ../c_host/hiddata.o  ../c_host/linkm-lib.o  native$(TARGET).o 
 
-CFLAGS  = $(OS_CFLAGS) -O -Wall -std=gnu99  $(INCLUDES)
+CFLAGS  = $(OS_CFLAGS) -O -Wall -std=gnu99 $(INCLUDES)
 LDFLAGS = $(OS_LDFLAGS) 
 
 CC = gcc
