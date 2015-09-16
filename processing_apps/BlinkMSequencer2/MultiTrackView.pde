@@ -606,7 +606,7 @@ public class MultiTrackView
   /**
    * give color vals on tooltip
    */
-  public String getToolTipText(MouseEvent e) {
+  public String getToolTipText(java.awt.event.MouseEvent e) {
     Point mp = e.getPoint();
     for( int j=0; j<numTracks; j++) {
       boolean intrack = 
@@ -626,15 +626,15 @@ public class MultiTrackView
   }
 
 
-  public void mouseClicked(MouseEvent e) {
+  public void mouseClicked(java.awt.event.MouseEvent e) {
     //l.debug("MultiTrack.mouseClicked");
   }
 
-  public void mouseEntered(MouseEvent e) {
+  public void mouseEntered(java.awt.event.MouseEvent e) {
     //l.debug("entered");
   }
 
-  public void mouseExited(MouseEvent e) {
+  public void mouseExited(java.awt.event.MouseEvent e) {
     //l.debug("exited");
   }
 
@@ -653,7 +653,7 @@ public class MultiTrackView
     
   
   //
-  public void mousePressed(MouseEvent e) {
+  public void mousePressed(java.awt.event.MouseEvent e) {
     //l.debug("MultiTrackView.mousePressed: "+e);
     Point mp = e.getPoint();
     mouseClickedPt = mp;
@@ -767,7 +767,7 @@ public class MultiTrackView
   }
     
 
-  public void mouseReleased(MouseEvent e) {
+  public void mouseReleased(java.awt.event.MouseEvent e) {
     Point mouseReleasedPt = e.getPoint();
     int clickCnt = e.getClickCount();
 
@@ -819,11 +819,11 @@ public class MultiTrackView
     repaint();
   }
 
-  public void mouseMoved(MouseEvent e) {
+  public void mouseMoved(java.awt.event.MouseEvent e) {
     mousePt = e.getPoint();
   }
 
-  public void mouseDragged(MouseEvent e) {
+  public void mouseDragged(java.awt.event.MouseEvent e) {
     //l.debug("dragged:"+e);
     if (playheadClicked) {             // if playhead is selected move it
       playHeadCurr = e.getPoint().x;

@@ -43,6 +43,7 @@ import javax.swing.event.*;
 import javax.swing.colorchooser.*;
 import javax.swing.plaf.metal.*;
 import java.util.jar.*;
+import java.util.*;
 
 import thingm.linkm.*;
 
@@ -1271,7 +1272,7 @@ JPanel makeChannelsTopPanel() {
   currChanLabel.setFont(textBigfont);
 
   p.addMouseListener(new MouseAdapter() {
-      public void mouseClicked(MouseEvent me) {
+      public void mouseClicked(java.awt.event.MouseEvent me) {
         doTrackDialog(0);  // open up change track functionality
       }
     });
@@ -1318,6 +1319,11 @@ JPanel makeColorChooserPanel() {
   FixedColorSelectionModel fixedModel = new FixedColorSelectionModel();
 
   colorChooser = new JColorChooser(fixedModel);
+  
+  Dimension d = new Dimension(480,240) ;
+  colorChooser.setPreferredSize( d );
+  colorChooser.setMaximumSize( d );
+  colorChooser.setMinimumSize( d );
 
   colorChooser.setBackground(cBgDarkGray);
   colorChooser.getSelectionModel().addChangeListener( new ChangeListener() {
@@ -1331,12 +1337,15 @@ JPanel makeColorChooserPanel() {
   colorChooser.setColor( cEmpty );
 
   JPanel colorChooserPanel = new JPanel();   // put it in its own panel for why?
+  //colorChooserPanel.setPreferredSize( d );
+  //colorChooserPanel.setMaximumSize( d );
+  
   colorChooserPanel.setBackground(cBgDarkGray);  
   colorChooserPanel.add( Box.createVerticalStrut(5) );
   colorChooserPanel.add( colorChooser );
 
   colorChooser.addMouseListener( new MouseAdapter() {
-      public void mouseClicked(MouseEvent e) {
+      public void mouseClicked(java.awt.event.MouseEvent e) {
         println("CLICKY");
       }
     });
@@ -1497,32 +1506,32 @@ void setupMenus(Frame f) {
   Menu toolMenu = new Menu("Tools");
   Menu helpMenu = new Menu("Help");
 
-  MenuItem itemf1 = new MenuItem("Load Set", new MenuShortcut(KeyEvent.VK_O));
-  MenuItem itemf2 = new MenuItem("Save Set", new MenuShortcut(KeyEvent.VK_S));
+  MenuItem itemf1 = new MenuItem("Load Set", new MenuShortcut(java.awt.event.KeyEvent.VK_O));
+  MenuItem itemf2 = new MenuItem("Save Set", new MenuShortcut(java.awt.event.KeyEvent.VK_S));
   MenuItem itemf2a= new MenuItem("-");
   MenuItem itemf3 = new MenuItem("Load One Track",
-                                 new MenuShortcut(KeyEvent.VK_O, true));
+                                 new MenuShortcut(java.awt.event.KeyEvent.VK_O, true));
   MenuItem itemf4 = new MenuItem("Save One Track",
-                                 new MenuShortcut(KeyEvent.VK_S, true));
+                                 new MenuShortcut(java.awt.event.KeyEvent.VK_S, true));
   MenuItem itemf4a= new MenuItem("-");
 
   connectItem     = new MenuItem("Connect to Arduino", 
-                                 new MenuShortcut(KeyEvent.VK_C,true));
+                                 new MenuShortcut(java.awt.event.KeyEvent.VK_C,true));
 
   MenuItem itemf4b= new MenuItem("-");
   CheckboxMenuItem itemf5 = new CheckboxMenuItem("CtrlM Mode");
 
   MenuItem itemf5a= new MenuItem("-");
-  MenuItem itemf6 = new MenuItem("Quit", new MenuShortcut(KeyEvent.VK_Q));
+  MenuItem itemf6 = new MenuItem("Quit", new MenuShortcut(java.awt.event.KeyEvent.VK_Q));
 
-  MenuItem iteme1= new MenuItem("Cut",  new MenuShortcut(KeyEvent.VK_X));
-  MenuItem iteme2= new MenuItem("Copy", new MenuShortcut(KeyEvent.VK_C));
-  MenuItem iteme3= new MenuItem("Paste",new MenuShortcut(KeyEvent.VK_V));
-  MenuItem iteme4= new MenuItem("Delete",new MenuShortcut(KeyEvent.VK_D));
+  MenuItem iteme1= new MenuItem("Cut",  new MenuShortcut(java.awt.event.KeyEvent.VK_X));
+  MenuItem iteme2= new MenuItem("Copy", new MenuShortcut(java.awt.event.KeyEvent.VK_C));
+  MenuItem iteme3= new MenuItem("Paste",new MenuShortcut(java.awt.event.KeyEvent.VK_V));
+  MenuItem iteme4= new MenuItem("Delete",new MenuShortcut(java.awt.event.KeyEvent.VK_D));
   MenuItem iteme4a=new MenuItem("-");
-  MenuItem iteme5= new MenuItem("Select All in Track", new MenuShortcut(KeyEvent.VK_A));
+  MenuItem iteme5= new MenuItem("Select All in Track", new MenuShortcut(java.awt.event.KeyEvent.VK_A));
   MenuItem iteme5a=new MenuItem("-");
-  MenuItem iteme6= new MenuItem("Make Gradient", new MenuShortcut(KeyEvent.VK_G));
+  MenuItem iteme6= new MenuItem("Make Gradient", new MenuShortcut(java.awt.event.KeyEvent.VK_G));
   MenuItem iteme6a=new MenuItem("-");
   MenuItem iteme7= new MenuItem("Edit Channel IDs");
 
@@ -1659,33 +1668,33 @@ void bindKeys() {
     KeyboardFocusManager.getCurrentKeyboardFocusManager();
   
   kfm.addKeyEventDispatcher( new KeyEventDispatcher() {
-      public boolean dispatchKeyEvent(KeyEvent e) {
+      public boolean dispatchKeyEvent(java.awt.event.KeyEvent e) {
         boolean rc = false;
         if( !mf.hasFocus() ) { 
           if( !multitrack.hasFocus() ) {
             return false;
           }
         }
-        if(e.getID() != KeyEvent.KEY_PRESSED) 
+        if(e.getID() != java.awt.event.KeyEvent.KEY_PRESSED) 
           return false;
         int mod = e.getModifiers();
         //if(e.getModifiers() != 0)  // FIXME?
         //  return false;
 
         switch(e.getKeyCode()) {
-        case KeyEvent.VK_UP:
+        case java.awt.event.KeyEvent.VK_UP:
           multitrack.prevTrack();  rc = true;
           break;
-        case KeyEvent.VK_DOWN:
+        case java.awt.event.KeyEvent.VK_DOWN:
           multitrack.nextTrack();  rc = true;
           break;
-        case KeyEvent.VK_LEFT:
+        case java.awt.event.KeyEvent.VK_LEFT:
           multitrack.prevSlice(mod);  rc = true;
           break;
-        case KeyEvent.VK_RIGHT:
+        case java.awt.event.KeyEvent.VK_RIGHT:
           multitrack.nextSlice(mod);  rc = true;
           break;
-        case KeyEvent.VK_SPACE:
+        case java.awt.event.KeyEvent.VK_SPACE:
           if( multitrack.playing ) { 
             multitrack.stop();
           } else { 
@@ -1694,28 +1703,28 @@ void bindKeys() {
           }
           rc = true;
           break;
-        case KeyEvent.VK_1:
+        case java.awt.event.KeyEvent.VK_1:
           multitrack.changeTrack(1);  rc = true;
          break;
-        case KeyEvent.VK_2:
+        case java.awt.event.KeyEvent.VK_2:
           multitrack.changeTrack(2);  rc = true;
           break;
-        case KeyEvent.VK_3:
+        case java.awt.event.KeyEvent.VK_3:
           multitrack.changeTrack(3);  rc = true;
           break;
-        case KeyEvent.VK_4:
+        case java.awt.event.KeyEvent.VK_4:
           multitrack.changeTrack(4);  rc = true;
           break;
-        case KeyEvent.VK_5:
+        case java.awt.event.KeyEvent.VK_5:
           multitrack.changeTrack(5);  rc = true;
           break;
-        case KeyEvent.VK_6:
+        case java.awt.event.KeyEvent.VK_6:
           multitrack.changeTrack(6);  rc = true;
           break;
-        case KeyEvent.VK_7:
+        case java.awt.event.KeyEvent.VK_7:
           multitrack.changeTrack(7);  rc = true;
           break;
-        case KeyEvent.VK_8:
+        case java.awt.event.KeyEvent.VK_8:
           multitrack.changeTrack(8);  rc = true;
           break;
         }

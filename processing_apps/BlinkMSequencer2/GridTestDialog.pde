@@ -1,4 +1,5 @@
 import javax.swing.border.*;
+import java.awt.event.*;
 
 /*
  *
@@ -47,12 +48,12 @@ public class GridTestDialog extends JDialog implements MouseListener {
   }
 
   // Invoked when the mouse button has been clicked (pressed & released)
-  void mouseClicked(MouseEvent e) {
+  void mouseClicked(java.awt.event.MouseEvent e) {
     //println("mouseClicked");
     
   }
   // Invoked when the mouse enters a component.
-  void mouseEntered(MouseEvent e) {
+  void mouseEntered(java.awt.event.MouseEvent e) {
     //println("mouseEntered");
     // if we're mousedown and in same row, select
     if( mousedown ) {
@@ -65,11 +66,11 @@ public class GridTestDialog extends JDialog implements MouseListener {
     }
   }
   // Invoked when the mouse exits a component.
-  void mouseExited(MouseEvent e) {
+  void mouseExited(java.awt.event.MouseEvent e) {
     //println("mouseExited");
   }
   // Invoked when a mouse button has been pressed on a component.
-  void	mousePressed(MouseEvent e) {
+  void	mousePressed(java.awt.event.MouseEvent e) {
     JLabel l = (JLabel)e.getComponent();
     selectOn(l);
     mousedown = true;
@@ -78,7 +79,7 @@ public class GridTestDialog extends JDialog implements MouseListener {
     println("mousePressed: "+currTrack);
     // begin select, say "mousedown!" and set what row we're in
   }
-  void 	mouseReleased(MouseEvent e)  {
+  void 	mouseReleased(java.awt.event.MouseEvent e)  {
     println("mouseReleased");
     // if in mousedown, end select
     mousedown = false;
