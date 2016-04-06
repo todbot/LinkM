@@ -37,8 +37,10 @@ endif
 
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
-JAVA_HOME:=/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Home
+#JAVA_HOME:=/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Home
+JAVA_HOME:=/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
 PATH:=$(JAVA_HOME)/bin:$(PATH)
+
 
 LIBTARGET = lib$(TARGET).jnilib
 #LIBUSBA   = libusb-macosx.a
@@ -125,7 +127,9 @@ help:
 	@echo "make javadoc ... to make the javadoc"
 
 javac:
-	javac  thingm/linkm/$(TARGET).java	
+	which javac
+	javac -source 1.6 -target 1.6 thingm/linkm/$(TARGET).java	
+#	javac  thingm/linkm/$(TARGET).java	
 #	javac -target 1.5 -source 1.5 thingm/linkm/$(TARGET).java	
 #	javac -target 1.5 thingm/linkm/$(TARGET).java	
 
