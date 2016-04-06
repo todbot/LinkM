@@ -48,7 +48,7 @@ The build process for all LinkM software except the Processing apps is
 expected to be done entirely from the command-line using standard free
 Unix-like tools such as "make" and "gcc".
 
-There is a "build_all_host.sh" script that will build the host-side code
+There is a `build_all_host.sh` script that will build the host-side code
 on all OS platforms. 
 
 Host code dependencies:
@@ -57,7 +57,7 @@ Host code dependencies:
 
 On Mac OS X you will need the following free tools:
 - XCode - http://developer.apple.com/technologies/xcode.html
-- libusb - "sudo port install libusb-legacy +universal"  
+- libusb - `sudo port install libusb-legacy +universal`
    ('port' is available from http://macports.org/ )
    (you may wait to add "universal_archs x86_64 i386 ppc" in 
     /opt/local/etc/macports/macports.conf and add "+universal" to 
@@ -70,9 +70,9 @@ On Windows you will need the following free tools:
 - Java JDK - http://java.sun.com/javase/downloads/widget/jdk6.jsp
 
 On Ubuntu Linux you will need the following free tools:
-- build-essential - 'sudo apt-get install build-essential'
-- libusb - 'sudo apt-get install libusb libusb-dev'
-- Sun JDK - 'sudo add-apt-repository "deb http://archive.canonical.com/ lucid partner" && sudo apt-get update && sudo apt-get install sun-java6-jdk'
+- build-essential - `sudo apt-get install build-essential`
+- libusb - `sudo apt-get install libusb libusb-dev`
+- Sun JDK - `sudo add-apt-repository "deb http://archive.canonical.com/ lucid partner" && sudo apt-get update && sudo apt-get install sun-java6-jdk`
 
 
 BUILDING THE FIRMWARE
