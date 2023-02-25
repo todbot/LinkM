@@ -20,7 +20,7 @@
 #
 # Mac OS X 
 #   - Install Xcode with Unix Dev Support 
-#   - Install 'make' from macports (or similar)
+#   - Install 'libusb' from homebrew or macports 
 #
 # Windows XP/7  
 #   - Install MinGW and MSYS (http://www.tdragon.net/recentgcc/ )
@@ -58,11 +58,11 @@ TARGET=linkm-tool
 
 # set to 1 to include bootloading functionality
 # e.g. "make ADDBOOTLOAD=0" to disable bootloader support  (i think)
-ADDBOOTLOAD := 1
+ADDBOOTLOAD := 0
 
 # set to 1 to enable macosx single architecture compiling 
 # (whatever your arch is, otherwise compile for x86_64, i386, and ppc )
-SINGLEARCH := 0
+SINGLEARCH := 1
 
 # try to do some autodetecting
 UNAME := $(shell uname -s)
@@ -83,6 +83,20 @@ CC=gcc
 
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
+ifneq ("$(wildcard /opt/homebrew)","")  # newer homebrew exists
+	USBFLAGS += -I/opt/homebrew/include/libusb-1.0
+	USBLIBS += /opt/homebrew/lib/libusb-1.0.a
+else
+	USBFLAGS = -I/usr/local/include/libusb-1.0
+	USBLIBS += /usr/local/lib/libusb-1.0.a 
+endif
+USBLIBS += -framework IOKit -framework CoreFoundation -framework Security
+
+OS_LIBS  = $(OS_CFLAGS) 
+EXE_SUFFIX=
+endif
+
+ifeq "$(OS)" "macosx-macports"
 # Mac OS X: "sudo port install libusb-legacy +universal" using MacPorts
 # If you want to build for PowerPC too, you'll need to edit 
 # /opt/local/etc/macports/macports.conf: universal_archs and add "ppc"
@@ -96,7 +110,7 @@ USBLIBS +=  `libusb-legacy-config --libs | cut -d' ' -f 3- `
 ifeq ($(SINGLEARCH), 0) 
 #OS_CFLAGS= -arch i386 -arch ppc 
 #OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
-OS_CFLAGS= -arch i386 -arch x86_64
+#OS_CFLAGS= -arch i386 -arch x86_64
 #OS_CFLAGS= -arch x86_64
 endif
 #OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
