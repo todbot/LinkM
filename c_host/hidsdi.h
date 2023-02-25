@@ -19,8 +19,8 @@ that instead.
 
 #include <pshpack4.h>
 
-#include <ddk/hidusage.h>
-#include <ddk/hidpi.h>
+//#include <ddk/hidusage.h>
+//#include <ddk/hidpi.h>
 
 typedef struct{
     ULONG   Size;

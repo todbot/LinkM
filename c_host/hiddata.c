@@ -15,7 +15,7 @@
 
 #include <windows.h>
 #include <setupapi.h>
-//#include "hidsdi.h"
+#include "hidsdi.h"
 //#include <ddk/hidpi.h>
 
 #ifdef DEBUG
