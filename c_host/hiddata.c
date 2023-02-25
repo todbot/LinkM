@@ -15,8 +15,8 @@
 
 #include <windows.h>
 #include <setupapi.h>
-#include "hidsdi.h"
-#include <ddk/hidpi.h>
+//#include "hidsdi.h"
+//#include <ddk/hidpi.h>
 
 #ifdef DEBUG
 #define DEBUG_PRINT(arg)    printf arg
@@ -52,7 +52,7 @@ int                                 i, openFlag = 0;  /* may be FILE_FLAG_OVERLA
 int                                 errorCode = USBOPEN_ERR_NOTFOUND;
 HANDLE                              handle = INVALID_HANDLE_VALUE;
 HIDD_ATTRIBUTES                     deviceAttributes;
-				
+
     HidD_GetHidGuid(&hidGuid);
     deviceInfoList = SetupDiGetClassDevs(&hidGuid, NULL, NULL, DIGCF_PRESENT | DIGCF_INTERFACEDEVICE);
     deviceInfo.cbSize = sizeof(deviceInfo);
