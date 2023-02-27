@@ -1,5 +1,5 @@
 /**
- * linkm-lib -- LinkM functions 
+ * linkm-lib -- LinkM functions
  *
  *
  * 2009, Tod E. Kurt, ThingM, http://thingm.com/
@@ -17,6 +17,17 @@
 
 int linkm_debug = 0;
 
+// simple cross-platform millis sleep func
+void linkm_sleep(uint32_t millis)
+{
+#ifdef WIN32
+            Sleep(millis);
+#else
+            usleep( millis * 1000);
+#endif
+}
+
+
 /**
  * Open up a LinkM for transactions.
  * returns 0 on success, and opened device in "dev"
@@ -29,14 +40,14 @@ int linkm_open(usbDevice_t **dev)
     //    linkm_close(*dev);
     //}
 
-    return usbhidOpenDevice(dev, 
+    return usbhidOpenDevice(dev,
                             IDENT_VENDOR_NUM,  IDENT_VENDOR_STRING,
                             IDENT_PRODUCT_NUM, IDENT_PRODUCT_STRING,
                             1);  // NOTE: '0' means "not using report IDs"
 }
 
 /**
- * Close a LinkM 
+ * Close a LinkM
  */
 void linkm_close(usbDevice_t *dev)
 {
@@ -44,14 +55,14 @@ void linkm_close(usbDevice_t *dev)
 }
 
 /**
- * Given a linkm command, number of bytes to send and receive, 
+ * Given a linkm command, number of bytes to send and receive,
  * and buffers to read from and write to, do a linkm transaction
  * Make sure buf_recv is big enough to receive data, or it will be truncated
  * return 0 on success, other on failure.
  *
  * This is the most-used function for LinkM tools.
  */
-int linkm_command(usbDevice_t *dev, int cmd, 
+int linkm_command(usbDevice_t *dev, int cmd,
                   int num_send, int num_recv,
                   uint8_t* buf_send, uint8_t* buf_recv)
 {
@@ -68,11 +79,11 @@ int linkm_command(usbDevice_t *dev, int cmd,
     buf[0] = 1;            // byte 0 : report id, required by usb functions
     buf[1] = START_BYTE;   // byte 1 : start byte
     buf[2] = cmd;          // byte 2 : command
-    buf[3] = num_send;     // byte 3 : num bytes to send (starting at byte 1+4) 
-    buf[4] = num_recv;     // byte 4 : num bytes to recv 
+    buf[3] = num_send;     // byte 3 : num bytes to send (starting at byte 1+4)
+    buf[4] = num_recv;     // byte 4 : num bytes to recv
     if( buf_send != NULL ) {
         memcpy( buf+5, buf_send, sizeof(buf)-5 );
-        
+
         if(linkm_debug) hexdump("linkmcmd: ",buf, 16); // print firest few bytes
     }
     // send out the command part of the transaction
@@ -89,10 +100,12 @@ int linkm_command(usbDevice_t *dev, int cmd,
 
     // if we should return a response from the command, do it
     if( num_recv !=0 ) {
+        linkm_sleep( 50 );
         // FIXME: maybe put delay in here?
         //usleep( millisleep * 1000); // sleep millisecs waiting for response
         memset(buf, 0, sizeof(buf));  // clear out so to more easily see data
-        len = sizeof(buf);
+        //len = sizeof(buf);
+        len = REPORT1_SIZE;
         if((err = usbhidGetReport(dev, 1, (char*)buf, &len)) != 0) {
             fprintf(stderr, "error reading data: %s\n", linkm_error_msg(err));
             return err;
@@ -107,6 +120,7 @@ int linkm_command(usbDevice_t *dev, int cmd,
             memcpy( buf_recv, buf+2, num_recv );  // byte 0 report id
             return buf[1];                        // byte 1 is error code
         }
+        linkm_sleep( 50 );
     }
     return 0;
 }
@@ -131,7 +145,7 @@ char* linkm_error_msg(int errCode)
         sprintf(buffer, "Unknown USB error %d", errCode);
         return buffer;
     }
-    return NULL;    // not reached 
+    return NULL;    // not reached
 }
 
 /* ------------------------------------------------------------------------- */
@@ -159,7 +173,7 @@ void hexdump(const char* intro, uint8_t *buffer, int len)
 int  hexread(uint8_t *buffer, char *string, int buflen)
 {
     char    *s;
-    int     pos = 0;   
+    int     pos = 0;
     while((s = strtok(string, ", '\"")) != NULL && pos < buflen) {
         string = NULL;
         buffer[pos++] = (isalpha(*s)) ? *s : (char)strtol(s, NULL, 0);
@@ -167,4 +181,32 @@ int  hexread(uint8_t *buffer, char *string, int buflen)
     return pos;
 }
 
+// parse string of:
+// "scriptline: 2 0x02 0x63 0x50 0xc9 0x5e"
+int parse_scriptlines( char* filename,  scriptline_t* lines )
+{
+    int i = 0;
+    FILE* file = fopen(filename, "r");
+    if( file == NULL ) {
+        perror("unable to open file");
+        exit(1);
+    }
+    char line[100];
+    while( fgets(line, sizeof(line), file) ) {
+        printf("\tparse: %d: line:%s", i, line);
+        //scriptline_t s = scriptlines[i];
+        int pos;
+        int n = sscanf( line,
+                        "scriptline: %d 0x%02hhx 0x%02hhx 0x%02hhx 0x%02hhx 0x%02hhx",
+                        &pos,
+                        &lines[i].duration, &lines[i].cmd,
+                        &lines[i].arg0, &lines[i].arg1, &lines[i].arg2);
+        //printf("    n:%d\n", n);
+        if( n==6 ) { // number of fields parsed
+            i++;
+        }
+    }
 
+    fclose(file);
+    return i;
+}

@@ -11,8 +11,8 @@
 #include <stdint.h>
 #include "hiddata.h"
 
-// NOTE: these values much be the same as those in 
-//       "linkm/firmware/usbconfig.h"           and 
+// NOTE: these values much be the same as those in
+//       "linkm/firmware/usbconfig.h"           and
 //       "linkm/bootloadHID/firmware/usbconfig.h"
 //#define IDENT_VENDOR_NUM        0x16C0
 //#define IDENT_PRODUCT_NUM       0x05DF
@@ -27,7 +27,7 @@
 #define START_BYTE          0xDA
 
 // Command byte values for linkm_command()
-enum { 
+enum {
     LINKM_CMD_NONE     = 0,      // no command, do not use
     // I2C commands
     LINKM_CMD_I2CTRANS = 1,      // i2c read & write (N args: addr + other)
@@ -49,7 +49,7 @@ enum {
 };
 
 // Return values for linkm_command()
-enum { 
+enum {
     LINKM_ERR_NONE     =   0,
     LINKM_ERR_BADSTART = 101,
     LINKM_ERR_BADARGS,
@@ -61,20 +61,33 @@ enum {
 
 extern int linkm_debug;
 
+
+typedef struct {
+    uint8_t duration;
+    uint8_t cmd;
+    uint8_t arg0;
+    uint8_t arg1;
+    uint8_t arg2;
+} scriptline_t;
+
+
 // public api
 int linkm_open(usbDevice_t** dev);
 void linkm_close(usbDevice_t* dev);
-int linkm_command(usbDevice_t* dev, 
-                  int cmd, 
-                  int bytes_send, 
+int linkm_command(usbDevice_t* dev,
+                  int cmd,
+                  int bytes_send,
                   int bytes_recv,
-                  uint8_t* buf_send, 
+                  uint8_t* buf_send,
                   uint8_t* buf_recv);
 char* linkm_error_msg(int errCode);
 
 // utility
 void hexdump(const char* intro, uint8_t* buffer, int len);
 int  hexread(uint8_t* buffer, char* string, int buflen);
+void linkm_sleep(uint32_t millis);
+int parse_scriptlines( char* filename,  scriptline_t* lines );
+
 
 
 #endif //__LINKM_LIB_H_INCLUDED__
