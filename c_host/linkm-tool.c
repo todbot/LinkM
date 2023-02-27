@@ -128,6 +128,8 @@ void usage(char *myName)
 "  linkm-tool -a 9 --download 5                # download script #5\n"
 "  linkm-tool --playset \"1,0,4,48\"   # set linkm to play script0,spd4,len48\n"
 "  linkm-tool --playset \"1,0,4,48,0,20,0\" # with pos0,fade20,dir0\n"
+"  linkm-tool -a 9 --download 0 > scriptlines.txt  # save script #0 to file\n"
+"  linkm-tool -a 9 --upload 0 -f scriptlines.txt   # upload script #0 from file\n"
 "\n", myName
            );
     exit(1);
