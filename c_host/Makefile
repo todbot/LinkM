@@ -1,6 +1,6 @@
 # Makefile for "linkm-lib" and "linkm-tool"
 # should work on Mac OS X, Windows, and Linux
-#  
+#
 # Build arguments:
 # - "OS=macosx"  -- build Mac version on Mac OS X
 # - "OS=windows" -- build Windows version on Windows
@@ -9,23 +9,23 @@
 # - "ADDBOOTLOAD=1" -- add ability to linkm-lib and linkm-tool to use bootloader
 # - "ADDBOOTLOAD=0" -- to disable ability to use bootloader
 #
-# Dependencies: 
+# Dependencies:
 # - libusb is required
 # - if "make ADDBOOTLOAD=1", then
-#    "../bootloadHID/commandline/linkmbootload" 
+#    "../bootloadHID/commandline/linkmbootload"
 #  must be compiled beforehand if using bootload functionality
 # - Or, if "make ADDBOATLOAD=0", then no other dependencies other than OS-specific ones below.
 #
 # Platform-specific notes:
 #
-# Mac OS X 
-#   - Install Xcode with Unix Dev Support 
-#   - Install 'libusb' from homebrew or macports 
+# Mac OS X
+#   - Install Xcode with Unix Dev Support
+#   - Install 'libusb' from homebrew or macports
 #
-# Windows XP/7  
+# Windows XP/7
 #   - Install MinGW and MSYS (http://www.tdragon.net/recentgcc/ )
 #
-# Linux (Ubuntu) 
+# Linux (Ubuntu)
 #   - apt-get install gcc-avr avr-libc avrdude java librxtx-java
 #
 # OpenWrt / DD-WRT
@@ -34,9 +34,9 @@
 #   - type "make OS=wrt" to build
 #
 # BeagleBone / BeagleBoard (on Angstrom Linux)
-#   - Install USB dev support 
+#   - Install USB dev support
 #      "opkg install libusb-0.1-4-dev"
-#   - May need to symlink libusb 
+#   - May need to symlink libusb
 #      "cd /lib; ln -s libusb-0.1.so.4 libusb.so"
 #   - Build "linkm-tool" command-line app
 #      "make ADDBOOTLOAD=0"
@@ -60,9 +60,9 @@ TARGET=linkm-tool
 # e.g. "make ADDBOOTLOAD=0" to disable bootloader support  (i think)
 ADDBOOTLOAD := 0
 
-# set to 1 to enable macosx single architecture compiling 
+# set to 1 to enable macosx single architecture compiling
 # (whatever your arch is, otherwise compile for x86_64, i386, and ppc )
-SINGLEARCH := 1
+SINGLE_ARCH := 1
 
 # try to do some autodetecting
 UNAME := $(shell uname -s)
@@ -81,24 +81,32 @@ endif
 
 CC=gcc
 
+
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
-ifneq ("$(wildcard /opt/homebrew)","")  # newer homebrew exists
+ifneq ("$(wildcard /opt/homebrew)","")  # check if /opt/homebrew exists
 	USBFLAGS += -I/opt/homebrew/include/libusb-1.0
 	USBLIBS += /opt/homebrew/lib/libusb-1.0.a
 else
 	USBFLAGS = -I/usr/local/include/libusb-1.0
-	USBLIBS += /usr/local/lib/libusb-1.0.a 
+	USBLIBS += /usr/local/lib/libusb-1.0.a
 endif
 USBLIBS += -framework IOKit -framework CoreFoundation -framework Security
 
-OS_LIBS  = $(OS_CFLAGS) 
-EXE_SUFFIX=
+ifeq ($(SINGLE_ARCH), 0)
+#OS_CFLAGS= -arch i386 -arch ppc
+#OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
+#OS_CFLAGS= -arch i386 -arch x86_64
+OS_CFLAGS= -arch x86_64 -arch x86_64
 endif
+
+OS_LIBS  = $(OS_CFLAGS)
+EXE_SUFFIX=
+endif  # macosx
 
 ifeq "$(OS)" "macosx-macports"
 # Mac OS X: "sudo port install libusb-legacy +universal" using MacPorts
-# If you want to build for PowerPC too, you'll need to edit 
+# If you want to build for PowerPC too, you'll need to edit
 # /opt/local/etc/macports/macports.conf: universal_archs and add "ppc"
 # otherwise swap the OS_CFLAGS with the commented one below
 USBFLAGS = `/opt/local/bin/libusb-legacy-config --cflags`
@@ -107,17 +115,11 @@ USBLIBS = `/opt/local/bin/libusb-legacy-config --libs | cut -d' ' -f1 | cut -c3-
 # get everything else in --libs
 USBLIBS +=  `libusb-legacy-config --libs | cut -d' ' -f 3- `
 
-ifeq ($(SINGLEARCH), 0) 
-#OS_CFLAGS= -arch i386 -arch ppc 
-#OS_CFLAGS= -arch i386 -arch x86_64 -arch ppc
-#OS_CFLAGS= -arch i386 -arch x86_64
-#OS_CFLAGS= -arch x86_64
-endif
 #OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -no_compact_linkedit
 #OS_CFLAGS += -isysroot /Developer/SDKs/MacOSX10.6.sdk -mmacosx-version-min=10.6 -no_compact_linkedit
-OS_LIBS  = $(OS_CFLAGS) 
+OS_LIBS  = $(OS_CFLAGS)
 EXE_SUFFIX=
-endif
+endif  # macosx-macports
 
 #################  Windows  ##################################################
 ifeq "$(OS)" "windows"
@@ -149,33 +151,33 @@ endif
 
 #CC=		gcc
 CFLAGS=	$(OS_CFLAGS) -O -Wall -std=gnu99 $(USBFLAGS) -DADDBOOTLOAD=$(ADDBOOTLOAD)
-LIBS=	$(OS_LIBS) $(USBLIBS) 
+LIBS=	$(OS_LIBS) $(USBLIBS)
 
-ifeq ($(ADDBOOTLOAD), 1) 
+ifeq ($(ADDBOOTLOAD), 1)
 CFLAGS+=        -I../bootloadHID/commandline
-LIBS+=          ../bootloadHID/commandline/liblinkmbootload.a 
+LIBS+=          ../bootloadHID/commandline/liblinkmbootload.a
 endif
 
-OBJ=		$(TARGET).o linkm-lib.o hiddata.o 
+OBJ=		$(TARGET).o linkm-lib.o hiddata.o
 
 PROGRAM=	$(TARGET)$(EXE_SUFFIX)
 
 all: msg $(PROGRAM)
 
-msg: 
+msg:
 	@echo "building for OS=$(OS)"
 
 # symbolic targets:
 help:
 	@echo "This Makefile works on multiple archs. Use one of the following:"
-	@echo "make OS=windows ... build Windows  linkm-lib and linkm-tool" 
-	@echo "make OS=linux   ... build Linux    linkm-lib and linkm-tool" 
-	@echo "make OS=macosx  ... build Mac OS X linkm-lib and linkm-tool" 
+	@echo "make OS=windows ... build Windows  linkm-lib and linkm-tool"
+	@echo "make OS=linux   ... build Linux    linkm-lib and linkm-tool"
+	@echo "make OS=macosx  ... build Mac OS X linkm-lib and linkm-tool"
 	@echo "make clean ..... to delete objects and hex file"
 	@echo
 
 $(PROGRAM): $(OBJ)
-	$(CC) -o $(PROGRAM) $(OBJ) $(LIBS) 
+	$(CC) -o $(PROGRAM) $(OBJ) $(LIBS)
 
 
 strip: $(PROGRAM)
