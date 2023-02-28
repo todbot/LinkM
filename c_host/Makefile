@@ -131,8 +131,8 @@ endif
 
 #################  Linux  ###################################################
 ifeq "$(OS)" "linux"
-USBFLAGS =   `libusb-config --cflags`
-USBLIBS  =   `libusb-config --libs`
+USBFLAGS =   `pkg-config libusb-1.0 --cflags`
+USBLIBS  =   `pkg-config libusb-1.0  --libs`
 EXE_SUFFIX=
 endif
 
