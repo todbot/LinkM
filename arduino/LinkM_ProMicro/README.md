@@ -1,9 +1,12 @@
 # LinkM Emulator for Arduino Pro Micro (ATmega32U4)
 
 Firmware that turns a SparkFun Pro Micro (ATmega32U4) into a drop-in replacement
-for a ThingM LinkM USB HID to I2C adapter.  The emulator is wire-compatible with
-the existing `linkm-tool` CLI and all LinkM host libraries — no host-side changes
-required.
+for a ThingM LinkM USB HID to I2C adapter.  The emulator implements the same USB
+HID identity and feature-report protocol as the original hardware.
+
+The host-side tool (`c_host/linkm-tool`) must be built from this repository — it
+uses hidapi rather than libusb, which allows the Pro Micro's CDC serial interface
+to remain active alongside the HID interface.
 
 ---
 
@@ -108,24 +111,14 @@ core and ship with `SparkFun:avr`.
 ## Compile
 
 The Pro Micro defaults to SparkFun's VID/PID (`0x1B4F / 0x9206`).  Pass the
-LinkM identity and CDC-disable flags on the command line:
-
-> **Why `-DCDC_DISABLED`?**  On macOS the `AppleUSBCDC` kernel driver claims the
-> CDC interface and prevents libusb from sending control transfers to the device.
-> Disabling CDC removes that interface entirely, allowing libusb to access the
-> HID interface directly.  With CDC disabled there is no USB serial port; use
-> the RST-to-GND method described in the Upload section to re-flash.
->
-> Note: the flag is `-DCDC_DISABLED` (define a symbol), not `-UCDC_ENABLED`
-> (undefine a symbol) — the Arduino core uses `#ifndef CDC_DISABLED` in
-> `USBDesc.h`, so `-U` has no effect on a header-file `#define`.
+LinkM identity flags on the command line:
 
 ```sh
 cd LinkM/arduino/LinkM_ProMicro
 
 arduino-cli compile \
     --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
-    --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\" -DCDC_DISABLED" \
+    --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\"" \
     --clean \
     .
 ```
@@ -141,7 +134,7 @@ PLATFORM_DIR=$(arduino-cli config dump --format json | \
     print(d['directories']['data'])")/packages/SparkFun/hardware/avr/1.1.13
 
 cat > "$PLATFORM_DIR/platform.local.txt" << 'EOF'
-build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER="ThingM" -DUSB_PRODUCT="LinkM" -DCDC_DISABLED
+build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER="ThingM" -DUSB_PRODUCT="LinkM"
 EOF
 ```
 
@@ -162,13 +155,7 @@ arduino-cli compile \
 
 ## Upload
 
-Because CDC is disabled, the board does **not** appear as a serial port while
-running.  To upload, you must force it into the Caterina bootloader manually:
-
-1. **Briefly connect RST to GND twice in quick succession** (the Pro Micro has
-   no reset button — use a jumper wire or tweezers on the RST and GND pins).
-   The RX LED will begin pulsing, indicating the bootloader is active.
-2. Within 8 seconds, find the bootloader port and upload:
+The board appears as a CDC serial port while running.  Find the port and upload:
 
 ```sh
 arduino-cli board list
@@ -181,8 +168,23 @@ arduino-cli upload \
     .
 ```
 
-After running this command, double-tap the RESET button (or RESET jumper) 
-to trigger the bootloader anew. 
+If the board is unresponsive (no serial port visible), force it into the
+Caterina bootloader manually:
+
+1. **Briefly connect RST to GND twice in quick succession** (the Pro Micro has
+   no reset button — use a jumper wire or tweezers on the RST and GND pins).
+   The RX LED will begin pulsing, indicating the bootloader is active.
+2. Within 8 seconds, find the bootloader port and upload:
+
+```sh
+arduino-cli board list
+# find the new port, then:
+arduino-cli upload \
+    --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
+    --port /dev/cu.usbmodem14101 \
+    .
+```
+
 
 > The bootloader port is a different path from any previous port.  Run
 > `arduino-cli board list` immediately after the double-tap to see it.
@@ -190,8 +192,8 @@ to trigger the bootloader anew.
 > If the upload still fails, try again — the timing window is ~8 seconds.
 
 
-After a successful upload the board re-enumerates as a HID-only device (no
-serial port) with VID=0x20A0 / PID=0x4110.
+After a successful upload the board re-enumerates with VID=0x20A0 / PID=0x4110,
+presenting both a CDC serial port and the HID interface.
 
 ---
 
@@ -302,10 +304,13 @@ STOP+START.  This is required by BlinkM and many other I2C peripherals.
 
 ### Linux udev rule
 
-On Linux, add a udev rule so non-root users can access the device:
+On Linux, add udev rules so non-root users can access the device.  Two rules are
+needed: one for the hidraw node (used by hidapi) and one for the USB device:
 
 ```sh
-echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="20a0", ATTR{idProduct}=="4110", MODE="0666"' \
-    | sudo tee /etc/udev/rules.d/99-linkm.rules
+cat << 'EOF' | sudo tee /etc/udev/rules.d/99-linkm.rules
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="20a0", ATTRS{idProduct}=="4110", MODE="0666"
+SUBSYSTEM=="usb",    ATTR{idVendor}=="20a0",  ATTR{idProduct}=="4110",  MODE="0666"
+EOF
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```

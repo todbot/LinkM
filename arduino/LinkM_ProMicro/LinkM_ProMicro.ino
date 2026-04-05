@@ -5,18 +5,19 @@
  * Presents as VID=0x20A0 / PID=0x4110 "ThingM" / "LinkM" to the host.
  * All USB communication uses HID Feature Reports (control transfers).
  *
- * BEFORE UPLOADING: set VID/PID, USB strings, and disable CDC.
- * CDC must be disabled so macOS allows libusb to access the HID interface.
+ * BEFORE UPLOADING: set VID/PID and USB strings.
  *
  *   arduino-cli compile \
  *     --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
- *     --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\" -DCDC_DISABLED" \
+ *     --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\"" \
  *     --clean \
  *     .
  *
- * NOTE: with CDC disabled there is no USB serial port. To reset into the
- * bootloader for re-upload, briefly short RST to GND twice in quick succession
- * (the Pro Micro has no reset button — use a jumper wire). RX LED will pulse.
+ * NOTE: the board appears as a CDC serial port while running. To upload,
+ * find the port with "arduino-cli board list" and pass --port to upload.
+ * If the board is unresponsive, briefly short RST to GND twice in quick
+ * succession to force the Caterina bootloader (the Pro Micro has no reset
+ * button — use a jumper wire). RX LED will pulse when bootloader is active.
  *
  * HARDWARE CONNECTIONS:
  *   SDA → Pro Micro pin 2  (internal pull-ups enabled; add 4.7kΩ for long runs)

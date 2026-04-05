@@ -56,21 +56,25 @@ on all OS platforms.
 Host code dependencies:
 - The Java library in "java_host" depends on the C library in "c_host"
 - The C library in "c_host" depends on library in "bootloadHID/commandline"
+- `c_host/linkm-tool` requires **hidapi** (replaces the older libusb dependency)
 
 On Mac OS X you will need the following free tools:
 - XCode - http://developer.apple.com/technologies/xcode.html
-- libusb - `brew install libusb`
+- hidapi - `brew install hidapi`
 
-On Windows you will need the following free tools:
-- MinGW - http://www.mingw.org/
-- MSYS - http://www.mingw.org/wiki/MSYS
-- zip - http://stahlworks.com/dev/index.php?tool=zipunzip
-- Java JDK - http://java.sun.com/javase/downloads/widget/jdk6.jsp
+On Windows (MinGW/MSYS2) you will need:
+- MinGW/MSYS2 - https://www.msys2.org/
+- The Windows build uses the native Win32 HID API; no extra library needed.
 
-On Ubuntu Linux you will need the following free tools:
+On Ubuntu / Debian Linux you will need:
 - build-essential - `sudo apt-get install build-essential`
-- libusb - `sudo apt-get install libusb libusb-dev`
-- Sun JDK - `sudo add-apt-repository "deb http://archive.canonical.com/ lucid partner" && sudo apt-get update && sudo apt-get install sun-java6-jdk`
+- hidapi - `sudo apt-get install libhidapi-dev`
+
+On Fedora / RHEL Linux:
+- `sudo dnf install hidapi-devel`
+
+On Arch Linux:
+- `sudo pacman -S hidapi`
 
 
 BUILDING THE FIRMWARE
