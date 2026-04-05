@@ -1,11 +1,19 @@
 /*
  * linkm-tool -- Command-line tool for using LinkM.
- *               Also excercises the linkm-lib library.
+ *               Also exercises the linkm-lib library.
  *
+ * Based off of "hidtool", part of the "vusb" AVR-USB library by obdev.
  *
- * Based off of "hidtool", part of the "vusb" AVR-USB library by obdev
+ * Dependencies:
+ *   hidapi  (https://github.com/libusb/hidapi)
  *
- * 2009, Tod E. Kurt, ThingM, http://thingm.com/
+ *   macOS:              brew install hidapi
+ *   Ubuntu/Debian:      sudo apt-get install libhidapi-dev
+ *   Fedora/RHEL:        sudo dnf install hidapi-devel
+ *   Arch:               sudo pacman -S hidapi
+ *   Windows (MSYS2):    uses native Win32 HID API — no extra library needed
+ *
+ * 2009-2026, Tod E. Kurt, ThingM, http://thingm.com/
  *
  */
 

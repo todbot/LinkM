@@ -85,13 +85,13 @@ CC=gcc
 #################  Mac OS X  ##################################################
 ifeq "$(OS)" "macosx"
 ifneq ("$(wildcard /opt/homebrew)","")  # check if /opt/homebrew exists
-	USBFLAGS += -I/opt/homebrew/include/libusb-1.0
-	USBLIBS += /opt/homebrew/lib/libusb-1.0.a
+	USBFLAGS += -I/opt/homebrew/include/hidapi
+	USBLIBS  += -L/opt/homebrew/lib -lhidapi
 else
-	USBFLAGS = -I/usr/local/include/libusb-1.0
-	USBLIBS += /usr/local/lib/libusb-1.0.a
+	USBFLAGS += -I/usr/local/include/hidapi
+	USBLIBS  += -L/usr/local/lib -lhidapi
 endif
-USBLIBS += -framework IOKit -framework CoreFoundation -framework Security
+USBLIBS += -framework IOKit -framework CoreFoundation -framework AppKit
 
 ifeq ($(SINGLE_ARCH), 0)
 #OS_CFLAGS= -arch i386 -arch ppc
@@ -129,10 +129,14 @@ USBLIBS=    -lhid -lsetupapi
 EXE_SUFFIX= .exe
 endif
 
-#################  Linux  ###################################################
+#################  Linux / Windows MSYS  ####################################
+# pkg-config name varies by distro:
+#   hidapi-hidraw  — Debian/Ubuntu (hidraw backend, no libusb dependency)
+#   hidapi-libusb  — Debian/Ubuntu (libusb backend)
+#   hidapi         — Fedora, MSYS2/MinGW, generic
 ifeq "$(OS)" "linux"
-USBFLAGS =   `pkg-config libusb-1.0 --cflags`
-USBLIBS  =   `pkg-config libusb-1.0  --libs`
+USBFLAGS = `pkg-config hidapi-hidraw --cflags 2>/dev/null || pkg-config hidapi-libusb --cflags 2>/dev/null || pkg-config hidapi --cflags`
+USBLIBS  = `pkg-config hidapi-hidraw --libs   2>/dev/null || pkg-config hidapi-libusb --libs   2>/dev/null || pkg-config hidapi --libs`
 EXE_SUFFIX=
 endif
 
