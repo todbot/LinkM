@@ -45,8 +45,10 @@ LinkMHID::LinkMHID() : PluggableUSBModule(1, 1, epType), msgReady(false),
 // ---- Public API ----
 
 void LinkMHID::begin() {
-    pinMode(LED_BUILTIN, OUTPUT);
-    statusLedSet(0);
+    pinMode(ACTIVITY_LED_PIN, OUTPUT);
+    digitalWrite(ACTIVITY_LED_PIN, HIGH);  // off (active LOW)
+    pinMode(STAT_LED_PIN, OUTPUT);
+    digitalWrite(STAT_LED_PIN, HIGH);      // off (active LOW)
     Wire.begin();
     Wire.setClock(100000);
     eeLoad();
@@ -68,7 +70,7 @@ void LinkMHID::playTicker() {
     if ((uint32_t)(millis() - lastTickMs) >= stepMs) {
         lastTickMs = millis();
         blinkmPlayScript(0, params.script_id, 0, (uint8_t)script_pos);
-        statusLedSet(1); delayMicroseconds(500); statusLedSet(0);
+        digitalWrite(ACTIVITY_LED_PIN, LOW); delayMicroseconds(500); digitalWrite(ACTIVITY_LED_PIN, HIGH);
         if (++script_pos >= params.script_len) script_pos = 0;
     }
 }
@@ -211,9 +213,10 @@ void LinkMHID::handleMessage() {
         return;
     }
 
-    statusLedSet(1);
+    // Flash activity LED (RX LED, pin 17) for the duration of the command.
+    // Status LED (TX LED, pin 30) is independent and only touched by STATLEDSET.
+    digitalWrite(ACTIVITY_LED_PIN, LOW);   // on (active LOW)
     uint8_t cmd = rxBuf[1];
-    bool preserveLed = false;
 
     switch (cmd) {
     case LINKM_CMD_I2CTRANS:   doI2CTrans();  break;
@@ -237,8 +240,8 @@ void LinkMHID::handleMessage() {
         break;
 
     case LINKM_CMD_STATLEDSET:
+        // Controls the status LED (TX LED, pin 30) — independent of activity flash
         statusLedSet(rxBuf[4]);
-        preserveLed = true;  // don't extinguish what was just set
         break;
 
     case LINKM_CMD_STATLEDGET:
@@ -262,15 +265,11 @@ void LinkMHID::handleMessage() {
         break;
 
     case LINKM_CMD_EESAVE:
-        statusLedSet(1);
         eeSave();
-        statusLedSet(0);
         break;
 
     case LINKM_CMD_EELOAD:
-        statusLedSet(1);
         eeLoad();
-        statusLedSet(0);
         break;
 
     case LINKM_CMD_GOBOOTLOAD:
@@ -285,7 +284,7 @@ void LinkMHID::handleMessage() {
         break;
     }
 
-    if (!preserveLed) statusLedSet(0);
+    digitalWrite(ACTIVITY_LED_PIN, HIGH);  // off (active LOW)
 }
 
 // ---- I2C command implementations ----
@@ -390,11 +389,11 @@ void LinkMHID::blinkmSetFadespeed(uint8_t addr, uint8_t fadespeed) {
 // ---- Utility ----
 
 void LinkMHID::statusLedSet(uint8_t val) {
-    digitalWrite(LED_BUILTIN, val ? HIGH : LOW);
+    digitalWrite(STAT_LED_PIN, val ? LOW : HIGH);  // active LOW: LOW = on
 }
 
 uint8_t LinkMHID::statusLedGet() {
-    return digitalRead(LED_BUILTIN) ? 1 : 0;
+    return digitalRead(STAT_LED_PIN) ? 0 : 1;  // active LOW: invert readback
 }
 
 void LinkMHID::eeSave() {

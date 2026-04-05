@@ -275,7 +275,7 @@ All 13 original LinkM commands are implemented:
 | I2CCONN    | 5   | No-op (no bus-isolation chip on Pro Micro) |
 | I2CINIT    | 6   | `Wire.end()` / `Wire.begin()` / `setClock(100000)` |
 | VERSIONGET | 100 | Returns `0x13` / `0x36` (matches original firmware) |
-| STATLEDSET | 101 | `LED_BUILTIN` (pin 17 on SparkFun Pro Micro) |
+| STATLEDSET | 101 | TX LED (pin 30, `LED_BUILTIN_TX`) — persistent state |
 | STATLEDGET | 102 | |
 | PLAYSET    | 103 | Sets autonomous BlinkM play-ticker params |
 | PLAYGET    | 104 | |

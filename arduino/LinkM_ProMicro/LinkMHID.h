@@ -22,6 +22,12 @@
 // playTicker timing: original ran at 12MHz/65536/6 ≈ 30.5 Hz → ~32.8 ms/tick
 #define TICK_MS         33UL
 
+// LED pin assignments (SparkFun Pro Micro, ATmega32U4)
+// Both LEDs are active LOW: LOW = on, HIGH = off.
+// LED_BUILTIN (pin 13, PC7) is a header pin with no physical LED — not used.
+#define ACTIVITY_LED_PIN  LED_BUILTIN_RX   // pin 17, PB0 — flashes on each HID command
+#define STAT_LED_PIN      LED_BUILTIN_TX   // pin 30, PD5 — persistent status (STATLEDSET)
+
 // HID descriptor type constants (not all defined in Arduino HID.h)
 #define HID_GET_REPORT              0x01
 #define HID_SET_IDLE                0x0A

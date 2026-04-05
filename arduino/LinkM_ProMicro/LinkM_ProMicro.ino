@@ -22,7 +22,8 @@
  * HARDWARE CONNECTIONS:
  *   SDA → Pro Micro pin 2  (internal pull-ups enabled; add 4.7kΩ for long runs)
  *   SCL → Pro Micro pin 3  (internal pull-ups enabled; add 4.7kΩ for long runs)
- *   Status LED → RX LED (pin 17) on SparkFun Pro Micro
+ *   Activity LED → RX LED (pin 17, LED_BUILTIN_RX) — flashes on each HID command
+ *   Status LED   → TX LED (pin 30, LED_BUILTIN_TX) — persistent, set by STATLEDSET
  *
  * TEST (after uploading with correct VID/PID):
  *   cd LinkM/c_host && make
