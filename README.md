@@ -76,6 +76,17 @@ On Fedora / RHEL Linux:
 On Arch Linux:
 - `sudo pacman -S hidapi`
 
+On Linux, non-root users also need permission to access the device.
+Add udev rules and reload:
+
+```sh
+cat << 'EOF' | sudo tee /etc/udev/rules.d/99-linkm.rules
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="20a0", ATTRS{idProduct}=="4110", MODE="0666"
+SUBSYSTEM=="usb",    ATTR{idVendor}=="20a0",  ATTR{idProduct}=="4110",  MODE="0666"
+EOF
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
 
 BUILDING THE FIRMWARE
 ---------------------
