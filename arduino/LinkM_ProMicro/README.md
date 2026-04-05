@@ -126,6 +126,7 @@ cd LinkM/arduino/LinkM_ProMicro
 arduino-cli compile \
     --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
     --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\" -DCDC_DISABLED" \
+    --clean \
     .
 ```
 
@@ -149,6 +150,7 @@ With that file in place the shorter form works:
 ```sh
 arduino-cli compile \
     --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
+    --clean \
     .
 ```
 
@@ -179,10 +181,14 @@ arduino-cli upload \
     .
 ```
 
+After running this command, double-tap the RESET button (or RESET jumper) 
+to trigger the bootloader anew. 
+
 > The bootloader port is a different path from any previous port.  Run
 > `arduino-cli board list` immediately after the double-tap to see it.
 >
 > If the upload still fails, try again — the timing window is ~8 seconds.
+
 
 After a successful upload the board re-enumerates as a HID-only device (no
 serial port) with VID=0x20A0 / PID=0x4110.

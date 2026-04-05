@@ -11,6 +11,7 @@
  *   arduino-cli compile \
  *     --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
  *     --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\" -DCDC_DISABLED" \
+ *     --clean \
  *     .
  *
  * NOTE: with CDC disabled there is no USB serial port. To reset into the
