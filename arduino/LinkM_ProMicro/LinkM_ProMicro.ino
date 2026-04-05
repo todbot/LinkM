@@ -5,23 +5,22 @@
  * Presents as VID=0x20A0 / PID=0x4110 "ThingM" / "LinkM" to the host.
  * All USB communication uses HID Feature Reports (control transfers).
  *
- * BEFORE UPLOADING: set VID/PID and USB strings.
+ * BEFORE UPLOADING: set VID/PID, USB strings, and disable CDC.
+ * CDC must be disabled so macOS allows libusb to access the HID interface.
  *
- *   Option A — platform.local.txt (recommended):
- *     Create the file:
- *       ~/.arduino15/packages/SparkFun/hardware/avr/<version>/platform.local.txt
- *     Contents:
- *       build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER="ThingM" -DUSB_PRODUCT="LinkM"
+ *   arduino-cli compile \
+ *     --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
+ *     --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\" -DCDC_DISABLED" \
+ *     .
  *
- *   Option B — Arduino CLI:
- *     arduino-cli compile \
- *       --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\""
- *       --fqbn SparkFun:avr:promicro LinkM_ProMicro
+ * NOTE: with CDC disabled there is no USB serial port. To reset into the
+ * bootloader for re-upload, briefly short RST to GND twice in quick succession
+ * (the Pro Micro has no reset button — use a jumper wire). RX LED will pulse.
  *
  * HARDWARE CONNECTIONS:
- *   SDA → Pro Micro pin 2  (with 4.7kΩ pull-up to VCC)
- *   SCL → Pro Micro pin 3  (with 4.7kΩ pull-up to VCC)
- *   Status LED → LED_BUILTIN (pin 17 on SparkFun Pro Micro)
+ *   SDA → Pro Micro pin 2  (internal pull-ups enabled; add 4.7kΩ for long runs)
+ *   SCL → Pro Micro pin 3  (internal pull-ups enabled; add 4.7kΩ for long runs)
+ *   Status LED → RX LED (pin 17) on SparkFun Pro Micro
  *
  * TEST (after uploading with correct VID/PID):
  *   cd LinkM/c_host && make

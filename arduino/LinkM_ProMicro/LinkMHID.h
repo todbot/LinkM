@@ -13,7 +13,6 @@
 #include <Arduino.h>
 #include <PluggableUSB.h>
 #include <Wire.h>
-#include <EEPROM.h>
 #include <avr/wdt.h>
 #include "linkm_protocol.h"
 
@@ -31,7 +30,12 @@
 #define HID_DESCRIPTOR_TYPE         0x21
 #define HID_REPORT_DESCRIPTOR_TYPE  0x22
 
-// bmRequestType values for HID class requests on an interface
+// bmRequestType values for HID class requests.
+// hiddata.c (the LinkM host library) uses LIBUSB_RECIPIENT_DEVICE (0x00),
+// not LIBUSB_RECIPIENT_INTERFACE (0x01), so the values are 0x20/0xA0.
+#define REQ_HOST_TO_DEVICE_CLASS    0x20  // Class | Device | H→D
+#define REQ_DEVICE_TO_HOST_CLASS    0xA0  // Class | Device | D→H
+// Accept interface-level requests too (correct per HID spec, sent by some hosts)
 #define REQ_HOST_TO_DEVICE_CLASS_IF 0x21  // Class | Interface | H→D
 #define REQ_DEVICE_TO_HOST_CLASS_IF 0xA1  // Class | Interface | D→H
 
@@ -106,6 +110,7 @@ private:
     uint8_t  rxBuf[REPORT1_COUNT]; // command received from host (SET_REPORT)
     uint8_t  txBuf[REPORT1_COUNT]; // response sent to host (GET_REPORT)
     volatile bool msgReady;        // set in USB ISR, consumed in loop()
+
 
     params_t params;
     uint16_t script_pos;

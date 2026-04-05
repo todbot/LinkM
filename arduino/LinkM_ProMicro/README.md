@@ -108,14 +108,24 @@ core and ship with `SparkFun:avr`.
 ## Compile
 
 The Pro Micro defaults to SparkFun's VID/PID (`0x1B4F / 0x9206`).  Pass the
-LinkM identity flags on the command line so the host tools recognise the device:
+LinkM identity and CDC-disable flags on the command line:
+
+> **Why `-DCDC_DISABLED`?**  On macOS the `AppleUSBCDC` kernel driver claims the
+> CDC interface and prevents libusb from sending control transfers to the device.
+> Disabling CDC removes that interface entirely, allowing libusb to access the
+> HID interface directly.  With CDC disabled there is no USB serial port; use
+> the RST-to-GND method described in the Upload section to re-flash.
+>
+> Note: the flag is `-DCDC_DISABLED` (define a symbol), not `-UCDC_ENABLED`
+> (undefine a symbol) — the Arduino core uses `#ifndef CDC_DISABLED` in
+> `USBDesc.h`, so `-U` has no effect on a header-file `#define`.
 
 ```sh
 cd LinkM/arduino/LinkM_ProMicro
 
 arduino-cli compile \
     --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
-    --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\"" \
+    --build-property "build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER=\"ThingM\" -DUSB_PRODUCT=\"LinkM\" -DCDC_DISABLED" \
     .
 ```
 
@@ -130,7 +140,7 @@ PLATFORM_DIR=$(arduino-cli config dump --format json | \
     print(d['directories']['data'])")/packages/SparkFun/hardware/avr/1.1.13
 
 cat > "$PLATFORM_DIR/platform.local.txt" << 'EOF'
-build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER="ThingM" -DUSB_PRODUCT="LinkM"
+build.extra_flags=-DUSB_VID=0x20A0 -DUSB_PID=0x4110 -DUSB_MANUFACTURER="ThingM" -DUSB_PRODUCT="LinkM" -DCDC_DISABLED
 EOF
 ```
 
@@ -150,31 +160,32 @@ arduino-cli compile \
 
 ## Upload
 
-Find the port the Pro Micro is on (it appears as a CDC serial port while running,
-or as a different port briefly after pressing reset):
+Because CDC is disabled, the board does **not** appear as a serial port while
+running.  To upload, you must force it into the Caterina bootloader manually:
+
+1. **Briefly connect RST to GND twice in quick succession** (the Pro Micro has
+   no reset button — use a jumper wire or tweezers on the RST and GND pins).
+   The RX LED will begin pulsing, indicating the bootloader is active.
+2. Within 8 seconds, find the bootloader port and upload:
 
 ```sh
 arduino-cli board list
-# Port          Protocol  Type              Board Name         FQBN
-# /dev/cu.usbmodem14101   serial  Serial Port (USB)  SparkFun Pro Micro  SparkFun:avr:promicro
-```
+# Port                    Protocol  Type              Board Name
+# /dev/cu.usbmodem14101   serial    Serial Port (USB) SparkFun Pro Micro
 
-Upload:
-
-```sh
 arduino-cli upload \
     --fqbn SparkFun:avr:promicro:cpu=16MHzatmega32U4 \
     --port /dev/cu.usbmodem14101 \
     .
 ```
 
-> If the upload fails with "avrdude: error: could not find USBtiny device", the
-> board may have entered a bad state.  Double-tap the reset button to force it into
-> the Caterina bootloader (the RX LED will pulse), then retry the upload within
-> 8 seconds.
+> The bootloader port is a different path from any previous port.  Run
+> `arduino-cli board list` immediately after the double-tap to see it.
+>
+> If the upload still fails, try again — the timing window is ~8 seconds.
 
-After a successful upload the board re-enumerates.  On macOS, the device path will
-change to a new name since the VID/PID and product string are now different.
+After a successful upload the board re-enumerates as a HID-only device (no
+serial port) with VID=0x20A0 / PID=0x4110.
 
 ---
 

@@ -10,6 +10,7 @@
  */
 
 #include "LinkMHID.h"
+#include <EEPROM.h>
 
 // HID report descriptor — must match original firmware exactly (33 bytes)
 // Defines a single vendor feature report: ID=1, 8 bytes.
@@ -139,33 +140,48 @@ uint8_t LinkMHID::getShortName(char* name) {
 // (the I2C work) is deferred to loop() via the msgReady flag.
 
 bool LinkMHID::setup(USBSetup& setup) {
-    // Only handle requests targeted at our interface
-    if (setup.wIndex != pluggedInterface) return false;
 
-    uint8_t reqType   = setup.bmRequestType;
-    uint8_t req       = setup.bRequest;
-    uint8_t reportId  = setup.wValueL;   // low byte: report ID
-    uint8_t reportType = setup.wValueH;  // high byte: 1=INPUT 2=OUTPUT 3=FEATURE
+    // Accept requests addressed to our interface or to the device as a whole.
+    // hiddata.c (the LinkM host library) sends wIndex=0 / RECIPIENT_DEVICE;
+    // the HID spec says wIndex should be the interface number, so accept both.
+    if (setup.wIndex != 0 && setup.wIndex != pluggedInterface) return false;
+
+    uint8_t reqType    = setup.bmRequestType;
+    uint8_t req        = setup.bRequest;
+    uint8_t reportId   = setup.wValueL;   // low byte: report ID
+    uint8_t reportType = setup.wValueH;   // high byte: 1=INPUT 2=OUTPUT 3=FEATURE
+
+    bool isHostToDevice = (reqType == REQ_HOST_TO_DEVICE_CLASS ||
+                           reqType == REQ_HOST_TO_DEVICE_CLASS_IF);
+    bool isDeviceToHost = (reqType == REQ_DEVICE_TO_HOST_CLASS ||
+                           reqType == REQ_DEVICE_TO_HOST_CLASS_IF);
 
     // --- SET_REPORT: host sends command to us ---
-    if (reqType == REQ_HOST_TO_DEVICE_CLASS_IF && req == HID_SET_REPORT) {
+    if (isHostToDevice && req == HID_SET_REPORT) {
         if (reportType == HID_REPORT_TYPE_FEATURE && reportId == 1) {
-            USB_RecvControl(rxBuf, REPORT1_COUNT);
+            // The host (hiddata.c, usesReportIDs=1) prepends the report ID byte
+            // to the data stage: [0x01][START_BYTE][cmd]...[padding] = 17 bytes.
+            // We must read at least enough bytes to clear the FIFO, and skip
+            // the leading report ID byte so rxBuf[0] aligns with START_BYTE.
+            uint8_t tmp[17];
+            uint8_t n = (setup.wLength <= 17) ? (uint8_t)setup.wLength : 17;
+            USB_RecvControl(tmp, n);
+            memcpy(rxBuf, tmp + 1, REPORT1_COUNT);  // tmp[0]=report_id; skip it
             msgReady = true;
             return true;
         }
     }
 
     // --- GET_REPORT: host reads our response ---
-    if (reqType == REQ_DEVICE_TO_HOST_CLASS_IF && req == HID_GET_REPORT) {
+    if (isDeviceToHost && req == HID_GET_REPORT) {
         if (reportType == HID_REPORT_TYPE_FEATURE && reportId == 1) {
             USB_SendControl(0, txBuf, REPORT1_COUNT);
             return true;
         }
     }
 
-    // --- SET_IDLE: macOS sends this during enumeration; ACK it silently ---
-    if (reqType == REQ_HOST_TO_DEVICE_CLASS_IF && req == HID_SET_IDLE) {
+    // --- SET_IDLE: sent by some hosts during enumeration; ACK silently ---
+    if (isHostToDevice && req == HID_SET_IDLE) {
         return true;
     }
 
@@ -197,6 +213,7 @@ void LinkMHID::handleMessage() {
 
     statusLedSet(1);
     uint8_t cmd = rxBuf[1];
+    bool preserveLed = false;
 
     switch (cmd) {
     case LINKM_CMD_I2CTRANS:   doI2CTrans();  break;
@@ -221,6 +238,7 @@ void LinkMHID::handleMessage() {
 
     case LINKM_CMD_STATLEDSET:
         statusLedSet(rxBuf[4]);
+        preserveLed = true;  // don't extinguish what was just set
         break;
 
     case LINKM_CMD_STATLEDGET:
@@ -267,7 +285,7 @@ void LinkMHID::handleMessage() {
         break;
     }
 
-    statusLedSet(0);
+    if (!preserveLed) statusLedSet(0);
 }
 
 // ---- I2C command implementations ----
