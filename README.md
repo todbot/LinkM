@@ -7,9 +7,11 @@ LinkM datasheet: https://github.com/todbot/LinkM/raw/master/docs/LinkM_datasheet
 
 
 ### README for LinkM
-2010-2015 Tod E. Kurt, ThingM
+2010-2026 Tod E. Kurt, ThingM
 
 Hosted on Github at https://github.com/todbot/LinkM/
+
+Modern BlinkMSequencer at https://github.com/todbot/BlinkMSequencer
 
 OVERVIEW
 --------
@@ -84,6 +86,15 @@ On Windows:
 On Ubuntu Linux:
 - "sudo apt-get install avrdude avr-libc avr-gcc avr-binutils"
 
+
+BlinkMSequencer
+-----------------
+
+There is a modern replacement for BlinkMSequencer for LinkM, located here:
+https://github.com/todbot/BlinkMSequencer
+
+The below BlinkMSequencer2 will likely not work, as things have evolved 
+much in 15 years. 
 
 
 Bundling BlinkMSequencer2 for Multiple Architectures
