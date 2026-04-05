@@ -13,7 +13,9 @@
 #define LINKM_VERSION_MAJOR 0x13
 #define LINKM_VERSION_MINOR 0x36
 
-#define REPORT1_COUNT       8   // payload bytes (not counting report ID)
+#define REPORT1_COUNT       8   // HID report size (response / HID descriptor)
+#define REPORT1_RXSIZE     16   // receive buffer: full payload minus report ID byte
+                                // host sends REPORT1_SIZE=17: [report_id][16 bytes]
 
 // Command byte values
 enum {

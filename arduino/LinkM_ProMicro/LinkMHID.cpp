@@ -166,7 +166,7 @@ bool LinkMHID::setup(USBSetup& setup) {
             uint8_t tmp[17];
             uint8_t n = (setup.wLength <= 17) ? (uint8_t)setup.wLength : 17;
             USB_RecvControl(tmp, n);
-            memcpy(rxBuf, tmp + 1, REPORT1_COUNT);  // tmp[0]=report_id; skip it
+            memcpy(rxBuf, tmp + 1, REPORT1_RXSIZE);  // tmp[0]=report_id; skip it
             msgReady = true;
             return true;
         }

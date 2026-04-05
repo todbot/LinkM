@@ -107,8 +107,8 @@ protected:
 private:
     uint8_t  epType[1];          // endpoint type array (one interrupt-in EP)
 
-    uint8_t  rxBuf[REPORT1_COUNT]; // command received from host (SET_REPORT)
-    uint8_t  txBuf[REPORT1_COUNT]; // response sent to host (GET_REPORT)
+    uint8_t  rxBuf[REPORT1_RXSIZE]; // command received from host (SET_REPORT)
+    uint8_t  txBuf[REPORT1_COUNT];  // response sent to host (GET_REPORT)
     volatile bool msgReady;        // set in USB ISR, consumed in loop()
 
 
