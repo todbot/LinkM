@@ -1,4 +1,7 @@
-## LinkM -- USB to I2C adapter for BlinkM Smart LEDs
+# LinkM -- USB to I2C adapter for BlinkM Smart LEDs
+
+2010-2026 Tod E. Kurt, ThingM
+
 
 ![](https://raw.githubusercontent.com/todbot/LinkM/master/docs/linkm1.jpg)![](https://raw.githubusercontent.com/todbot/LinkM/master/docs/linkm2.jpg)
 ![](https://raw.githubusercontent.com/todbot/LinkM/master/docs/linkm3.jpg)![](https://raw.githubusercontent.com/todbot/LinkM/master/docs/linkm4.jpg)
@@ -6,15 +9,27 @@
 LinkM datasheet: https://github.com/todbot/LinkM/raw/master/docs/LinkM_datasheet.pdf
 
 
-### README for LinkM
-2010-2026 Tod E. Kurt, ThingM
-
 Hosted on Github at https://github.com/todbot/LinkM/
+
+## BlinkMSequencer
+
+Create BlinkM light scripts using a drum machine-style metaphor and requires no
+programming or hardware experience.
 
 Modern BlinkMSequencer at https://github.com/todbot/BlinkMSequencer
 
-OVERVIEW
---------
+Available for MacOS / Windows / Linux.
+
+
+## linkm-tool
+
+Commandline tool for controlling LinkM and BlinkMs.
+
+Pre-compiled versions available in the [Releases section](https://github.com/todbot/LinkM/releases).
+
+
+## Repo contents
+
 This project contains the following directories:
 
 - c_host          -- C library for talking to LinkM
@@ -44,8 +59,8 @@ This project contains the following directories:
 
 
 
-BUILDING THE PC-SIDE (HOST) CODE
---------------------------------
+## Building linkm-tool
+
 The build process for all LinkM software except the Processing apps is
 expected to be done entirely from the command-line using standard free
 Unix-like tools such as "make" and "gcc".
@@ -88,8 +103,8 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
 
-BUILDING THE FIRMWARE
----------------------
+### Building the LinkM firmware
+
 In general you should have everything you have for the host code above, and:
 
 On Mac OS X:
@@ -102,18 +117,12 @@ On Ubuntu Linux:
 - "sudo apt-get install avrdude avr-libc avr-gcc avr-binutils"
 
 
-BlinkMSequencer
------------------
 
-There is a modern replacement for BlinkMSequencer for LinkM, located here:
-https://github.com/todbot/BlinkMSequencer
+
+### BlinkMSequencer2 (old)
 
 The below BlinkMSequencer2 will likely not work, as things have evolved 
 much in 15 years. 
-
-
-Bundling BlinkMSequencer2 for Multiple Architectures
-----------------------------------------------------
 
 A. Bundle for Mac OS X
   1. Open BlinkMSequencer2 in Processing
