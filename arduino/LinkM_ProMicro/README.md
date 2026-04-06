@@ -1,5 +1,9 @@
 # LinkM Emulator for Arduino Pro Micro (ATmega32U4)
 
+Make an Arduino act like a ThingM LinkM!
+
+<img src="./linkm_promicro.jpg" width=700 />
+
 Firmware that turns a SparkFun Pro Micro (ATmega32U4) into a drop-in replacement
 for a ThingM LinkM USB HID to I2C adapter.  The emulator implements the same USB
 HID identity and feature-report protocol as the original hardware.
