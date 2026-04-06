@@ -52,6 +52,9 @@ void LinkMHID::begin() {
     Wire.begin();
     Wire.setClock(100000);
     eeLoad();
+    blinkmStop(0);         // stop all scripts  FIXME:maybe make this a param?
+    blinkmSetRGB(0, 0,0,0); // turn all off
+
     // If a non-zero fadespeed was loaded, push it to BlinkM address 0
     if (params.fadespeed != 0) {
         blinkmSetFadespeed(0, params.fadespeed);
@@ -368,6 +371,21 @@ void LinkMHID::doI2CScan() {
 }
 
 // ---- BlinkM helper commands ----
+
+void LinkMHID::blinkmStop(uint8_t addr) {
+    Wire.beginTransmission(addr);
+    Wire.write('o');
+    Wire.endTransmission();
+}
+
+void LinkMHID::blinkmSetRGB(uint8_t addr, uint8_t r, uint8_t g, uint8_t b) {
+    Wire.beginTransmission(addr);
+    Wire.write('n');
+    Wire.write(r);
+    Wire.write(g);
+    Wire.write(b);
+    Wire.endTransmission();
+}
 
 void LinkMHID::blinkmPlayScript(uint8_t addr, uint8_t id,
                                 uint8_t reps, uint8_t pos) {

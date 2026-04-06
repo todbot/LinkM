@@ -130,6 +130,8 @@ private:
     void doI2CScan();
 
     // ---- BlinkM helpers ----
+    void blinkmStop(uint8_t addr);
+    void blinkmSetRGB(uint8_t addr, uint8_t r, uint8_t g, uint8_t b);
     void blinkmPlayScript(uint8_t addr, uint8_t id, uint8_t reps, uint8_t pos);
     void blinkmSetFadespeed(uint8_t addr, uint8_t fadespeed);
 
