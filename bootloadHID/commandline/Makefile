@@ -72,6 +72,7 @@ endif
 ifeq "$(OS)" "linux"
 USBFLAGS =   `libusb-config --cflags`
 USBLIBS  =   `libusb-config --libs`
+OS_CFLAGS = -fPIC
 EXE_SUFFIX=
 endif
 
